@@ -76,7 +76,7 @@ const root = {
   }
 };
 
-// クエリ実行
+// サーバを起動
 const server = new ApolloServer({
   typeDefs: schemaDoc,
   resolvers: root
