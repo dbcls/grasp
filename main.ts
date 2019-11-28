@@ -11,6 +11,7 @@ const schemaDoc = `
   }
 
   type Prefecture {
+    name: String
     flower: Flower
     adjacentPrefectures: [Prefecture]
   }
@@ -27,7 +28,7 @@ PREFIX resource-ja: <http://ja.dbpedia.org/resource/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 SELECT DISTINCT *
 WHERE {
-  resource-ja:{{name}} rdfs:label ?flower.
+  resource-ja:{{name}} rdfs:label ?name.
 }`;
 
 // クエリも定義する
