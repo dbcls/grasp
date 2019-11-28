@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "@types/node": "^12.12.8",
+    "apollo-server": "^2.9.9",
+    "apollo-server-express": "^2.9.9",
+    "dataloader": "^2.0.0",
+    "graphql": "^14.5.8",
+    "graphql-tag": "^2.10.1",
+    "handlebars": "^4.5.2",
+    "node-fetch": "^2.6.0",
+    "nodemon": "^2.0.1",
+    "ts-node": "^8.5.2",
+    "typescript": "^3.7.2"
+  },
+  "scripts": {
+    "start": "ts-node main.ts",
+    "watch": "nodemon -e ts"
+  }
+}
