@@ -1,4 +1,3 @@
-import { graphql, buildSchema } from "graphql";
 import fetch from "node-fetch";
 const Handlebars = require("handlebars");
 const { URLSearchParams } = require("url");
@@ -76,8 +75,6 @@ const root = {
     }
   }
 };
-
-const schema = buildSchema(schemaDoc);
 
 // クエリ実行
 const server = new ApolloServer({
