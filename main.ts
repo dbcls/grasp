@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
-const Handlebars = require("handlebars");
-const { URLSearchParams } = require("url");
+import Handlebars = require("handlebars");
+import { URLSearchParams } from "url";
 import { ApolloServer } from "apollo-server";
 
 /*
@@ -59,7 +59,11 @@ WHERE {
   {{{iri}}} rdfs:label ?name.
 }`;
 
-async function runSPARQL(endpoint, query) {
+function mapValues(obj: object, fn: (val: any) => any): object {
+  return Object.entries(obj).reduce((acc, [k, v]) => Object.assign(acc, {[k]: fn(v)}), {});
+}
+
+async function runSPARQL(endpoint: string, query: string) {
   const sparqlParams = new URLSearchParams();
   sparqlParams.append("query", query);
 
@@ -74,13 +78,9 @@ async function runSPARQL(endpoint, query) {
   const data = await res.json();
   console.log("RESPONSE!!", JSON.stringify(data, null, "  "));
 
-  const result = data.results.bindings.map(b => {
-    const obj = {};
-    Object.entries(b).forEach(([k, v]) => {
-      // TODO v の型に応じて変換する？最後に一括で変換したほうがいいかもしれない
-      obj[k] = (v as any).value;
-    });
-    return obj;
+  const result = data.results.bindings.map((b: object) => {
+    // TODO v の型に応じて変換する？最後に一括で変換したほうがいいかもしれない
+    return mapValues(b, ({value}) => value);
   });
 
   return result;
@@ -89,10 +89,10 @@ async function runSPARQL(endpoint, query) {
 // クエリも定義する
 const root = {
   Prefecture: {
-    adjacentPrefectures: async (parent, args) => {
-      //      const iri = `<http://ja.dbpedia.org/resource/${parent.name}>`;
+    async adjacentPrefectures({name}, _args: object) {
+      //      const iri = `<http://ja.dbpedia.org/resource/${name}>`;
       const compiledTemplate = Handlebars.compile(sparql);
-      const query = compiledTemplate({ name: parent.name });
+      const query = compiledTemplate({ name });
       const results = await runSPARQL(endpoint, query);
       console.log("ADJ RESULTS", results);
 
@@ -106,10 +106,10 @@ const root = {
 
       return adjacentPrefectures;
     },
-    flower: async (parent, args) => {
-      if (parent.flower.startsWith("http")) {
+    async flower({flower}) {
+      if (flower.startsWith("http")) {
         // TODO ほんとはこれがIRIか判定したいんだけど雑にやってる
-        const iri = `<${parent.flower}>`;
+        const iri = `<${flower}>`;
         const compiledTemplate = Handlebars.compile(flowerSPARQL);
         const query = compiledTemplate({ iri });
         console.log("QUERY", query);
@@ -118,12 +118,12 @@ const root = {
 
         return results[0];
       } else {
-        return { name: parent.flower };
+        return { name: flower };
       }
     }
   },
   Query: {
-    Prefecture: async function(parent, params) {
+    async Prefecture(_parent: object, params: object) {
       const compiledTemplate = Handlebars.compile(sparql);
       const query = compiledTemplate(params);
       console.log("QUERY", query);
@@ -142,13 +142,9 @@ const root = {
       const data = await res.json();
       console.log("RESPONSE", JSON.stringify(data, null, "  "));
 
-      const result = data.results.bindings.map(b => {
-        const obj = {};
-        Object.entries(b).forEach(([k, v]) => {
-          // TODO v の型に応じて変換する？最後に一括で変換したほうがいいかもしれない
-          obj[k] = (v as any).value;
-        });
-        return obj;
+      const result = data.results.bindings.map((b: object) => {
+        // TODO v の型に応じて変換する？最後に一括で変換したほうがいいかもしれない
+        return mapValues(b, ({value}) => value);
       });
 
       const r = result[0];
