@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 import Handlebars = require("handlebars");
 import { URLSearchParams } from "url";
 import { ApolloServer } from "apollo-server";
-import dedent = require("dedent");
+import outdent from 'outdent';
 
 /*
 次のようなクエリができる:
@@ -23,7 +23,7 @@ import dedent = require("dedent");
 */
 
 // スキーマをユーザに定義してもらう
-const schemaDoc = `
+const schemaDoc = outdent`
   type Query {
     Prefecture(name: String): Prefecture
   }
@@ -42,7 +42,7 @@ const schemaDoc = `
 const Prefecture = {
   endpoint: "http://ja.dbpedia.org/sparql",
 
-  query: Handlebars.compile(dedent`
+  query: Handlebars.compile(outdent`
     PREFIX prop-ja: <http://ja.dbpedia.org/property/>
     PREFIX resource-ja: <http://ja.dbpedia.org/resource/>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -58,7 +58,7 @@ const Prefecture = {
 const Flower = {
   endpoint: "http://ja.dbpedia.org/sparql",
 
-  query: Handlebars.compile(dedent`
+  query: Handlebars.compile(outdent`
     PREFIX prop-ja: <http://ja.dbpedia.org/property/>
     PREFIX resource-ja: <http://ja.dbpedia.org/resource/>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
