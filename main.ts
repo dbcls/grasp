@@ -129,12 +129,14 @@ const root = {
   }
 };
 
+const port = process.env.PORT || 4000;
+
 // サーバを起動
 const server = new ApolloServer({
   typeDefs: schemaDoc,
   resolvers: root
 });
 
-server.listen().then(({ url }) => {
+server.listen({ port }).then(({ url }) => {
   console.log(`🚀 Server ready at ${url}`);
 });
