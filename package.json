@@ -17,6 +17,6 @@
   },
   "scripts": {
     "start": "ts-node main.ts",
-    "watch": "nodemon -e ts"
+    "watch": "nodemon -e ts,graphql"
   }
 }
