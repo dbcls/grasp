@@ -40,7 +40,7 @@ const typeDefs = schemaDoc.definitions
     });
 
     return {
-      name: def.name.value,
+      definition: def,
       endpoint,
       query: Handlebars.compile(query, { noEscape: true })
     };
@@ -89,7 +89,6 @@ async function queryFirstBinding(
 }
 
 const query = schemaDoc.definitions.find(def => def.name.value === "Query");
-const types = schemaDoc.definitions.filter(def => def.name.value !== "Query");
 
 const rootResolvers = query.fields.reduce(
   (acc, field) =>
@@ -97,7 +96,9 @@ const rootResolvers = query.fields.reduce(
       [field.name.value]: async (_parent: object, args: object) => {
         // TODO スキーマの型に応じて取り方を変える必要がある？
         return await queryFirstBinding(
-          typeDefs.find(def => def.name === field.name.value),
+          typeDefs.find(
+            type => type.definition.name.value === field.name.value
+          ),
           args
         );
       }
@@ -107,10 +108,7 @@ const rootResolvers = query.fields.reduce(
 
 const listResolver = type => {
   return async args => {
-    const bindings = await queryAllBindings(
-      typeDefs.find(def => def.name === type.name.value),
-      args
-    );
+    const bindings = await queryAllBindings(type, args);
 
     // TODO 汎化できていない
     const queries = bindings.map(async ({ adjacentPrefecture: iri }) => {
@@ -118,33 +116,33 @@ const listResolver = type => {
         name: iri.split("/").slice(-1)[0]
       };
 
-      return await queryFirstBinding(
-        typeDefs.find(def => def.name === type.name.value),
-        args
-      );
+      return await queryFirstBinding(type, args);
     });
 
     return await Promise.all(queries);
   };
 };
 
-const typeResolvers = types.reduce((acc, type) => {
+const typeResolvers = typeDefs.reduce((acc, type) => {
   return Object.assign(acc, {
-    [type.name.value]: type.fields.reduce((acc, field) => {
-      return Object.assign(
-        acc,
-        field.type.kind === "ListType"
-          ? { [field.name.value]: listResolver(type) }
-          : typeDefs.map(def => def.name).includes(field.type.name.value)
-          ? {
-              [field.name.value]: async args => {
-                // TODO 関連を引くロジック
-                throw new Error("not implemented");
+    [type.definition.name.value]: type.definition.fields.reduce(
+      (acc, field) => {
+        return Object.assign(
+          acc,
+          field.type.kind === "ListType"
+            ? { [field.name.value]: listResolver(type) }
+            : typeDefs.includes(type.definition)
+            ? {
+                [field.name.value]: async args => {
+                  // TODO 関連を引くロジック
+                  throw new Error("not implemented");
+                }
               }
-            }
-          : {}
-      );
-    }, {})
+            : {}
+        );
+      },
+      {}
+    )
   });
 }, {});
 
