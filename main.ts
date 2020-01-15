@@ -88,6 +88,10 @@ async function queryFirstBinding(
   return bindings[0];
 }
 
+function isUserDefined(type) {
+  return typeDefs.includes(type.definition);
+}
+
 const query = schemaDoc.definitions.find(def => def.name.value === "Query");
 
 const rootResolvers = query.fields.reduce(
@@ -125,24 +129,22 @@ const listResolver = type => {
 
 const typeResolvers = typeDefs.reduce((acc, type) => {
   return Object.assign(acc, {
-    [type.definition.name.value]: type.definition.fields.reduce(
-      (acc, field) => {
-        return Object.assign(
-          acc,
-          field.type.kind === "ListType"
-            ? { [field.name.value]: listResolver(type) }
-            : typeDefs.includes(type.definition)
-            ? {
-                [field.name.value]: async args => {
-                  // TODO 関連を引くロジック
-                  throw new Error("not implemented");
-                }
-              }
-            : {}
-        );
-      },
-      {}
-    )
+    [type.definition.name.value]: type.definition.fields.reduce((acc, field) => {
+      let resolver;
+
+      if (field.type.kind === "ListType") {
+        resolver = listResolver(type);
+      } else if (isUserDefined(type)) {
+        resolver = async args => {
+          // TODO 関連を引くロジック
+          throw new Error("not implemented");
+        }
+      } else {
+        return acc;
+      }
+
+      return Object.assign(acc, {[field.name.value]: resolver});
+    }, {})
   });
 }, {});
 
