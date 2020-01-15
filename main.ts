@@ -53,15 +53,9 @@ function mapValues(obj: object, fn: (val: any) => any): object {
   );
 }
 
-async function queryAllBindings(
-  {
-    endpoint,
-    query: buildQuery
-  }: { endpoint: string; query: (args: object) => string },
-  args: object
-) {
+async function queryAllBindings(type, args: object) {
   const sparqlParams = new URLSearchParams();
-  sparqlParams.append("query", buildQuery(args));
+  sparqlParams.append("query", type.query(args));
 
   const opts = {
     method: "POST",
@@ -70,13 +64,15 @@ async function queryAllBindings(
       Accept: "application/sparql-results+json"
     }
   };
-  const data = await fetch(endpoint, opts).then(res => res.json());
+  const data = await fetch(type.endpoint, opts).then(res => res.json());
   console.log("RESPONSE!!", JSON.stringify(data, null, "  "));
 
-  return data.results.bindings.map((b: object) => {
+  const unwrapped = data.results.bindings.map((b: object) => {
     // TODO v の型に応じて変換する？最後に一括で変換したほうがいいかもしれない
     return mapValues(b, ({ value }) => value);
   });
+
+  return unwrapped;
 }
 
 async function queryFirstBinding(
@@ -110,20 +106,25 @@ const rootResolvers = query.fields.reduce(
   {}
 );
 
-const listResolver = type => {
+const listResolver = (type, field) => {
   return async args => {
     const bindings = await queryAllBindings(type, args);
 
-    // TODO 汎化できていない
-    const queries = bindings.map(async ({ adjacentPrefecture: iri }) => {
-      const args = {
-        name: iri.split("/").slice(-1)[0]
-      };
+    if (isUserDefined(type)) {
+      // TODO 汎化できていない
+      const queries = bindings.map(async ({ adjacentPrefecture: iri }) => {
+        const args = {
+          name: iri.split("/").slice(-1)[0]
+        };
 
-      return await queryFirstBinding(type, args);
-    });
+        return await queryFirstBinding(type, args);
+      });
 
-    return await Promise.all(queries);
+      return await Promise.all(queries);
+    } else {
+      console.log("BINDINGS", type, args, bindings)
+      return bindings.map(binding => binding[field.name.value]);
+    }
   };
 };
 
@@ -133,7 +134,7 @@ const typeResolvers = typeDefs.reduce((acc, type) => {
       let resolver;
 
       if (field.type.kind === "ListType") {
-        resolver = listResolver(type);
+        resolver = listResolver(type, field);
       } else if (isUserDefined(type)) {
         resolver = async args => {
           // TODO 関連を引くロジック
