@@ -88,18 +88,20 @@ async function queryFirstBinding(
 const query = schemaDoc.definitions.find(def => def.name.value === "Query");
 const types = schemaDoc.definitions.filter(def => def.name.value !== "Query");
 
+const rootResolvers = query.fields.reduce((acc, field) =>
+  Object.assign(acc, {
+    [field.name.value]: async (_parent: object, args: object) => {
+      // TODO スキーマの型に応じて取り方を変える必要がある？
+      return await queryFirstBinding(typeDefs.find(def => def.name === field.name.value), args);
+    }
+  }),
+  {}
+);
+
 // クエリも定義する
 const root = {
-  Query: query.fields.reduce(
-    (acc, field) =>
-      Object.assign(acc, {
-        [field.name.value]: async (_parent: object, args: object) => {
-          // TODO スキーマの型に応じて取り方を変える必要がある？
-          return await queryFirstBinding(typeDefs.find(def => def.name === field.name.value), args);
-        }
-      }),
-    {}
-  ),
+  Query: rootResolvers,
+
   ...types.reduce((acc, type) => {
     return Object.assign(acc, {
       [type.name.value]: type.fields.reduce((acc, field) => {
