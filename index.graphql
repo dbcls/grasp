@@ -3,6 +3,7 @@ type Query {
   returns a quanto entry of IRI
   """
   SequenceStatisticsReport(iri: String): SequenceStatisticsReport
+  Dataset(iri: String): Dataset
 }
 
 """
@@ -84,4 +85,31 @@ type SequenceStatisticsReport {
   gc_content: Float
   total_seq: Int
   filtered_seq: Int
+}
+
+"""
+--- endpoint ---
+https://integbio.jp/rdf/sparql
+
+--- sparql ---
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
+
+SELECT *
+FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
+WHERE
+{
+  { ?db dcterms:title ?title_ja . FILTER (lang(?title_ja) = "ja" ) }
+  OPTIONAL { ?db dcterms:title ?title_en . FILTER (lang(?title_en) = "en" ) }
+  { ?db dcterms:description ?description_ja . FILTER (lang(?description_ja) = "ja" ) }
+  OPTIONAL { ?db dcterms:description ?description_en . FILTER (lang(?description_en) = "en" ) }
+  FILTER (?db = <{{iri}}>)
+}
+"""
+type Dataset {
+  db: String
+  title_ja: String
+  title_en: String
+  description_ja: String
+  description_en: String
 }
