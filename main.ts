@@ -2,124 +2,46 @@ import fetch from "node-fetch";
 import Handlebars = require("handlebars");
 import { URLSearchParams } from "url";
 import { ApolloServer } from "apollo-server";
-import outdent from "outdent";
-import gql from "graphql-tag";
+import { parse } from 'graphql/language/parser';
+import { readFileSync } from 'fs';
 
 // スキーマをユーザに定義してもらう
-const schemaDoc = gql`
-  type Query {
-    """
-    returns a quanto entry of IRI
-    """
-    SequenceStatisticsReport(iri: String): SequenceStatisticsReport
-  }
+const schemaDoc = parse(readFileSync('./index.graphql', 'utf8')) as any;
 
-  """
-  \`SequenceStatisticsReport\` represents a sequence statistics report (sos:SequenceStatisticsReport)
-  """
-  type SequenceStatisticsReport {
-    """
-    Ideintifier. \`dcterms:identifier\`
-    """
-    id: String
+const typeDefs = schemaDoc.definitions.filter(def => def.name.value !== 'Query').map(def => {
+  const description = def.description.value;
+  const lines = description.split(/\r?\n/);
 
-    """
-    An encoding format. \`sos:encoding\`
-    """
-    encoding: String
+  let endpoint: string, query = '';
+  let state = null;
 
-    """
-    A file type. \`sos:fileType\`
-    """
-    file_type: String
-    version: String
-    fastqc_version: String
-    contributor: [String] # doesn't work yet
-    min_seq_len: Float
-    median_seq_len: Float
-    max_seq_len: Float
-    mean_bc_quality: Float
-    median_bc_quality: Float
-    n_content: Float
-    gc_content: Float
-    total_seq: Int
-    filtered_seq: Int
-  }
-`;
-
-const typeDefs = {
-  SequenceStatisticsReport: {
-    endpoint: "https://integbio.jp/rdf/sparql",
-
-    query: Handlebars.compile(
-      outdent`
-    # Retrieve statistics of SRA entry ERR026579 from the Qunato database
-
-    PREFIX sos: <http://purl.jp/bio/01/quanto/ontology/sos#>
-    PREFIX quanto: <http://purl.jp/bio/01/quanto/resource/>
-    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-    PREFIX dct: <http://purl.org/dc/terms/>
-    PREFIX pav: <http://purl.org/pav/>
-    SELECT
-      ?quanto
-      ?id
-      ?encoding
-      ?file_type
-      ?version
-      ?contributor
-      ?fastqc_version
-      ?filtered_seq
-      ?min_seq_len
-      ?median_seq_len
-      ?max_seq_len
-      ?mean_bc_quality
-      ?median_bc_quality
-      ?n_content
-      ?gc_content
-      ?total_seq
-    FROM <http://quanto.dbcls.jp>
-    WHERE {
-      ?quanto a sos:SequenceStatisticsReport .
-      ?quanto dct:identifier ?id .
-      ?quanto rdfs:seeAlso <http://identifiers.org/insdc.sra/ERR026579> .
-      ?quanto sos:fastqcVersion ?fastqc_version .
-      ?quanto sos:encoding ?encoding .
-      ?quanto sos:fileType ?file_type .
-      ?quanto pav:version ?version .
-      ?quanto dcterms:contributor ?contributor .
-      ?quanto sos:maxSequenceLength/rdf:value ?max_seq_len .
-      ?quanto sos:medianSequenceLength/rdf:value ?median_seq_len .
-      ?quanto sos:minSequenceLength/rdf:value ?min_seq_len .
-      ?quanto sos:overallMeanBaseCallQuality/rdf:value ?mean_bc_quality .
-      ?quanto sos:overallMedianBaseCallQuality/rdf:value ?median_bc_quality .
-      ?quanto sos:overallNContent/rdf:value ?n_content .
-      ?quanto sos:percentGC/rdf:value ?gc_content .
-      ?quanto sos:totalSequences/rdf:value ?total_seq .
-      ?quanto sos:filteredSequences/rdf:value ?filtered_seq .
-
-      FILTER (?quanto = <{{iri}}>)
+  lines.forEach((line: string) => {
+    switch (line) {
+      case '--- endpoint ---':
+        state = 'endpoint';
+        return;
+      case '--- sparql ---':
+        state = 'sparql';
+        return;
     }
-        `,
-      { noEscape: true }
-    )
-  },
-  Flower: {
-    endpoint: "http://ja.dbpedia.org/sparql",
 
-    query: Handlebars.compile(
-      outdent`
-      PREFIX prop-ja: <http://ja.dbpedia.org/property/>
-      PREFIX resource-ja: <http://ja.dbpedia.org/resource/>
-      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-      SELECT DISTINCT *
-      WHERE {
-        <{{iri}}> rdfs:label ?name.
-      }
-    `,
-      { noEscape: true }
-    )
+    switch (state) {
+      case 'endpoint':
+        endpoint = line;
+        state = null;
+        break;
+      case 'sparql':
+        query += line + "\n";
+        break;
+    }
+  });
+
+  return {
+    name: def.name.value,
+    endpoint,
+    query: Handlebars.compile(query, {noEscape: true})
   }
-};
+});
 
 function mapValues(obj: object, fn: (val: any) => any): object {
   return Object.entries(obj).reduce(
@@ -173,7 +95,7 @@ const root = {
       Object.assign(acc, {
         [field.name.value]: async (_parent: object, args: object) => {
           // TODO スキーマの型に応じて取り方を変える必要がある？
-          return await queryFirstBinding(typeDefs[field.name.value], args);
+          return await queryFirstBinding(typeDefs.find(def => def.name === field.name.value), args);
         }
       }),
     {}
@@ -186,9 +108,8 @@ const root = {
           field.type.kind === "ListType"
             ? {
                 [field.name.value]: async args => {
-                  console.log(typeDefs[type.name.value]);
                   const bindings = await queryAllBindings(
-                    typeDefs[type.name.value],
+                    typeDefs.find(def => def.name === type.name.value),
                     args
                   );
 
@@ -200,7 +121,7 @@ const root = {
                       };
 
                       return await queryFirstBinding(
-                        typeDefs[field.type.type.name.value],
+                        typeDefs.find(def => def.name === type.name.value),
                         args
                       );
                     }
@@ -209,18 +130,11 @@ const root = {
                   return await Promise.all(queries);
                 }
               }
-            : Object.keys(typeDefs).includes(field.type.name.value)
+            : typeDefs.map(def => def.name).includes(field.type.name.value)
             ? {
                 [field.name.value]: async args => {
-                  // TODO 汎化できていない
-                  // TODO ほんとはこれがIRIか判定したいんだけど雑にやってる
-                  if (args.flower.startsWith("http")) {
-                    return await queryFirstBinding(typeDefs.Flower, {
-                      iri: args.flower
-                    });
-                  } else {
-                    return { name: args.flower };
-                  }
+                  // TODO 関連を引くロジック
+                  throw new Error('not implemented')
                 }
               }
             : {}
