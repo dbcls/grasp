@@ -5,12 +5,29 @@ import { ApolloServer } from "apollo-server";
 import { parse } from "graphql/language/parser";
 import { readFileSync } from "fs";
 
-// スキーマをユーザに定義してもらう
-const schemaDoc = parse(readFileSync("./index.graphql", "utf8")) as any;
+import { ObjectTypeDefinitionNode, FieldDefinitionNode } from 'graphql';
 
-const typeDefs = schemaDoc.definitions
-  .filter(def => def.name.value !== "Query")
-  .map(def => {
+type CompiledTemplate = (args: object) => string;
+type Binding = object;
+
+class Resource {
+  definition: ObjectTypeDefinitionNode;
+  endpoint: string;
+  query: CompiledTemplate;
+
+  constructor(definition: TypeDefinitionNode, endpoint: string, query: string) {
+    this.definition = definition;
+    this.endpoint   = endpoint;
+    this.query      = Handlebars.compile(query, { noEscape: true });
+  }
+}
+
+// スキーマをユーザに定義してもらう
+const schemaDoc = parse(readFileSync("./index.graphql", "utf8"));
+
+const resources: Array<Resource> = schemaDoc.definitions
+  .filter((def: ObjectTypeDefinitionNode) => def.name.value !== "Query")
+  .map((def: ObjectTypeDefinitionNode) => {
     const description = def.description.value;
     const lines = description.split(/\r?\n/);
 
@@ -39,11 +56,7 @@ const typeDefs = schemaDoc.definitions
       }
     });
 
-    return {
-      definition: def,
-      endpoint,
-      query: Handlebars.compile(query, { noEscape: true })
-    };
+    return new Resource(def, endpoint, query);
   });
 
 function mapValues(obj: object, fn: (val: any) => any): object {
@@ -53,9 +66,9 @@ function mapValues(obj: object, fn: (val: any) => any): object {
   );
 }
 
-async function queryAllBindings(type, args: object) {
+async function queryAllBindings(resource: Resource, args: object) {
   const sparqlParams = new URLSearchParams();
-  sparqlParams.append("query", type.query(args));
+  sparqlParams.append("query", resource.query(args));
 
   const opts = {
     method: "POST",
@@ -64,7 +77,7 @@ async function queryAllBindings(type, args: object) {
       Accept: "application/sparql-results+json"
     }
   };
-  const data = await fetch(type.endpoint, opts).then(res => res.json());
+  const data = await fetch(resource.endpoint, opts).then(res => res.json());
   console.log("RESPONSE!!", JSON.stringify(data, null, "  "));
 
   const unwrapped = data.results.bindings.map((b: object) => {
@@ -75,20 +88,17 @@ async function queryAllBindings(type, args: object) {
   return unwrapped;
 }
 
-async function queryFirstBinding(
-  typeDef: { endpoint: string; query: (args: object) => string },
-  args: object
-) {
-  const bindings = await queryAllBindings(typeDef, args);
+async function queryFirstBinding(resource: Resource, args: object) {
+  const bindings = await queryAllBindings(resource, args);
 
   return bindings[0];
 }
 
-function isUserDefined(type) {
-  return typeDefs.includes(type.definition);
+function isUserDefined(resource: Resource) {
+  return resources.includes(resource);
 }
 
-const query = schemaDoc.definitions.find(def => def.name.value === "Query");
+const query = schemaDoc.definitions.find((def: ObjectTypeDefinitionNode) => def.name.value === "Query") as ObjectTypeDefinitionNode;
 
 const rootResolvers = query.fields.reduce(
   (acc, field) =>
@@ -96,9 +106,7 @@ const rootResolvers = query.fields.reduce(
       [field.name.value]: async (_parent: object, args: object) => {
         // TODO スキーマの型に応じて取り方を変える必要がある？
         return await queryFirstBinding(
-          typeDefs.find(
-            type => type.definition.name.value === field.name.value
-          ),
+          resources.find(resource => resource.definition.name.value === field.name.value),
           args
         );
       }
@@ -106,37 +114,37 @@ const rootResolvers = query.fields.reduce(
   {}
 );
 
-const listResolver = (type, field) => {
-  return async args => {
-    const bindings = await queryAllBindings(type, args);
+const listResolver = (resource: Resource, field: FieldDefinitionNode) => {
+  return async (args: object) => {
+    const bindings = await queryAllBindings(resource, args);
 
-    if (isUserDefined(type)) {
+    if (isUserDefined(resource)) {
       // TODO 汎化できていない
       const queries = bindings.map(async ({ adjacentPrefecture: iri }) => {
         const args = {
           name: iri.split("/").slice(-1)[0]
         };
 
-        return await queryFirstBinding(type, args);
+        return await queryFirstBinding(resource, args);
       });
 
       return await Promise.all(queries);
     } else {
-      console.log("BINDINGS", type, args, bindings)
-      return bindings.map(binding => binding[field.name.value]);
+      console.log("BINDINGS", resource, args, bindings)
+      return bindings.map((binding: object) => binding[field.name.value]);
     }
   };
 };
 
-const typeResolvers = typeDefs.reduce((acc, type) => {
+const resourceResolvers = resources.reduce((acc, type) => {
   return Object.assign(acc, {
     [type.definition.name.value]: type.definition.fields.reduce((acc, field) => {
-      let resolver;
+      let resolver: (args: object) => Promise<Array<Binding>>;
 
       if (field.type.kind === "ListType") {
         resolver = listResolver(type, field);
       } else if (isUserDefined(type)) {
-        resolver = async args => {
+        resolver = async (_args: object) => {
           // TODO 関連を引くロジック
           throw new Error("not implemented");
         }
@@ -152,7 +160,7 @@ const typeResolvers = typeDefs.reduce((acc, type) => {
 // クエリも定義する
 const root = {
   Query: rootResolvers,
-  ...typeResolvers
+  ...resourceResolvers
 };
 
 const port = process.env.PORT || 4000;
