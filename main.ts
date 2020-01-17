@@ -136,18 +136,19 @@ const listResolver = (resource: Resource, field: FieldDefinitionNode) => {
   };
 };
 
-const resourceResolvers = resources.reduce((acc, type) => {
+const resourceResolvers = resources.reduce((acc, resource) => {
   return Object.assign(acc, {
-    [type.definition.name.value]: type.definition.fields.reduce((acc, field) => {
+    [resource.definition.name.value]: resource.definition.fields.reduce((acc, field) => {
       let resolver: (args: object) => Promise<Array<Binding>>;
 
       if (field.type.kind === "ListType") {
-        resolver = listResolver(type, field);
-      } else if (isUserDefined(type)) {
-        resolver = async (_args: object) => {
-          // TODO 関連を引くロジック
-          throw new Error("not implemented");
-        }
+        resolver = listResolver(resource, field);
+      //} else if (isUserDefined(resource)) {
+      //  resolver = async (_args: object) => {
+      //    console.log(resource);
+      //    // TODO 関連を引くロジック
+      //    throw new Error("not implemented");
+      //  }
       } else {
         return acc;
       }
