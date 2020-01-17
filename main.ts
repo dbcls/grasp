@@ -15,7 +15,7 @@ class Resource {
   endpoint: string;
   query: CompiledTemplate;
 
-  constructor(definition: TypeDefinitionNode, endpoint: string, query: string) {
+  constructor(definition: ObjectTypeDefinitionNode, endpoint: string, query: string) {
     this.definition = definition;
     this.endpoint   = endpoint;
     this.query      = Handlebars.compile(query, { noEscape: true });
