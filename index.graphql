@@ -99,16 +99,16 @@ SELECT *
 FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
 WHERE
 {
-  OPTIONAL { ?db dcterms:references ?references }
-  { ?db dcterms:title ?title_ja . FILTER (lang(?title_ja) = "ja" ) }
-  OPTIONAL { ?db dcterms:title ?title_en . FILTER (lang(?title_en) = "en" ) }
-  { ?db dcterms:description ?description_ja . FILTER (lang(?description_ja) = "ja" ) }
-  OPTIONAL { ?db dcterms:description ?description_en . FILTER (lang(?description_en) = "en" ) }
-  FILTER (?db = <{{iri}}>)
+  OPTIONAL { ?iri dcterms:references ?references }
+  { ?iri dcterms:title ?title_ja . FILTER (lang(?title_ja) = "ja" ) }
+  OPTIONAL { ?iri dcterms:title ?title_en . FILTER (lang(?title_en) = "en" ) }
+  { ?iri dcterms:description ?description_ja . FILTER (lang(?description_ja) = "ja" ) }
+  OPTIONAL { ?iri dcterms:description ?description_en . FILTER (lang(?description_en) = "en" ) }
+  FILTER (?iri = <{{iri}}>)
 }
 """
 type Dataset {
-  db: String
+  iri: String
   title_ja: String
   title_en: String
   description_ja: String

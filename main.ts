@@ -118,21 +118,21 @@ const listResolver = (resource: Resource, field: FieldDefinitionNode) => {
   return async (args: object) => {
     const bindings = await queryAllBindings(resource, args);
 
-    if (isUserDefined(resource)) {
-      // TODO 汎化できていない
-      const queries = bindings.map(async ({ adjacentPrefecture: iri }) => {
-        const args = {
-          name: iri.split("/").slice(-1)[0]
-        };
+    //if (isUserDefined(resource)) {
+    //  // TODO 汎化できていない
+    //  const queries = bindings.map(async ({ adjacentPrefecture: iri }) => {
+    //    const args = {
+    //      name: iri.split("/").slice(-1)[0]
+    //    };
 
-        return await queryFirstBinding(resource, args);
-      });
+    //    return await queryFirstBinding(resource, args);
+    //  });
 
-      return await Promise.all(queries);
-    } else {
+    //  return await Promise.all(queries);
+    //} else {
       console.log("BINDINGS", resource, args, bindings)
       return bindings.map((binding: object) => binding[field.name.value]);
-    }
+    //}
   };
 };
 
