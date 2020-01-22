@@ -1,11 +1,12 @@
-import fetch from "node-fetch";
 import Handlebars = require("handlebars");
-import { URLSearchParams } from "url";
+import fetch from "node-fetch";
+import groupBy = require('lodash.groupby');
 import { ApolloServer } from "apollo-server";
+import { URLSearchParams } from "url";
 import { parse } from "graphql/language/parser";
 import { readFileSync } from "fs";
 
-import { ObjectTypeDefinitionNode, FieldDefinitionNode } from 'graphql';
+import { ObjectTypeDefinitionNode } from 'graphql';
 
 type CompiledTemplate = (args: object) => string;
 type Binding = object;
@@ -22,10 +23,9 @@ class Resource {
   }
 }
 
-// スキーマをユーザに定義してもらう
-const schemaDoc = parse(readFileSync("./index.graphql", "utf8"));
+const typeDefs = parse(readFileSync("./index.graphql", "utf8"));
 
-const resources: Array<Resource> = schemaDoc.definitions
+const resources: Array<Resource> = typeDefs.definitions
   .filter((def: ObjectTypeDefinitionNode) => def.name.value !== "Query")
   .map((def: ObjectTypeDefinitionNode) => {
     const description = def.description.value;
@@ -66,7 +66,7 @@ function mapValues(obj: object, fn: (val: any) => any): object {
   );
 }
 
-async function queryAllBindings(resource: Resource, args: object) {
+async function queryAllBindings(resource: Resource, args: object): Promise<Array<Binding>> {
   const sparqlParams = new URLSearchParams();
   sparqlParams.append("query", resource.query(args));
 
@@ -81,95 +81,63 @@ async function queryAllBindings(resource: Resource, args: object) {
   console.log("--- SPARQL RESULT ---", JSON.stringify(data, null, "  "));
 
   const unwrapped = data.results.bindings.map((b: object) => {
-    // TODO v の型に応じて変換する？最後に一括で変換したほうがいいかもしれない
     return mapValues(b, ({ value }) => value);
   });
 
   return unwrapped;
 }
 
-async function queryFirstBinding(resource: Resource, args: object) {
-  const bindings = await queryAllBindings(resource, args);
+const query = typeDefs.definitions.find((def: ObjectTypeDefinitionNode) => def.name.value === "Query") as ObjectTypeDefinitionNode;
 
-  return bindings[0];
-}
-
-function isUserDefined(resource: Resource) {
-  return resources.includes(resource);
-}
-
-const query = schemaDoc.definitions.find((def: ObjectTypeDefinitionNode) => def.name.value === "Query") as ObjectTypeDefinitionNode;
-
-const rootResolvers = query.fields.reduce(
+const queryResolvers = query.fields.reduce(
   (acc, field) =>
     Object.assign(acc, {
       [field.name.value]: async (_parent: object, args: object) => {
-        // TODO スキーマの型に応じて取り方を変える必要がある？
-        return await queryFirstBinding(
-          resources.find(resource => resource.definition.name.value === field.name.value),
-          args
-        );
+        const resource = resources.find(resource => resource.definition.name.value === field.name.value);
+        const bindings = await queryAllBindings(resource, args);
+
+        // TODO id -> iri
+        const entries = groupBy(bindings, 'id');
+
+        Object.entries(entries).forEach(([id, bindings]) => {
+          const attrs = {};
+
+          resource.definition.fields.forEach(field => {
+            const values = bindings.map(b => b[field.name.value]);
+
+            // TODO handle empty values case
+            attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
+          });
+
+          Object.assign(entries, {[id]: attrs});
+        });
+
+        // TODO return multiple entries if schema demands
+        return Object.values(entries)[0];
       }
     }),
   {}
 );
 
-const listResolver = (resource: Resource, field: FieldDefinitionNode) => {
-  return async (args: object) => {
-    const bindings = await queryAllBindings(resource, args);
-
-    //if (isUserDefined(resource)) {
-    //  // TODO 汎化できていない
-    //  const queries = bindings.map(async ({ adjacentPrefecture: iri }) => {
-    //    const args = {
-    //      name: iri.split("/").slice(-1)[0]
-    //    };
-
-    //    return await queryFirstBinding(resource, args);
-    //  });
-
-    //  return await Promise.all(queries);
-    //} else {
-      console.log("BINDINGS", resource, args, bindings)
-      return bindings.map((binding: object) => binding[field.name.value]);
-    //}
-  };
-};
-
 const resourceResolvers = resources.reduce((acc, resource) => {
   return Object.assign(acc, {
-    [resource.definition.name.value]: resource.definition.fields.reduce((acc, field) => {
-      let resolver: (args: object) => Promise<Array<Binding>>;
-
-      if (field.type.kind === "ListType") {
-        resolver = listResolver(resource, field);
-      //} else if (isUserDefined(resource)) {
-      //  resolver = async (_args: object) => {
-      //    console.log(resource);
-      //    // TODO 関連を引くロジック
-      //    throw new Error("not implemented");
-      //  }
-      } else {
-        return acc;
-      }
-
-      return Object.assign(acc, {[field.name.value]: resolver});
+    [resource.definition.name.value]: resource.definition.fields.reduce((acc, _field) => {
+      // TODO follow relationship if necessary
+      return acc;
     }, {})
   });
 }, {});
 
-// クエリも定義する
-const root = {
-  Query: rootResolvers,
+const rootResolvers = {
+  Query: queryResolvers,
   ...resourceResolvers
 };
 
 const port = process.env.PORT || 4000;
 
-// サーバを起動
 const server = new ApolloServer({
-  typeDefs: schemaDoc,
-  resolvers: root
+  typeDefs,
+  resolvers: rootResolvers
 });
 
 server.listen({ port }).then(({ url }) => {

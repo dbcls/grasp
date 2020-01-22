@@ -9,6 +9,7 @@
     "graphql": "^14.5.8",
     "graphql-tag": "^2.10.1",
     "handlebars": "^4.5.2",
+    "lodash.groupby": "^4.6.0",
     "node-fetch": "^2.6.0",
     "nodemon": "^2.0.1",
     "outdent": "^0.7.0",
@@ -18,5 +19,8 @@
   "scripts": {
     "start": "ts-node main.ts",
     "watch": "nodemon -e ts,graphql"
+  },
+  "devDependencies": {
+    "@types/lodash.groupby": "^4.6.6"
   }
 }
