@@ -4,6 +4,7 @@ type Query {
   """
   SequenceStatisticsReport(iri: String): SequenceStatisticsReport
   Dataset(iri: String): Dataset
+  Datasets(iri: String): [Dataset]
 }
 
 """
@@ -19,7 +20,7 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX pav: <http://purl.org/pav/>
 SELECT
-  ?quanto
+  ?iri
   ?id
   ?encoding
   ?file_type
@@ -37,28 +38,30 @@ SELECT
   ?total_seq
 FROM <http://quanto.dbcls.jp>
 WHERE {
-  ?quanto a sos:SequenceStatisticsReport .
-  ?quanto dct:identifier ?id .
-  ?quanto rdfs:seeAlso <http://identifiers.org/insdc.sra/ERR026579> .
-  ?quanto sos:fastqcVersion ?fastqc_version .
-  ?quanto sos:encoding ?encoding .
-  ?quanto sos:fileType ?file_type .
-  ?quanto pav:version ?version .
-  ?quanto dcterms:contributor ?contributor .
-  ?quanto sos:maxSequenceLength/rdf:value ?max_seq_len .
-  ?quanto sos:medianSequenceLength/rdf:value ?median_seq_len .
-  ?quanto sos:minSequenceLength/rdf:value ?min_seq_len .
-  ?quanto sos:overallMeanBaseCallQuality/rdf:value ?mean_bc_quality .
-  ?quanto sos:overallMedianBaseCallQuality/rdf:value ?median_bc_quality .
-  ?quanto sos:overallNContent/rdf:value ?n_content .
-  ?quanto sos:percentGC/rdf:value ?gc_content .
-  ?quanto sos:totalSequences/rdf:value ?total_seq .
-  ?quanto sos:filteredSequences/rdf:value ?filtered_seq .
+  ?iri a sos:SequenceStatisticsReport .
+  ?iri dct:identifier ?id .
+  ?iri rdfs:seeAlso <http://identifiers.org/insdc.sra/ERR026579> .
+  ?iri sos:fastqcVersion ?fastqc_version .
+  ?iri sos:encoding ?encoding .
+  ?iri sos:fileType ?file_type .
+  ?iri pav:version ?version .
+  ?iri dcterms:contributor ?contributor .
+  ?iri sos:maxSequenceLength/rdf:value ?max_seq_len .
+  ?iri sos:medianSequenceLength/rdf:value ?median_seq_len .
+  ?iri sos:minSequenceLength/rdf:value ?min_seq_len .
+  ?iri sos:overallMeanBaseCallQuality/rdf:value ?mean_bc_quality .
+  ?iri sos:overallMedianBaseCallQuality/rdf:value ?median_bc_quality .
+  ?iri sos:overallNContent/rdf:value ?n_content .
+  ?iri sos:percentGC/rdf:value ?gc_content .
+  ?iri sos:totalSequences/rdf:value ?total_seq .
+  ?iri sos:filteredSequences/rdf:value ?filtered_seq .
 
-  FILTER (?quanto = <{{iri}}>)
+  FILTER (?iri = <{{iri}}>)
 }
 """
 type SequenceStatisticsReport {
+  iri: String
+
   """
   Ideintifier. `dcterms:identifier`
   """

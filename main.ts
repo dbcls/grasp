@@ -11,6 +11,13 @@ import { ObjectTypeDefinitionNode, NamedTypeNode } from 'graphql';
 type CompiledTemplate = (args: object) => string;
 type Binding = object;
 
+function mapValues(obj: object, fn: (val: any) => any): object {
+  return Object.entries(obj).reduce(
+    (acc, [k, v]) => Object.assign(acc, { [k]: fn(v) }),
+    {}
+  );
+}
+
 class Resource {
   definition: ObjectTypeDefinitionNode;
   endpoint: string;
@@ -92,13 +99,6 @@ const resources = typeDefs.definitions
   .filter((def: ObjectTypeDefinitionNode) => def.name.value !== "Query")
   .map((def: ObjectTypeDefinitionNode) => Resource.buildFromTypeDefinition(def));
 
-function mapValues(obj: object, fn: (val: any) => any): object {
-  return Object.entries(obj).reduce(
-    (acc, [k, v]) => Object.assign(acc, { [k]: fn(v) }),
-    {}
-  );
-}
-
 const query = typeDefs.definitions.find((def: ObjectTypeDefinitionNode) => def.name.value === "Query") as ObjectTypeDefinitionNode;
 
 const queryResolvers = query.fields.reduce(
@@ -116,8 +116,7 @@ const queryResolvers = query.fields.reduce(
         const resource = Resource.lookup(resourceName);
         const bindings = await resource.query(args);
 
-        // TODO id -> iri
-        const entries = groupBy(bindings, 'id');
+        const entries = groupBy(bindings, 'iri');
 
         Object.entries(entries).forEach(([id, bindings]) => {
           const attrs = {};
