@@ -104,16 +104,15 @@ const queryResolvers = query.fields.reduce(
 
           resource.definition.fields.forEach(field => {
             const values = bindings.map(b => b[field.name.value]);
-
-            // TODO handle empty values case
             attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
           });
 
           Object.assign(entries, {[id]: attrs});
         });
 
-        // TODO return multiple entries if schema demands
-        return Object.values(entries)[0];
+        const values = Object.values(entries);
+
+        return field.type.kind === "ListType" ? values : values[0];
       }
     }),
   {}
