@@ -85,11 +85,9 @@ class Resource {
     const data = await fetch(this.endpoint, opts).then(res => res.json());
     console.log("--- SPARQL RESULT ---", JSON.stringify(data, null, "  "));
 
-    const unwrapped = data.results.bindings.map((b: object) => {
+    return data.results.bindings.map((b: Binding) => {
       return mapValues(b, ({ value }) => value);
     });
-
-    return unwrapped;
   }
 }
 
@@ -99,9 +97,9 @@ const resources = typeDefs.definitions
   .filter((def: ObjectTypeDefinitionNode) => def.name.value !== "Query")
   .map((def: ObjectTypeDefinitionNode) => Resource.buildFromTypeDefinition(def));
 
-const query = typeDefs.definitions.find((def: ObjectTypeDefinitionNode) => def.name.value === "Query") as ObjectTypeDefinitionNode;
+const queryDef = typeDefs.definitions.find((def: ObjectTypeDefinitionNode) => def.name.value === "Query") as ObjectTypeDefinitionNode;
 
-const queryResolvers = query.fields.reduce(
+const queryResolvers = queryDef.fields.reduce(
   (acc, field) =>
     Object.assign(acc, {
       [field.name.value]: async (_parent: object, args: object) => {
@@ -115,8 +113,7 @@ const queryResolvers = query.fields.reduce(
 
         const resource = Resource.lookup(resourceName);
         const bindings = await resource.query(args);
-
-        const entries = groupBy(bindings, 'iri');
+        const entries  = groupBy(bindings, 'iri');
 
         Object.entries(entries).forEach(([id, bindings]) => {
           const attrs = {};
