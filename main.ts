@@ -115,7 +115,7 @@ const queryResolvers = queryDef.fields.reduce(
         const bindings = await resource.query(args);
         const entries  = groupBy(bindings, 'iri');
 
-        Object.entries(entries).forEach(([id, bindings]) => {
+        Object.entries(entries).forEach(([iri, bindings]) => {
           const attrs = {};
 
           resource.definition.fields.forEach(field => {
@@ -123,7 +123,7 @@ const queryResolvers = queryDef.fields.reduce(
             attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
           });
 
-          Object.assign(entries, {[id]: attrs});
+          Object.assign(entries, {[iri]: attrs});
         });
 
         const values = Object.values(entries);
