@@ -6,7 +6,7 @@ import { URLSearchParams } from "url";
 import { parse } from "graphql/language/parser";
 import { readFileSync } from "fs";
 
-import { ObjectTypeDefinitionNode } from 'graphql';
+import { ObjectTypeDefinitionNode, NamedTypeNode } from 'graphql';
 
 type CompiledTemplate = (args: object) => string;
 type Binding = object;
@@ -93,7 +93,19 @@ const queryResolvers = query.fields.reduce(
   (acc, field) =>
     Object.assign(acc, {
       [field.name.value]: async (_parent: object, args: object) => {
-        const resource = resources.find(resource => resource.definition.name.value === field.name.value);
+        let resourceName;
+        if (field.type.kind === "ListType") {
+          // TODO field.type.type.kind can also be ListType
+          resourceName = (field.type.type as NamedTypeNode).name.value;
+        } else {
+          resourceName = (field.type as NamedTypeNode).name.value;
+        }
+
+        const resource = resources.find(resource => resource.definition.name.value === resourceName);
+        if (!resource) {
+          throw new Error(`resource ${resourceName} not found`);
+        }
+
         const bindings = await queryAllBindings(resource, args);
 
         // TODO id -> iri
