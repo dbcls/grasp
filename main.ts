@@ -91,6 +91,18 @@ class Resource {
   }
 }
 
+Handlebars.registerHelper('filter-by-iri', function(): string {
+  if (this.iri) {
+    return `FILTER (?iri = <${this.iri}>)`;
+  } else if (this.iris) {
+    const bracketed = this.iris.map(iri => `<${iri}>`);
+
+    return `FILTER (?iri IN (${bracketed.join(', ')}))`;
+  } else {
+    throw new Error('Requires eigher iri or iris as a query parameter');
+  }
+});
+
 const typeDefs = parse(readFileSync("./index.graphql", "utf8"));
 
 const resources = typeDefs.definitions

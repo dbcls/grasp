@@ -3,8 +3,9 @@ type Query {
   returns a quanto entry of IRI
   """
   SequenceStatisticsReport(iri: String): SequenceStatisticsReport
+  SequenceStatisticsReports(iris: [String]): [SequenceStatisticsReport]
   Dataset(iri: String): Dataset
-  Datasets(iri: String): [Dataset]
+  Datasets(iris: [String]): [Dataset]
 }
 
 """
@@ -56,7 +57,7 @@ WHERE {
   ?iri sos:totalSequences/rdf:value ?total_seq .
   ?iri sos:filteredSequences/rdf:value ?filtered_seq .
 
-  FILTER (?iri = <{{iri}}>)
+  {{filter-by-iri}}
 }
 """
 type SequenceStatisticsReport {
@@ -78,7 +79,7 @@ type SequenceStatisticsReport {
   file_type: String
   version: String
   fastqc_version: String
-  contributor: [String] # doesn't work yet
+  contributor: [String]
   min_seq_len: Float
   median_seq_len: Float
   max_seq_len: Float
@@ -107,7 +108,8 @@ WHERE
   OPTIONAL { ?iri dcterms:title ?title_en . FILTER (lang(?title_en) = "en" ) }
   { ?iri dcterms:description ?description_ja . FILTER (lang(?description_ja) = "ja" ) }
   OPTIONAL { ?iri dcterms:description ?description_en . FILTER (lang(?description_en) = "en" ) }
-  FILTER (?iri = <{{iri}}>)
+
+  {{filter-by-iri}}
 }
 """
 type Dataset {
