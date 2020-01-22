@@ -14,25 +14,30 @@ type Binding = object;
 class Resource {
   definition: ObjectTypeDefinitionNode;
   endpoint: string;
-  query: CompiledTemplate;
+  queryTemplate: CompiledTemplate;
 
-  constructor(definition: ObjectTypeDefinitionNode, endpoint: string, query: string) {
-    this.definition = definition;
-    this.endpoint   = endpoint;
-    this.query      = Handlebars.compile(query, { noEscape: true });
+  constructor(definition: ObjectTypeDefinitionNode, endpoint: string, sparql: string) {
+    this.definition    = definition;
+    this.endpoint      = endpoint;
+    this.queryTemplate = Handlebars.compile(sparql, { noEscape: true });
   }
-}
 
-const typeDefs = parse(readFileSync("./index.graphql", "utf8"));
+  static lookup(name: string): Resource {
+    const resource = resources.find(resource => resource.definition.name.value === name);
 
-const resources: Array<Resource> = typeDefs.definitions
-  .filter((def: ObjectTypeDefinitionNode) => def.name.value !== "Query")
-  .map((def: ObjectTypeDefinitionNode) => {
+    if (!resource) {
+      throw new Error(`resource ${name} not found`);
+    }
+
+    return resource;
+  }
+
+  static buildFromTypeDefinition(def: ObjectTypeDefinitionNode): Resource {
     const description = def.description.value;
     const lines = description.split(/\r?\n/);
 
     let endpoint: string,
-      query = "";
+      sparql = "";
     let state = null;
 
     lines.forEach((line: string) => {
@@ -51,13 +56,41 @@ const resources: Array<Resource> = typeDefs.definitions
           state = null;
           break;
         case "sparql":
-          query += line + "\n";
+          sparql += line + "\n";
           break;
       }
     });
 
-    return new Resource(def, endpoint, query);
-  });
+    return new Resource(def, endpoint, sparql);
+  }
+
+  async query(args: object): Promise<Array<Binding>> {
+    const sparqlParams = new URLSearchParams();
+    sparqlParams.append("query", this.queryTemplate(args));
+
+    const opts = {
+      method: "POST",
+      body: sparqlParams,
+      headers: {
+        Accept: "application/sparql-results+json"
+      }
+    };
+    const data = await fetch(this.endpoint, opts).then(res => res.json());
+    console.log("--- SPARQL RESULT ---", JSON.stringify(data, null, "  "));
+
+    const unwrapped = data.results.bindings.map((b: object) => {
+      return mapValues(b, ({ value }) => value);
+    });
+
+    return unwrapped;
+  }
+}
+
+const typeDefs = parse(readFileSync("./index.graphql", "utf8"));
+
+const resources = typeDefs.definitions
+  .filter((def: ObjectTypeDefinitionNode) => def.name.value !== "Query")
+  .map((def: ObjectTypeDefinitionNode) => Resource.buildFromTypeDefinition(def));
 
 function mapValues(obj: object, fn: (val: any) => any): object {
   return Object.entries(obj).reduce(
@@ -66,34 +99,13 @@ function mapValues(obj: object, fn: (val: any) => any): object {
   );
 }
 
-async function queryAllBindings(resource: Resource, args: object): Promise<Array<Binding>> {
-  const sparqlParams = new URLSearchParams();
-  sparqlParams.append("query", resource.query(args));
-
-  const opts = {
-    method: "POST",
-    body: sparqlParams,
-    headers: {
-      Accept: "application/sparql-results+json"
-    }
-  };
-  const data = await fetch(resource.endpoint, opts).then(res => res.json());
-  console.log("--- SPARQL RESULT ---", JSON.stringify(data, null, "  "));
-
-  const unwrapped = data.results.bindings.map((b: object) => {
-    return mapValues(b, ({ value }) => value);
-  });
-
-  return unwrapped;
-}
-
 const query = typeDefs.definitions.find((def: ObjectTypeDefinitionNode) => def.name.value === "Query") as ObjectTypeDefinitionNode;
 
 const queryResolvers = query.fields.reduce(
   (acc, field) =>
     Object.assign(acc, {
       [field.name.value]: async (_parent: object, args: object) => {
-        let resourceName;
+        let resourceName: string;
         if (field.type.kind === "ListType") {
           // TODO field.type.type.kind can also be ListType
           resourceName = (field.type.type as NamedTypeNode).name.value;
@@ -101,12 +113,8 @@ const queryResolvers = query.fields.reduce(
           resourceName = (field.type as NamedTypeNode).name.value;
         }
 
-        const resource = resources.find(resource => resource.definition.name.value === resourceName);
-        if (!resource) {
-          throw new Error(`resource ${resourceName} not found`);
-        }
-
-        const bindings = await queryAllBindings(resource, args);
+        const resource = Resource.lookup(resourceName);
+        const bindings = await resource.query(args);
 
         // TODO id -> iri
         const entries = groupBy(bindings, 'id');
