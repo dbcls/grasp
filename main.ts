@@ -78,7 +78,7 @@ async function queryAllBindings(resource: Resource, args: object) {
     }
   };
   const data = await fetch(resource.endpoint, opts).then(res => res.json());
-  console.log("RESPONSE!!", JSON.stringify(data, null, "  "));
+  console.log("--- SPARQL RESULT ---", JSON.stringify(data, null, "  "));
 
   const unwrapped = data.results.bindings.map((b: object) => {
     // TODO v の型に応じて変換する？最後に一括で変換したほうがいいかもしれない
