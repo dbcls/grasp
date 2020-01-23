@@ -99,7 +99,7 @@ Handlebars.registerHelper('filter-by-iri', function(): string {
 
     return `FILTER (?iri IN (${bracketed.join(', ')}))`;
   } else {
-    throw new Error('Requires eigher iri or iris as a query parameter');
+    throw new Error('Requires either iri or iris as a query parameter');
   }
 });
 
