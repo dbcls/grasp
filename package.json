@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@types/handlebars": "^4.1.0",
+    "@types/lodash.groupby": "^4.6.6",
     "@types/node": "^12.12.8",
     "@types/node-fetch": "^2.5.4",
     "apollo-server": "^2.9.9",
@@ -19,8 +20,5 @@
   "scripts": {
     "start": "ts-node main.ts",
     "watch": "nodemon -e ts,graphql"
-  },
-  "devDependencies": {
-    "@types/lodash.groupby": "^4.6.6"
   }
 }
