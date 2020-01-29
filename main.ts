@@ -113,9 +113,9 @@ Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | null, i
   if (this.iri) {
     return `FILTER (?iri = <${this.iri}>)`;
   } else if (this.iris) {
-    const bracketed = this.iris.map(iri => `<${iri}>`);
+    const refs = this.iris.map(iri => `<${iri}>`);
 
-    return `FILTER (?iri IN (${bracketed.join(', ')}))`;
+    return `FILTER (?iri IN (${refs.join(', ')}))`;
   } else {
     throw new Error('Requires either iri or iris as a query parameter');
   }
