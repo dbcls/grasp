@@ -11,11 +11,12 @@ import { ObjectTypeDefinitionNode, NamedTypeNode, isTypeDefinitionNode, Definiti
 type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
 
-function mapValues(obj: object, fn: (val: any) => any): object {
-  return Object.entries(obj).reduce(
-    (acc, [k, v]) => Object.assign(acc, { [k]: fn(v) }),
-    {}
-  );
+function mapValues<K extends string | number | symbol, V1, V2>(obj: Record<K, V1>, fn: (val: V1) => V2): Record<K, V2> {
+  return Object.entries(obj).reduce((acc, [k, v]) => (
+    Object.assign(acc, {
+      [k]: fn(v as V1)
+    })
+  ), {} as Record<K, V2>);
 }
 
 class Resource {
