@@ -86,8 +86,12 @@ class Resource {
   }
 
   async query(args: object): Promise<Array<Binding>> {
+    const sparqlQuery = this.queryTemplate(args);
+
+    console.log('--- SPARQL QUERY ---', sparqlQuery);
+
     const sparqlParams = new URLSearchParams();
-    sparqlParams.append("query", this.queryTemplate(args));
+    sparqlParams.append("query", sparqlQuery);
 
     const opts = {
       method: "POST",
