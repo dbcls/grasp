@@ -6,7 +6,7 @@ import { URLSearchParams } from "url";
 import { parse } from "graphql/language/parser";
 import { readFileSync } from "fs";
 
-import { ObjectTypeDefinitionNode, NamedTypeNode, isTypeDefinitionNode, DefinitionNode, isListType, isNamedType, DocumentNode } from 'graphql';
+import { ObjectTypeDefinitionNode, NamedTypeNode, DefinitionNode, DocumentNode } from 'graphql';
 
 type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
@@ -142,6 +142,10 @@ class SchemaLoader {
 
     this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== "Query");
   }
+
+  isUserDefined(type: NamedTypeNode): boolean {
+    return this.resourceTypeDefs.some(def => def.name.value === type.name.value);
+  }
 }
 
 const loader = new SchemaLoader(readFileSync("./index.graphql", "utf8"));
@@ -185,10 +189,35 @@ const queryResolvers = (loader.queryDef.fields || []).reduce(
 const resources = loader.resourceTypeDefs
   .map(def => Resource.buildFromTypeDefinition(def));
 
-const resourceResolvers = resources.reduce((acc, resource) => {
+const resourceResolvers: Record<string, any> = resources.reduce((acc, resource) => {
   return Object.assign(acc, {
-    [resource.definition.name.value]: (resource.definition.fields || []).reduce((acc, _field) => {
-      // TODO follow relationship if necessary
+    [resource.definition.name.value]: (resource.definition.fields || []).reduce((acc, field) => {
+      // TODO consider ListType
+      if (field.type.kind === 'NamedType' && loader.isUserDefined(field.type)) {
+        return Object.assign(acc, {[field.name.value]: async (parent: Record<string, any>) => {
+          const resource = Resource.lookup((field.type as NamedTypeNode).name.value);
+
+          const bindings = await resource.query({iri: parent.references});
+
+          const entries  = groupBy(bindings, 's');
+          Object.entries(entries).forEach(([iri, bindings]) => {
+            const assoc = mapValues(groupBy(bindings, 'p'), (bindings) => bindings.map(b => b.o));
+
+            const attrs: Record<string, any> = {};
+            (resource.definition.fields || []).forEach(field => {
+              const values = assoc[field.name.value] || [];
+              attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
+            });
+
+            Object.assign(entries, {[iri]: attrs});
+          });
+
+          const values = Object.values(entries);
+
+          return field.type.kind === "ListType" ? values : values[0];
+        }});
+      }
+
       return acc;
     }, {})
   });

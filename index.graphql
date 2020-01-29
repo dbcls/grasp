@@ -127,7 +127,9 @@ type Dataset {
   title_en: String
   description_ja: String
   description_en: String
-  references: [PubmedReference]
+
+  # TODO ListType
+  references: PubmedReference
 }
 
 """
@@ -139,8 +141,8 @@ PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
 
 CONSTRUCT {
-  ?iri <iri> ?iri
-  ?title <title> ?title
+  ?iri <iri> ?iri .
+  ?iri <title> ?title .
 }
 WHERE
 {
