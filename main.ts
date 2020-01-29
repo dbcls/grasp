@@ -166,7 +166,9 @@ const queryResolvers = (loader.queryDef.fields || []).reduce(
           const attrs: Record<string, any> = {};
 
           (resource.definition.fields || []).forEach(field => {
-            const values = bindings.map(b => b[field.name.value]);
+            const values = bindings.reduce((acc: Array<Binding>, b) =>
+              b.hasOwnProperty(field.name.value) ? [...acc, b[field.name.value]] : acc,
+            []);
             attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
           });
 
