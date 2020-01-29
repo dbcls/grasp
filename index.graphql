@@ -103,10 +103,10 @@ SELECT *
 FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
 WHERE
 {
-  OPTIONAL { ?iri dcterms:references ?references }
   { ?iri dcterms:title ?title_ja . FILTER (lang(?title_ja) = "ja" ) }
-  OPTIONAL { ?iri dcterms:title ?title_en . FILTER (lang(?title_en) = "en" ) }
   { ?iri dcterms:description ?description_ja . FILTER (lang(?description_ja) = "ja" ) }
+  OPTIONAL { ?iri dcterms:references ?references }
+  OPTIONAL { ?iri dcterms:title ?title_en . FILTER (lang(?title_en) = "en" ) }
   OPTIONAL { ?iri dcterms:description ?description_en . FILTER (lang(?description_en) = "en" ) }
 
   {{filter-by-iri}}
