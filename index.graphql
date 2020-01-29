@@ -20,23 +20,25 @@ PREFIX quanto: <http://purl.jp/bio/01/quanto/resource/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX pav: <http://purl.org/pav/>
-SELECT
-  ?iri
-  ?id
-  ?encoding
-  ?file_type
-  ?version
-  ?contributor
-  ?fastqc_version
-  ?filtered_seq
-  ?min_seq_len
-  ?median_seq_len
-  ?max_seq_len
-  ?mean_bc_quality
-  ?median_bc_quality
-  ?n_content
-  ?gc_content
-  ?total_seq
+
+CONSTRUCT {
+  ?iri <iri> ?iri .
+  ?iri <id> ?id .
+  ?iri <encoding> ?encoding .
+  ?iri <file_type> ?file_type .
+  ?iri <version> ?version .
+  ?iri <contributor> ?contributor .
+  ?iri <fastqc_version> ?fastqc_version .
+  ?iri <filtered_seq> ?filtered_seq .
+  ?iri <min_seq_len> ?min_seq_len .
+  ?iri <median_seq_len> ?median_seq_len .
+  ?iri <max_seq_len> ?max_seq_len .
+  ?iri <mean_bc_quality> ?mean_bc_quality .
+  ?iri <median_bc_quality> ?median_bc_quality .
+  ?iri <n_content> ?n_content .
+  ?iri <gc_content> ?gc_content .
+  ?iri <total_seq> ?total_seq .
+}
 FROM <http://quanto.dbcls.jp>
 WHERE {
   ?iri a sos:SequenceStatisticsReport .
@@ -99,7 +101,14 @@ https://integbio.jp/rdf/sparql
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
 
-SELECT *
+CONSTRUCT {
+  ?iri <iri> ?iri .
+  ?iri <title_ja> ?title_ja .
+  ?iri <title_en> ?title_en .
+  ?iri <description_en> ?description_en .
+  ?iri <description_ja> ?description_ja .
+  ?iri <references> ?references .
+}
 FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
 WHERE
 {

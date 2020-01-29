@@ -160,15 +160,14 @@ const queryResolvers = (loader.queryDef.fields || []).reduce(
 
         const resource = Resource.lookup(resourceName);
         const bindings = await resource.query(args);
-        const entries  = groupBy(bindings, 'iri');
 
+        const entries  = groupBy(bindings, 's');
         Object.entries(entries).forEach(([iri, bindings]) => {
-          const attrs: Record<string, any> = {};
+          const assoc = mapValues(groupBy(bindings, 'p'), (bindings) => bindings.map(b => b.o));
 
+          const attrs: Record<string, any> = {};
           (resource.definition.fields || []).forEach(field => {
-            const values = bindings.reduce((acc: Array<Binding>, b) =>
-              b.hasOwnProperty(field.name.value) ? [...acc, b[field.name.value]] : acc,
-            []);
+            const values = assoc[field.name.value] || [];
             attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
           });
 
