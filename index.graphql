@@ -127,5 +127,32 @@ type Dataset {
   title_en: String
   description_ja: String
   description_en: String
-  references: [String]
+  references: [PubmedReference]
+}
+
+"""
+--- endpoint ---
+https://integbio.jp/rdf/sparql
+
+--- sparql ---
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
+
+CONSTRUCT {
+  ?iri <iri> ?iri
+  ?title <title> ?title
+}
+WHERE
+{
+  { ?iri dcterms:title ?title . }
+
+  {{filter-by-iri}}
+}
+"""
+type PubmedReference {
+  iri: String
+  title: String
+  date: String
+  creator: String
+  publicationName: String
 }
