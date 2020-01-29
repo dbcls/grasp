@@ -6,7 +6,7 @@ import { URLSearchParams } from "url";
 import { parse } from "graphql/language/parser";
 import { readFileSync } from "fs";
 
-import { ObjectTypeDefinitionNode, NamedTypeNode, isTypeDefinitionNode, DefinitionNode } from 'graphql';
+import { ObjectTypeDefinitionNode, NamedTypeNode, isTypeDefinitionNode, DefinitionNode, isListType, isNamedType, DocumentNode } from 'graphql';
 
 type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
@@ -117,23 +117,32 @@ Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | null, i
   }
 });
 
-const typeDefs = parse(readFileSync("./index.graphql", "utf8"));
-
 const isObjectTypeDefinitionNode = (value: DefinitionNode): value is ObjectTypeDefinitionNode => value.kind === "ObjectTypeDefinition";
 
-const typeDefinitionNodes = typeDefs.definitions
-.filter((def): def is ObjectTypeDefinitionNode => isObjectTypeDefinitionNode(def));
+class SchemaLoader {
+  originalTypeDefs: DocumentNode;
+  queryDef: ObjectTypeDefinitionNode;
+  resourceTypeDefs: Array<ObjectTypeDefinitionNode>;
 
-const resources = typeDefinitionNodes
-.filter(def => def.name.value !== "Query")
-  .map(def => Resource.buildFromTypeDefinition(def));
+  constructor(graphql: string) {
+    this.originalTypeDefs = parse(graphql);
 
-const queryDef = typeDefinitionNodes.find(def => def.name.value === "Query");
-if (!queryDef) {
-  throw new Error("Query is not defined");
+    const typeDefinitionNodes = this.originalTypeDefs.definitions
+      .filter((def): def is ObjectTypeDefinitionNode => isObjectTypeDefinitionNode(def));
+
+    const queryDef = typeDefinitionNodes.find(def => def.name.value === "Query");
+    if (!queryDef) {
+      throw new Error("Query is not defined");
+    }
+    this.queryDef = queryDef;
+
+    this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== "Query");
+  }
 }
 
-const queryResolvers = (queryDef.fields || []).reduce(
+const loader = new SchemaLoader(readFileSync("./index.graphql", "utf8"));
+
+const queryResolvers = (loader.queryDef.fields || []).reduce(
   (acc, field) =>
     Object.assign(acc, {
       [field.name.value]: async (_parent: object, args: object) => {
@@ -168,6 +177,9 @@ const queryResolvers = (queryDef.fields || []).reduce(
   {}
 );
 
+const resources = loader.resourceTypeDefs
+  .map(def => Resource.buildFromTypeDefinition(def));
+
 const resourceResolvers = resources.reduce((acc, resource) => {
   return Object.assign(acc, {
     [resource.definition.name.value]: (resource.definition.fields || []).reduce((acc, _field) => {
@@ -185,7 +197,7 @@ const rootResolvers = {
 const port = process.env.PORT || 4000;
 
 const server = new ApolloServer({
-  typeDefs,
+  typeDefs: loader.originalTypeDefs,
   resolvers: rootResolvers
 });
 
