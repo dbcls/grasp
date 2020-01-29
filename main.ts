@@ -6,10 +6,10 @@ import { URLSearchParams } from "url";
 import { parse } from "graphql/language/parser";
 import { readFileSync } from "fs";
 
-import { ObjectTypeDefinitionNode, NamedTypeNode } from 'graphql';
+import { ObjectTypeDefinitionNode, NamedTypeNode, isTypeDefinitionNode, DefinitionNode } from 'graphql';
 
 type CompiledTemplate = (args: object) => string;
-type Binding = object;
+type Binding = Record<string, any>;
 
 function mapValues(obj: object, fn: (val: any) => any): object {
   return Object.entries(obj).reduce(
@@ -30,7 +30,7 @@ class Resource {
   }
 
   static lookup(name: string): Resource {
-    const resource = resources.find(resource => resource.definition.name.value === name);
+    const resource = resources.find((resource: Resource) => resource.definition.name.value === name);
 
     if (!resource) {
       throw new Error(`resource ${name} not found`);
@@ -40,34 +40,47 @@ class Resource {
   }
 
   static buildFromTypeDefinition(def: ObjectTypeDefinitionNode): Resource {
+    if (!def.description) {
+      throw new Error(`description for type ${def.name.value} is not defined`);
+    }
     const description = def.description.value;
     const lines = description.split(/\r?\n/);
 
-    let endpoint: string,
+    let endpoint: string | null = null,
       sparql = "";
-    let state = null;
+
+    enum State {
+      Default,
+      Endpoint,
+      Sparql,
+    };
+    let state: State = State.Default;
 
     lines.forEach((line: string) => {
       switch (line) {
         case "--- endpoint ---":
-          state = "endpoint";
+          state = State.Endpoint;
           return;
         case "--- sparql ---":
-          state = "sparql";
+          state = State.Sparql;
           return;
       }
 
       switch (state) {
-        case "endpoint":
+        case State.Endpoint:
           endpoint = line;
-          state = null;
+          state = State.Default;
           break;
-        case "sparql":
+        case State.Sparql:
           sparql += line + "\n";
           break;
       }
     });
 
+    if (!endpoint) {
+      throw new Error("endpoint is not defined for type ${def.name.value}")
+
+    }
     return new Resource(def, endpoint, sparql);
   }
 
@@ -91,7 +104,7 @@ class Resource {
   }
 }
 
-Handlebars.registerHelper('filter-by-iri', function(): string {
+Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | null, iris: string[] | null}): string {
   if (this.iri) {
     return `FILTER (?iri = <${this.iri}>)`;
   } else if (this.iris) {
@@ -105,13 +118,21 @@ Handlebars.registerHelper('filter-by-iri', function(): string {
 
 const typeDefs = parse(readFileSync("./index.graphql", "utf8"));
 
-const resources = typeDefs.definitions
-  .filter((def: ObjectTypeDefinitionNode) => def.name.value !== "Query")
-  .map((def: ObjectTypeDefinitionNode) => Resource.buildFromTypeDefinition(def));
+const isObjectTypeDefinitionNode = (value: DefinitionNode): value is ObjectTypeDefinitionNode => value.kind === "ObjectTypeDefinition";
 
-const queryDef = typeDefs.definitions.find((def: ObjectTypeDefinitionNode) => def.name.value === "Query") as ObjectTypeDefinitionNode;
+const typeDefinitionNodes = typeDefs.definitions
+.filter((def): def is ObjectTypeDefinitionNode => isObjectTypeDefinitionNode(def));
 
-const queryResolvers = queryDef.fields.reduce(
+const resources = typeDefinitionNodes
+.filter(def => def.name.value !== "Query")
+  .map(def => Resource.buildFromTypeDefinition(def));
+
+const queryDef = typeDefinitionNodes.find(def => def.name.value === "Query");
+if (!queryDef) {
+  throw new Error("Query is not defined");
+}
+
+const queryResolvers = (queryDef.fields || []).reduce(
   (acc, field) =>
     Object.assign(acc, {
       [field.name.value]: async (_parent: object, args: object) => {
@@ -128,9 +149,9 @@ const queryResolvers = queryDef.fields.reduce(
         const entries  = groupBy(bindings, 'iri');
 
         Object.entries(entries).forEach(([iri, bindings]) => {
-          const attrs = {};
+          const attrs: Record<string, any> = {};
 
-          resource.definition.fields.forEach(field => {
+          (resource.definition.fields || []).forEach(field => {
             const values = bindings.map(b => b[field.name.value]);
             attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
           });
@@ -148,7 +169,7 @@ const queryResolvers = queryDef.fields.reduce(
 
 const resourceResolvers = resources.reduce((acc, resource) => {
   return Object.assign(acc, {
-    [resource.definition.name.value]: resource.definition.fields.reduce((acc, _field) => {
+    [resource.definition.name.value]: (resource.definition.fields || []).reduce((acc, _field) => {
       // TODO follow relationship if necessary
       return acc;
     }, {})
