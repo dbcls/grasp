@@ -1,11 +1,11 @@
-import Handlebars = require("handlebars");
-import fetch from "node-fetch";
+import Handlebars = require('handlebars');
+import fetch from 'node-fetch';
 import groupBy = require('lodash.groupby');
 import mapValues = require('lodash.mapvalues');
-import { ApolloServer } from "apollo-server";
-import { URLSearchParams } from "url";
-import { parse } from "graphql/language/parser";
-import { readFileSync } from "fs";
+import { ApolloServer } from 'apollo-server';
+import { URLSearchParams } from 'url';
+import { parse } from 'graphql/language/parser';
+import { readFileSync } from 'fs';
 
 import { ObjectTypeDefinitionNode, TypeNode, NamedTypeNode, DefinitionNode, DocumentNode } from 'graphql';
 
@@ -68,7 +68,7 @@ class Resource {
     const lines = description.split(/\r?\n/);
 
     let endpoint: string | null = null,
-      sparql = "";
+      sparql = '';
 
     enum State {
       Default,
@@ -79,10 +79,10 @@ class Resource {
 
     lines.forEach((line: string) => {
       switch (line) {
-        case "--- endpoint ---":
+        case '--- endpoint ---':
           state = State.Endpoint;
           return;
-        case "--- sparql ---":
+        case '--- sparql ---':
           state = State.Sparql;
           return;
       }
@@ -93,13 +93,13 @@ class Resource {
           state = State.Default;
           break;
         case State.Sparql:
-          sparql += line + "\n";
+          sparql += line + '\n';
           break;
       }
     });
 
     if (!endpoint) {
-      throw new Error("endpoint is not defined for type ${def.name.value}")
+      throw new Error('endpoint is not defined for type ${def.name.value}')
 
     }
     return new Resource(def, endpoint, sparql);
@@ -130,17 +130,17 @@ class Resource {
     console.log('--- SPARQL QUERY ---', sparqlQuery);
 
     const sparqlParams = new URLSearchParams();
-    sparqlParams.append("query", sparqlQuery);
+    sparqlParams.append('query', sparqlQuery);
 
     const opts = {
-      method: "POST",
+      method: 'POST',
       body: sparqlParams,
       headers: {
-        Accept: "application/sparql-results+json"
+        Accept: 'application/sparql-results+json'
       }
     };
     const data = await fetch(this.endpoint, opts).then(res => res.json());
-    console.log("--- SPARQL RESULT ---", JSON.stringify(data, null, "  "));
+    console.log('--- SPARQL RESULT ---', JSON.stringify(data, null, '  '));
 
     return data.results.bindings.map((b: Binding) => {
       return mapValues(b, ({ value }) => value);
@@ -157,7 +157,7 @@ Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[
   }
 });
 
-const isObjectTypeDefinitionNode = (value: DefinitionNode): value is ObjectTypeDefinitionNode => value.kind === "ObjectTypeDefinition";
+const isObjectTypeDefinitionNode = (value: DefinitionNode): value is ObjectTypeDefinitionNode => value.kind === 'ObjectTypeDefinition';
 
 class SchemaLoader {
   originalTypeDefs: DocumentNode;
@@ -170,13 +170,13 @@ class SchemaLoader {
     const typeDefinitionNodes = this.originalTypeDefs.definitions
       .filter((def): def is ObjectTypeDefinitionNode => isObjectTypeDefinitionNode(def));
 
-    const queryDef = typeDefinitionNodes.find(def => def.name.value === "Query");
+    const queryDef = typeDefinitionNodes.find(def => def.name.value === 'Query');
     if (!queryDef) {
-      throw new Error("Query is not defined");
+      throw new Error('Query is not defined');
     }
     this.queryDef = queryDef;
 
-    this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== "Query");
+    this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== 'Query');
   }
 
   isUserDefined(type: TypeNode): boolean {
@@ -186,7 +186,7 @@ class SchemaLoader {
   }
 }
 
-const loader = new SchemaLoader(readFileSync("./index.graphql", "utf8"));
+const loader = new SchemaLoader(readFileSync('./index.graphql', 'utf8'));
 
 const queryResolvers: Record<string, ResourceResolver> = {};
 
