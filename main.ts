@@ -6,10 +6,11 @@ import { URLSearchParams } from "url";
 import { parse } from "graphql/language/parser";
 import { readFileSync } from "fs";
 
-import { ObjectTypeDefinitionNode, TypeNode, NamedTypeNode, DefinitionNode, DocumentNode, ListTypeNode } from 'graphql';
+import { ObjectTypeDefinitionNode, TypeNode, NamedTypeNode, DefinitionNode, DocumentNode } from 'graphql';
 
 type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
+type Entry = Record<string, any>;
 
 function mapValues<K extends string | number | symbol, V1, V2>(obj: Record<K, V1>, fn: (val: V1) => V2): Record<K, V2> {
   return Object.entries(obj).reduce((acc, [k, v]) => (
@@ -85,6 +86,27 @@ class Resource {
     return new Resource(def, endpoint, sparql);
   }
 
+  async fetch(args: object, one = false): Promise<Entry[]> {
+    const bindings = await this.query(args);
+
+    const entries  = groupBy(bindings, 's');
+    Object.entries(entries).forEach(([iri, bindings]) => {
+      const assoc = mapValues(groupBy(bindings, 'p'), (bindings) => bindings.map(b => b.o));
+
+      const attrs: Entry = {};
+      (this.definition.fields || []).forEach(field => {
+        const values = assoc[field.name.value] || [];
+        attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
+      });
+
+      Object.assign(entries, {[iri]: attrs});
+    });
+
+    const values = Object.values(entries);
+
+    return one ? values[0] : values;
+  }
+
   async query(args: object): Promise<Array<Binding>> {
     const sparqlQuery = this.queryTemplate(args);
 
@@ -154,37 +176,25 @@ class SchemaLoader {
 
 const loader = new SchemaLoader(readFileSync("./index.graphql", "utf8"));
 
+function unwrapListType(type: TypeNode): NamedTypeNode {
+  switch (type.kind) {
+    case 'NamedType':
+      return type;
+    case 'ListType':
+      return unwrapListType(type.type);
+    default:
+      throw new Error(`unsupported type: ${type.kind}`);
+  }
+}
+
 const queryResolvers = (loader.queryDef.fields || []).reduce(
   (acc, field) =>
     Object.assign(acc, {
       [field.name.value]: async (_parent: object, args: object) => {
-        let resourceName: string;
-        if (field.type.kind === "ListType") {
-          // TODO field.type.type.kind can also be ListType
-          resourceName = (field.type.type as NamedTypeNode).name.value;
-        } else {
-          resourceName = (field.type as NamedTypeNode).name.value;
-        }
-
+        const resourceName = unwrapListType(field.type).name.value;
         const resource = Resource.lookup(resourceName);
-        const bindings = await resource.query(args);
 
-        const entries  = groupBy(bindings, 's');
-        Object.entries(entries).forEach(([iri, bindings]) => {
-          const assoc = mapValues(groupBy(bindings, 'p'), (bindings) => bindings.map(b => b.o));
-
-          const attrs: Record<string, any> = {};
-          (resource.definition.fields || []).forEach(field => {
-            const values = assoc[field.name.value] || [];
-            attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
-          });
-
-          Object.assign(entries, {[iri]: attrs});
-        });
-
-        const values = Object.values(entries);
-
-        return field.type.kind === "ListType" ? values : values[0];
+        return await resource.fetch(args, field.type.kind !== "ListType")
       }
     }),
   {}
@@ -195,58 +205,17 @@ const resources = loader.resourceTypeDefs
 
 const resourceResolvers: Record<string, any> = resources.reduce((acc, resource) => {
   return Object.assign(acc, {
-    [resource.definition.name.value]: (resource.definition.fields || []).reduce((acc, field) => {
-      if (!loader.isUserDefined(field.type)) {
-        return acc;
-      }
-      // TODO remove code duplication
-      if (field.type.kind === 'NamedType') {
-        return Object.assign(acc, {[field.name.value]: async (parent: Record<string, any>) => {
-          const resource = Resource.lookup((field.type as NamedTypeNode).name.value);
+    [resource.definition.name.value]: (resource.definition.fields || []).reduce((acc: Record<string, Function>, field) => {
+      if (!loader.isUserDefined(field.type)) { return acc; }
 
-          const bindings = await resource.query({iri: parent[field.name.value]});
+      const resourceName = unwrapListType(field.type).name.value;
+      const resource = Resource.lookup(resourceName);
 
-          const entries  = groupBy(bindings, 's');
-          Object.entries(entries).forEach(([iri, bindings]) => {
-            const assoc = mapValues(groupBy(bindings, 'p'), (bindings) => bindings.map(b => b.o));
+      acc[field.name.value] = async (parent: Entry): Promise<Entry | Entry[]> => {
+        const args = {iri: parent[field.name.value]};
 
-            const attrs: Record<string, any> = {};
-            (resource.definition.fields || []).forEach(field => {
-              const values = assoc[field.name.value] || [];
-              attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
-            });
-
-            Object.assign(entries, {[iri]: attrs});
-          });
-
-          const values = Object.values(entries);
-
-          return field.type.kind === "ListType" ? values : values[0];
-        }});
-      } else if (field.type.kind == 'ListType') {
-        return Object.assign(acc, {[field.name.value]: async (parent: Record<string, any>) => {
-          const resource = Resource.lookup(((field.type as ListTypeNode).type as NamedTypeNode).name.value);
-
-          const bindings = await resource.query({iri: parent[field.name.value]});
-
-          const entries  = groupBy(bindings, 's');
-          Object.entries(entries).forEach(([iri, bindings]) => {
-            const assoc = mapValues(groupBy(bindings, 'p'), (bindings) => bindings.map(b => b.o));
-
-            const attrs: Record<string, any> = {};
-            (resource.definition.fields || []).forEach(field => {
-              const values = assoc[field.name.value] || [];
-              attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
-            });
-
-            Object.assign(entries, {[iri]: attrs});
-          });
-
-          const values = Object.values(entries);
-
-          return field.type.kind === "ListType" ? values : values[0];
-        }});
-      }
+        return await resource.fetch(args, field.type.kind !== "ListType");
+      };
 
       return acc;
     }, {})
