@@ -109,15 +109,12 @@ class Resource {
   }
 }
 
-Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | null, iris: string[] | null}): string {
-  if (this.iri) {
-    return `FILTER (?iri = <${this.iri}>)`;
-  } else if (this.iris) {
-    const refs = this.iris.map(iri => `<${iri}>`);
-
+Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[]}): string {
+  if (Array.isArray(this.iri)) {
+    const refs = this.iri.map(iri => `<${iri}>`);
     return `FILTER (?iri IN (${refs.join(', ')}))`;
   } else {
-    throw new Error('Requires either iri or iris as a query parameter');
+    return `FILTER (?iri = <${this.iri}>)`;
   }
 });
 
@@ -230,7 +227,7 @@ const resourceResolvers: Record<string, any> = resources.reduce((acc, resource) 
         return Object.assign(acc, {[field.name.value]: async (parent: Record<string, any>) => {
           const resource = Resource.lookup(((field.type as ListTypeNode).type as NamedTypeNode).name.value);
 
-          const bindings = await resource.query({iris: parent[field.name.value]});
+          const bindings = await resource.query({iri: parent[field.name.value]});
 
           const entries  = groupBy(bindings, 's');
           Object.entries(entries).forEach(([iri, bindings]) => {

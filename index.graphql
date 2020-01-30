@@ -3,9 +3,9 @@ type Query {
   returns a quanto entry of IRI
   """
   SequenceStatisticsReport(iri: String): SequenceStatisticsReport
-  SequenceStatisticsReports(iris: [String]): [SequenceStatisticsReport]
+  SequenceStatisticsReports(iri: [String]): [SequenceStatisticsReport]
   Dataset(iri: String): Dataset
-  Datasets(iris: [String]): [Dataset]
+  Datasets(iri: [String]): [Dataset]
 }
 
 """
