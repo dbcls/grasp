@@ -106,10 +106,9 @@ class Resource {
   }
 
   async fetch(args: object, one = false): Promise<ResourceEntry[] | ResourceEntry> {
-    const entries: ResourceEntry[] = [];
     const bindings = await this.query(args);
 
-    Object.entries(groupBy(bindings, 's')).forEach(([s, sBindings]) => {
+    const entries = Object.entries(groupBy(bindings, 's')).map(([_s, sBindings]) => {
       const entry: ResourceEntry = {};
       const pValues = mapValues(groupBy(sBindings, 'p'), bs => bs.map(({o}) => o));
 
@@ -119,7 +118,7 @@ class Resource {
         entry[field.name.value] = isListType(field.type) ? values : values[0];
       });
 
-      entries.push(entry);
+      return entry;
     });
 
     return one ? entries[0] : entries;
