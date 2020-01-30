@@ -1,6 +1,7 @@
 import Handlebars = require("handlebars");
 import fetch from "node-fetch";
 import groupBy = require('lodash.groupby');
+import mapValues = require('lodash.mapvalues');
 import { ApolloServer } from "apollo-server";
 import { URLSearchParams } from "url";
 import { parse } from "graphql/language/parser";
@@ -12,14 +13,6 @@ type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
 type ResourceEntry = Record<string, any>;
 type ResourceResolver = (parent: ResourceEntry, args: object) => Promise<ResourceEntry | ResourceEntry[]>;
-
-function mapValues<K extends string | number | symbol, V1, V2>(obj: Record<K, V1>, fn: (val: V1) => V2): Record<K, V2> {
-  return Object.entries(obj).reduce((acc, [k, v]) => (
-    Object.assign(acc, {
-      [k]: fn(v as V1)
-    })
-  ), {} as Record<K, V2>);
-}
 
 function unwrapCompositeType(type: TypeNode): NamedTypeNode {
   switch (type.kind) {
@@ -112,25 +105,24 @@ class Resource {
     return new Resource(def, endpoint, sparql);
   }
 
-  async fetch(args: object, one = false): Promise<ResourceEntry[]> {
+  async fetch(args: object, one = false): Promise<ResourceEntry[] | ResourceEntry> {
+    const entries: ResourceEntry[] = [];
     const bindings = await this.query(args);
 
-    const entries  = groupBy(bindings, 's');
-    Object.entries(entries).forEach(([iri, bindings]) => {
-      const assoc = mapValues(groupBy(bindings, 'p'), (bindings) => bindings.map(b => b.o));
+    Object.entries(groupBy(bindings, 's')).forEach(([s, sBindings]) => {
+      const entry: ResourceEntry = {};
+      const pValues = mapValues(groupBy(sBindings, 'p'), bs => bs.map(({o}) => o));
 
-      const attrs: ResourceEntry = {};
       (this.definition.fields || []).forEach(field => {
-        const values = assoc[field.name.value] || [];
-        attrs[field.name.value] = isListType(field.type) ? values : values[0];
+        const values = pValues[field.name.value];
+
+        entry[field.name.value] = isListType(field.type) ? values : values[0];
       });
 
-      Object.assign(entries, {[iri]: attrs});
+      entries.push(entry);
     });
 
-    const values = Object.values(entries);
-
-    return one ? values[0] : values;
+    return one ? entries[0] : entries;
   }
 
   async query(args: object): Promise<Array<Binding>> {
