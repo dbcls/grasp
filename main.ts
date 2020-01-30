@@ -157,8 +157,6 @@ Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[
   }
 });
 
-const isObjectTypeDefinitionNode = (value: DefinitionNode): value is ObjectTypeDefinitionNode => value.kind === 'ObjectTypeDefinition';
-
 class SchemaLoader {
   originalTypeDefs: DocumentNode;
   queryDef: ObjectTypeDefinitionNode;
@@ -168,7 +166,7 @@ class SchemaLoader {
     this.originalTypeDefs = parse(graphql);
 
     const typeDefinitionNodes = this.originalTypeDefs.definitions
-      .filter((def): def is ObjectTypeDefinitionNode => isObjectTypeDefinitionNode(def));
+      .filter((def): def is ObjectTypeDefinitionNode => def.kind === 'ObjectTypeDefinition');
 
     const queryDef = typeDefinitionNodes.find(def => def.name.value === 'Query');
     if (!queryDef) {
