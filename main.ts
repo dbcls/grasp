@@ -6,7 +6,7 @@ import { URLSearchParams } from "url";
 import { parse } from "graphql/language/parser";
 import { readFileSync } from "fs";
 
-import { ObjectTypeDefinitionNode, NamedTypeNode, DefinitionNode, DocumentNode } from 'graphql';
+import { ObjectTypeDefinitionNode, TypeNode, NamedTypeNode, DefinitionNode, DocumentNode, ListTypeNode } from 'graphql';
 
 type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
@@ -143,8 +143,15 @@ class SchemaLoader {
     this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== "Query");
   }
 
-  isUserDefined(type: NamedTypeNode): boolean {
-    return this.resourceTypeDefs.some(def => def.name.value === type.name.value);
+  isUserDefined(type: TypeNode): boolean {
+    switch(type.kind) {
+      case "ListType":
+        return this.isUserDefined(type.type);
+      case "NamedType":
+        return this.resourceTypeDefs.some(def => def.name.value === type.name.value);
+      default:
+        throw new Error(`unsupported type ${type.kind}`);
+    }
   }
 }
 
@@ -192,12 +199,38 @@ const resources = loader.resourceTypeDefs
 const resourceResolvers: Record<string, any> = resources.reduce((acc, resource) => {
   return Object.assign(acc, {
     [resource.definition.name.value]: (resource.definition.fields || []).reduce((acc, field) => {
-      // TODO consider ListType
-      if (field.type.kind === 'NamedType' && loader.isUserDefined(field.type)) {
+      if (!loader.isUserDefined(field.type)) {
+        return acc;
+      }
+      // TODO remove code duplication
+      if (field.type.kind === 'NamedType') {
         return Object.assign(acc, {[field.name.value]: async (parent: Record<string, any>) => {
           const resource = Resource.lookup((field.type as NamedTypeNode).name.value);
 
-          const bindings = await resource.query({iri: parent.references});
+          const bindings = await resource.query({iri: parent[field.name.value]});
+
+          const entries  = groupBy(bindings, 's');
+          Object.entries(entries).forEach(([iri, bindings]) => {
+            const assoc = mapValues(groupBy(bindings, 'p'), (bindings) => bindings.map(b => b.o));
+
+            const attrs: Record<string, any> = {};
+            (resource.definition.fields || []).forEach(field => {
+              const values = assoc[field.name.value] || [];
+              attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
+            });
+
+            Object.assign(entries, {[iri]: attrs});
+          });
+
+          const values = Object.values(entries);
+
+          return field.type.kind === "ListType" ? values : values[0];
+        }});
+      } else if (field.type.kind == 'ListType') {
+        return Object.assign(acc, {[field.name.value]: async (parent: Record<string, any>, _args :any, context: any, _options: any) => {
+          const resource = Resource.lookup(((field.type as ListTypeNode).type as NamedTypeNode).name.value);
+
+          const bindings = await resource.query({iris: parent[field.name.value]});
 
           const entries  = groupBy(bindings, 's');
           Object.entries(entries).forEach(([iri, bindings]) => {
