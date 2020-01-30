@@ -7,7 +7,7 @@ import { URLSearchParams } from 'url';
 import { parse } from 'graphql/language/parser';
 import { readFileSync } from 'fs';
 
-import { ObjectTypeDefinitionNode, TypeNode, NamedTypeNode, DefinitionNode, DocumentNode } from 'graphql';
+import { ObjectTypeDefinitionNode, TypeNode, NamedTypeNode, DocumentNode } from 'graphql';
 
 type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
@@ -37,6 +37,10 @@ function isListType(type: TypeNode): boolean {
     default:
       throw new Error(`unsupported type: ${(type as TypeNode).kind}`);
   }
+}
+
+function oneOrMany<T>(xs: T[], one: boolean): T | T[] {
+  return one ? xs[0] : xs;
 }
 
 class Resource {
@@ -113,15 +117,13 @@ class Resource {
       const pValues = mapValues(groupBy(sBindings, 'p'), bs => bs.map(({o}) => o));
 
       (this.definition.fields || []).forEach(field => {
-        const values = pValues[field.name.value];
-
-        entry[field.name.value] = isListType(field.type) ? values : values[0];
+        entry[field.name.value] = oneOrMany(pValues[field.name.value], !isListType(field.type));
       });
 
       return entry;
     });
 
-    return one ? entries[0] : entries;
+    return oneOrMany(entries, one);
   }
 
   async query(args: object): Promise<Array<Binding>> {
@@ -143,7 +145,7 @@ class Resource {
     console.log('--- SPARQL RESULT ---', JSON.stringify(data, null, '  '));
 
     return data.results.bindings.map((b: Binding) => {
-      return mapValues(b, ({ value }) => value);
+      return mapValues(b, ({value}) => value);
     });
   }
 }
@@ -165,8 +167,9 @@ class SchemaLoader {
   constructor(graphql: string) {
     this.originalTypeDefs = parse(graphql);
 
-    const typeDefinitionNodes = this.originalTypeDefs.definitions
-      .filter((def): def is ObjectTypeDefinitionNode => def.kind === 'ObjectTypeDefinition');
+    const typeDefinitionNodes = this.originalTypeDefs.definitions.filter((def): def is ObjectTypeDefinitionNode => (
+      def.kind === 'ObjectTypeDefinition'
+    ));
 
     const queryDef = typeDefinitionNodes.find(def => def.name.value === 'Query');
     if (!queryDef) {
@@ -191,7 +194,7 @@ const queryResolvers: Record<string, ResourceResolver> = {};
 (loader.queryDef.fields || []).forEach(field => {
   queryResolvers[field.name.value] = async (_parent, args) => {
     const resourceName = unwrapCompositeType(field.type).name.value;
-    const resource = Resource.lookup(resourceName);
+    const resource     = Resource.lookup(resourceName);
 
     return await resource.fetch(args, !isListType(field.type));
   }
