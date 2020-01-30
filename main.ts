@@ -20,6 +20,31 @@ function mapValues<K extends string | number | symbol, V1, V2>(obj: Record<K, V1
   ), {} as Record<K, V2>);
 }
 
+function unwrapCompositeType(type: TypeNode): NamedTypeNode {
+  switch (type.kind) {
+    case 'NamedType':
+      return type;
+    case 'ListType':
+    case 'NonNullType':
+      return unwrapCompositeType(type.type);
+    default:
+      throw new Error(`unsupported type: ${(type as TypeNode).kind}`);
+  }
+}
+
+function isListType(type: TypeNode): boolean {
+  switch (type.kind) {
+    case 'NamedType':
+      return false;
+    case 'ListType':
+      return true;
+    case 'NonNullType':
+      return isListType(type.type);
+    default:
+      throw new Error(`unsupported type: ${(type as TypeNode).kind}`);
+  }
+}
+
 class Resource {
   definition: ObjectTypeDefinitionNode;
   endpoint: string;
@@ -96,7 +121,7 @@ class Resource {
       const attrs: Entry = {};
       (this.definition.fields || []).forEach(field => {
         const values = assoc[field.name.value] || [];
-        attrs[field.name.value] = field.type.kind === 'ListType' ? values : values[0];
+        attrs[field.name.value] = isListType(field.type) ? values : values[0];
       });
 
       Object.assign(entries, {[iri]: attrs});
@@ -163,38 +188,22 @@ class SchemaLoader {
   }
 
   isUserDefined(type: TypeNode): boolean {
-    switch(type.kind) {
-      case "ListType":
-        return this.isUserDefined(type.type);
-      case "NamedType":
-        return this.resourceTypeDefs.some(def => def.name.value === type.name.value);
-      default:
-        throw new Error(`unsupported type ${type.kind}`);
-    }
+    const unwrapped = unwrapCompositeType(type);
+
+    return this.resourceTypeDefs.some(def => def.name.value === unwrapped.name.value);
   }
 }
 
 const loader = new SchemaLoader(readFileSync("./index.graphql", "utf8"));
 
-function unwrapListType(type: TypeNode): NamedTypeNode {
-  switch (type.kind) {
-    case 'NamedType':
-      return type;
-    case 'ListType':
-      return unwrapListType(type.type);
-    default:
-      throw new Error(`unsupported type: ${type.kind}`);
-  }
-}
-
 const queryResolvers = (loader.queryDef.fields || []).reduce(
   (acc, field) =>
     Object.assign(acc, {
       [field.name.value]: async (_parent: object, args: object) => {
-        const resourceName = unwrapListType(field.type).name.value;
+        const resourceName = unwrapCompositeType(field.type).name.value;
         const resource = Resource.lookup(resourceName);
 
-        return await resource.fetch(args, field.type.kind !== "ListType")
+        return await resource.fetch(args, !isListType(field.type));
       }
     }),
   {}
@@ -208,13 +217,13 @@ const resourceResolvers: Record<string, any> = resources.reduce((acc, resource) 
     [resource.definition.name.value]: (resource.definition.fields || []).reduce((acc: Record<string, Function>, field) => {
       if (!loader.isUserDefined(field.type)) { return acc; }
 
-      const resourceName = unwrapListType(field.type).name.value;
+      const resourceName = unwrapCompositeType(field.type).name.value;
       const resource = Resource.lookup(resourceName);
 
       acc[field.name.value] = async (parent: Entry): Promise<Entry | Entry[]> => {
         const args = {iri: parent[field.name.value]};
 
-        return await resource.fetch(args, field.type.kind !== "ListType");
+        return await resource.fetch(args, !isListType(field.type));
       };
 
       return acc;
