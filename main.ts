@@ -105,7 +105,7 @@ class Resource {
     return new Resource(def, endpoint, sparql);
   }
 
-  async fetch(args: object, one = false): Promise<ResourceEntry[] | ResourceEntry> {
+  async fetch(args: object, one: boolean): Promise<ResourceEntry[] | ResourceEntry> {
     const bindings = await this.query(args);
 
     const entries = Object.entries(groupBy(bindings, 's')).map(([_s, sBindings]) => {
