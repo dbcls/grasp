@@ -227,7 +227,7 @@ const resourceResolvers: Record<string, any> = resources.reduce((acc, resource) 
           return field.type.kind === "ListType" ? values : values[0];
         }});
       } else if (field.type.kind == 'ListType') {
-        return Object.assign(acc, {[field.name.value]: async (parent: Record<string, any>, _args :any, context: any, _options: any) => {
+        return Object.assign(acc, {[field.name.value]: async (parent: Record<string, any>) => {
           const resource = Resource.lookup(((field.type as ListTypeNode).type as NamedTypeNode).name.value);
 
           const bindings = await resource.query({iris: parent[field.name.value]});
