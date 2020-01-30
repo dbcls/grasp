@@ -6,7 +6,7 @@ type Query {
   SequenceStatisticsReports(iri: [String!]!): [SequenceStatisticsReport!]!
   Dataset(iri: String!): Dataset
   Datasets(iri: [String!]!): [Dataset!]!
-  PubmedReference(iri: String): PubmedReference
+  PubmedReference(iri: String!): PubmedReference
   PubmedReferences(iri: [String!]!): [PubmedReference!]!
 }
 
@@ -65,34 +65,34 @@ WHERE {
 }
 """
 type SequenceStatisticsReport {
-  iri: String
+  iri: String!
 
   """
   Ideintifier. `dcterms:identifier`
   """
-  id: String
+  id: String!
 
   """
   An encoding format. `sos:encoding`
   """
-  encoding: String
+  encoding: String!
 
   """
   A file type. `sos:fileType`
   """
-  file_type: String
-  version: String
-  fastqc_version: String
-  contributor: [String]
-  min_seq_len: Float
-  median_seq_len: Float
-  max_seq_len: Float
-  mean_bc_quality: Float
-  median_bc_quality: Float
-  n_content: Float
-  gc_content: Float
-  total_seq: Int
-  filtered_seq: Int
+  file_type: String!
+  version: String!
+  fastqc_version: String!
+  contributor: [String!]!
+  min_seq_len: Float!
+  median_seq_len: Float!
+  max_seq_len: Float!
+  mean_bc_quality: Float!
+  median_bc_quality: Float!
+  n_content: Float!
+  gc_content: Float!
+  total_seq: Int!
+  filtered_seq: Int!
 }
 
 """
@@ -159,9 +159,9 @@ WHERE
 }
 """
 type PubmedReference {
-  iri: String
-  title: String
-  date: String
-  creator: String
-  publicationName: String
+  iri: String!
+  title: String!
+  date: String!
+  creator: String!
+  publicationName: String!
 }
