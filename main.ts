@@ -208,16 +208,16 @@ resources.forEach(resource => {
   const fieldResolvers: Record<string, ResourceResolver> = resourceResolvers[resource.definition.name.value] = {};
 
   (resource.definition.fields || []).forEach(field => {
-      if (!loader.isUserDefined(field.type)) { return; }
+    if (!loader.isUserDefined(field.type)) { return; }
 
-      const resourceName = unwrapCompositeType(field.type).name.value;
-      const resource     = Resource.lookup(resourceName);
+    const resourceName = unwrapCompositeType(field.type).name.value;
+    const resource     = Resource.lookup(resourceName);
 
-      fieldResolvers[field.name.value] = async (parent) => {
-        const args = {iri: parent[field.name.value]};
+    fieldResolvers[field.name.value] = async (parent) => {
+      const args = {iri: parent[field.name.value]};
 
-        return await resource.fetch(args, !isListType(field.type));
-      };
+      return await resource.fetch(args, !isListType(field.type));
+    };
   });
 });
 
