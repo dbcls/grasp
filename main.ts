@@ -167,9 +167,9 @@ class SchemaLoader {
   constructor(graphql: string) {
     this.originalTypeDefs = parse(graphql);
 
-    const typeDefinitionNodes = this.originalTypeDefs.definitions.filter((def): def is ObjectTypeDefinitionNode => (
-      def.kind === 'ObjectTypeDefinition'
-    ));
+    const typeDefinitionNodes = this.originalTypeDefs.definitions.filter((def): def is ObjectTypeDefinitionNode => {
+      return def.kind === 'ObjectTypeDefinition';
+    });
 
     const queryDef = typeDefinitionNodes.find(def => def.name.value === 'Query');
     if (!queryDef) {
