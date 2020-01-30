@@ -10,7 +10,8 @@ import { ObjectTypeDefinitionNode, TypeNode, NamedTypeNode, DefinitionNode, Docu
 
 type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
-type Entry = Record<string, any>;
+type ResourceEntry = Record<string, any>;
+type ResourceResolver = (parent: ResourceEntry, args: object) => Promise<ResourceEntry | ResourceEntry[]>;
 
 function mapValues<K extends string | number | symbol, V1, V2>(obj: Record<K, V1>, fn: (val: V1) => V2): Record<K, V2> {
   return Object.entries(obj).reduce((acc, [k, v]) => (
@@ -111,14 +112,14 @@ class Resource {
     return new Resource(def, endpoint, sparql);
   }
 
-  async fetch(args: object, one = false): Promise<Entry[]> {
+  async fetch(args: object, one = false): Promise<ResourceEntry[]> {
     const bindings = await this.query(args);
 
     const entries  = groupBy(bindings, 's');
     Object.entries(entries).forEach(([iri, bindings]) => {
       const assoc = mapValues(groupBy(bindings, 'p'), (bindings) => bindings.map(b => b.o));
 
-      const attrs: Entry = {};
+      const attrs: ResourceEntry = {};
       (this.definition.fields || []).forEach(field => {
         const values = assoc[field.name.value] || [];
         attrs[field.name.value] = isListType(field.type) ? values : values[0];
@@ -196,40 +197,38 @@ class SchemaLoader {
 
 const loader = new SchemaLoader(readFileSync("./index.graphql", "utf8"));
 
-const queryResolvers = (loader.queryDef.fields || []).reduce(
-  (acc, field) =>
-    Object.assign(acc, {
-      [field.name.value]: async (_parent: object, args: object) => {
-        const resourceName = unwrapCompositeType(field.type).name.value;
-        const resource = Resource.lookup(resourceName);
+const queryResolvers: Record<string, ResourceResolver> = {};
 
-        return await resource.fetch(args, !isListType(field.type));
-      }
-    }),
-  {}
-);
+(loader.queryDef.fields || []).forEach(field => {
+  queryResolvers[field.name.value] = async (_parent, args) => {
+    const resourceName = unwrapCompositeType(field.type).name.value;
+    const resource = Resource.lookup(resourceName);
+
+    return await resource.fetch(args, !isListType(field.type));
+  }
+});
 
 const resources = loader.resourceTypeDefs
   .map(def => Resource.buildFromTypeDefinition(def));
 
-const resourceResolvers: Record<string, any> = resources.reduce((acc, resource) => {
-  return Object.assign(acc, {
-    [resource.definition.name.value]: (resource.definition.fields || []).reduce((acc: Record<string, Function>, field) => {
-      if (!loader.isUserDefined(field.type)) { return acc; }
+const resourceResolvers: Record<string, Record<string, ResourceResolver>> = {};
+
+resources.forEach(resource => {
+  const fieldResolvers: Record<string, ResourceResolver> = resourceResolvers[resource.definition.name.value] = {};
+
+  (resource.definition.fields || []).forEach(field => {
+      if (!loader.isUserDefined(field.type)) { return; }
 
       const resourceName = unwrapCompositeType(field.type).name.value;
-      const resource = Resource.lookup(resourceName);
+      const resource     = Resource.lookup(resourceName);
 
-      acc[field.name.value] = async (parent: Entry): Promise<Entry | Entry[]> => {
+      fieldResolvers[field.name.value] = async (parent) => {
         const args = {iri: parent[field.name.value]};
 
         return await resource.fetch(args, !isListType(field.type));
       };
-
-      return acc;
-    }, {})
   });
-}, {});
+});
 
 const rootResolvers = {
   Query: queryResolvers,
