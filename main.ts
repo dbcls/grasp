@@ -103,8 +103,7 @@ class Resource {
     });
 
     if (!endpoint) {
-      throw new Error(`endpoint is not defined for type ${def.name.value}`)
-
+      throw new Error(`endpoint is not defined for type ${def.name.value}`);
     }
     return new Resource(def, endpoint, sparql);
   }
