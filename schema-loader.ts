@@ -1,5 +1,5 @@
-import { parse } from 'graphql/language/parser';
 import { ObjectTypeDefinitionNode, TypeNode, DocumentNode } from 'graphql';
+import { parse } from 'graphql/language/parser';
 
 import { unwrapCompositeType } from './utils';
 

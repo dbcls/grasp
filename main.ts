@@ -1,12 +1,12 @@
-import Handlebars = require('handlebars');
 import { ApolloServer } from 'apollo-server';
 import { readFileSync } from 'fs';
+import Handlebars = require('handlebars');
 
-import { ResourceEntry } from './resource';
 import { isListType } from './utils';
+import { ResourceEntry } from './resource';
+import { unwrapCompositeType } from './utils';
 import Resources from './resources';
 import SchemaLoader from './schema-loader';
-import { unwrapCompositeType } from './utils';
 
 type ResourceResolver = (parent: ResourceEntry, args: object) => Promise<ResourceEntry | ResourceEntry[]>;
 

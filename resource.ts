@@ -1,9 +1,10 @@
-import Handlebars = require('handlebars');
+import { ObjectTypeDefinitionNode } from 'graphql';
+import { URLSearchParams } from 'url';
 import fetch from 'node-fetch';
 import groupBy = require('lodash.groupby');
+import Handlebars = require('handlebars');
 import mapValues = require('lodash.mapvalues');
-import { URLSearchParams } from 'url';
-import { ObjectTypeDefinitionNode } from 'graphql';
+
 import {oneOrMany, isListType} from './utils';
 
 type CompiledTemplate = (args: object) => string;
