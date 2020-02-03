@@ -1,6 +1,5 @@
 import { ApolloServer } from 'apollo-server';
 import { readFileSync } from 'fs';
-import Handlebars = require('handlebars');
 
 import { isListType } from './utils';
 import { ResourceEntry } from './resource';
@@ -9,15 +8,6 @@ import Resources from './resources';
 import SchemaLoader from './schema-loader';
 
 type ResourceResolver = (parent: ResourceEntry, args: object) => Promise<ResourceEntry | ResourceEntry[]>;
-
-Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[]}): string {
-  if (Array.isArray(this.iri)) {
-    const refs = this.iri.map(iri => `<${iri}>`);
-    return `FILTER (?iri IN (${refs.join(', ')}))`;
-  } else {
-    return `FILTER (?iri = <${this.iri}>)`;
-  }
-});
 
 const loader = new SchemaLoader(readFileSync('./index.graphql', 'utf8'));
 const resources = new Resources(loader.resourceTypeDefs);

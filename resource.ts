@@ -11,6 +11,17 @@ type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
 export type ResourceEntry = Record<string, any>;
 
+const handlebars = Handlebars.create();
+
+handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[]}): string {
+  if (Array.isArray(this.iri)) {
+    const refs = this.iri.map(iri => `<${iri}>`);
+    return `FILTER (?iri IN (${refs.join(', ')}))`;
+  } else {
+    return `FILTER (?iri = <${this.iri}>)`;
+  }
+});
+
 export default class Resource {
   definition: ObjectTypeDefinitionNode;
   endpoint: string;
@@ -19,7 +30,7 @@ export default class Resource {
   constructor(definition: ObjectTypeDefinitionNode, endpoint: string, sparql: string) {
     this.definition    = definition;
     this.endpoint      = endpoint;
-    this.queryTemplate = Handlebars.compile(sparql, { noEscape: true });
+    this.queryTemplate = handlebars.compile(sparql, {noEscape: true});
   }
 
   static buildFromTypeDefinition(def: ObjectTypeDefinitionNode): Resource {
