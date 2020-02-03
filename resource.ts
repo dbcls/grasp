@@ -5,7 +5,7 @@ import groupBy = require('lodash.groupby');
 import Handlebars = require('handlebars');
 import mapValues = require('lodash.mapvalues');
 
-import {oneOrMany, isListType} from './utils';
+import { oneOrMany, isListType } from './utils';
 
 type CompiledTemplate = (args: object) => string;
 type Binding = Record<string, any>;
