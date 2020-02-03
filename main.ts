@@ -54,16 +54,6 @@ class Resource {
     this.queryTemplate = Handlebars.compile(sparql, { noEscape: true });
   }
 
-  static lookup(name: string): Resource {
-    const resource = resources.find((resource: Resource) => resource.definition.name.value === name);
-
-    if (!resource) {
-      throw new Error(`resource ${name} not found`);
-    }
-
-    return resource;
-  }
-
   static buildFromTypeDefinition(def: ObjectTypeDefinitionNode): Resource {
     if (!def.description) {
       throw new Error(`description for type ${def.name.value} is not defined`);
@@ -149,15 +139,6 @@ class Resource {
   }
 }
 
-Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[]}): string {
-  if (Array.isArray(this.iri)) {
-    const refs = this.iri.map(iri => `<${iri}>`);
-    return `FILTER (?iri IN (${refs.join(', ')}))`;
-  } else {
-    return `FILTER (?iri = <${this.iri}>)`;
-  }
-});
-
 class SchemaLoader {
   originalTypeDefs: DocumentNode;
   queryDef: ObjectTypeDefinitionNode;
@@ -186,32 +167,57 @@ class SchemaLoader {
   }
 }
 
+class Resources {
+  all: Array<Resource>;
+
+  constructor(resourceTypeDefs: ObjectTypeDefinitionNode[]) {
+    this.all = resourceTypeDefs.map(def => Resource.buildFromTypeDefinition(def));
+  }
+
+  lookup(name: string): Resource {
+    const resource = this.all.find((resource: Resource) => resource.definition.name.value === name);
+
+    if (!resource) {
+      throw new Error(`resource ${name} not found`);
+    }
+
+    return resource;
+  }
+}
+
+Handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[]}): string {
+  if (Array.isArray(this.iri)) {
+    const refs = this.iri.map(iri => `<${iri}>`);
+    return `FILTER (?iri IN (${refs.join(', ')}))`;
+  } else {
+    return `FILTER (?iri = <${this.iri}>)`;
+  }
+});
+
 const loader = new SchemaLoader(readFileSync('./index.graphql', 'utf8'));
+const resources = new Resources(loader.resourceTypeDefs);
 
 const queryResolvers: Record<string, ResourceResolver> = {};
 
 (loader.queryDef.fields || []).forEach(field => {
   queryResolvers[field.name.value] = async (_parent, args) => {
     const resourceName = unwrapCompositeType(field.type).name.value;
-    const resource     = Resource.lookup(resourceName);
+    const resource     = resources.lookup(resourceName);
 
     return await resource.fetch(args, !isListType(field.type));
   }
 });
 
-const resources = loader.resourceTypeDefs
-  .map(def => Resource.buildFromTypeDefinition(def));
-
 const resourceResolvers: Record<string, Record<string, ResourceResolver>> = {};
 
-resources.forEach(resource => {
+resources.all.forEach(resource => {
   const fieldResolvers: Record<string, ResourceResolver> = resourceResolvers[resource.definition.name.value] = {};
 
   (resource.definition.fields || []).forEach(field => {
     if (!loader.isUserDefined(field.type)) { return; }
 
     const resourceName = unwrapCompositeType(field.type).name.value;
-    const resource     = Resource.lookup(resourceName);
+    const resource     = resources.lookup(resourceName);
 
     fieldResolvers[field.name.value] = async (parent) => {
       const args = {iri: parent[field.name.value]};
