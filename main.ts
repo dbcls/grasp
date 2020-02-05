@@ -7,7 +7,7 @@ import { unwrapCompositeType } from './utils';
 import Resources from './resources';
 import SchemaLoader from './schema-loader';
 
-type ResourceResolver = (parent: ResourceEntry, args: object) => Promise<ResourceEntry | ResourceEntry[]>;
+type ResourceResolver = (parent: ResourceEntry, args: object) => Promise<ResourceEntry | ResourceEntry[] | null>;
 
 const loader = new SchemaLoader(readFileSync('./index.graphql', 'utf8'));
 const resources = new Resources(loader.resourceTypeDefs);
@@ -29,16 +29,24 @@ resources.root.forEach(resource => {
   const fieldResolvers: Record<string, ResourceResolver> = resourceResolvers[resource.definition.name.value] = {};
 
   (resource.definition.fields || []).forEach(field => {
-    if (!resources.isUserDefined(field.type)) { return; }
+    const type = field.type;
+    const name = field.name.value;
 
-    const resourceName = unwrapCompositeType(field.type).name.value;
+    if (!resources.isUserDefined(type)) { return; }
+
+    const resourceName = unwrapCompositeType(type).name.value;
     const resource     = resources.lookup(resourceName);
+
     if (!resource.isRootType) { return; }
 
-    fieldResolvers[field.name.value] = async (parent) => {
-      const args = {iri: parent[field.name.value]};
+    fieldResolvers[name] = async (parent) => {
+      const value = parent[name];
 
-      return await resource.fetch(args, !isListType(field.type));
+      if (value) {
+        return await resource.fetch({iri: value}, !isListType(type));
+      }
+
+      return isListType(type) ? [] : null;
     };
   });
 });

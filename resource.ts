@@ -15,7 +15,7 @@ export type ResourceEntry = Record<string, any>;
 const handlebars = Handlebars.create();
 
 function wrapIRI(iri: string): string {
-  return iri.startsWith("_:") ? iri : `<${iri}>`;
+  return `<${iri}>`;
 }
 
 handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[]}): string {
@@ -94,20 +94,44 @@ export default class Resource {
     const bindingGropuedByS = groupBy(bindings, 's');
     const primaryBindings = bindings.filter(binding => !binding.s.startsWith('_:'));
 
-    const entries = Object.entries(groupBy(primaryBindings, 's')).map(([s, sBindings]) => {
+    const entries = Object.entries(groupBy(primaryBindings, 's')).map(([_s, sBindings]) => {
       const entry: ResourceEntry = {};
       const pValues = mapValues(groupBy(sBindings, 'p'), bs => bs.map(({o}) => o));
 
       (this.definition.fields || []).forEach(field => {
-        const targetType = unwrapCompositeType(field.type);
-        if (this.resources.isUserDefined(targetType)) {
-          const targetDef = this.resources.lookup(targetType.name.value);
-          console.log(targetDef);
+        const type = field.type;
+        const name = field.name.value;
 
-          // TODO
+        const targetType = unwrapCompositeType(type);
+
+        if (!this.resources.isUserDefined(targetType)) {
+          entry[name] = oneOrMany(pValues[name], !isListType(type));
+          return;
         }
 
-        entry[field.name.value] = oneOrMany(pValues[field.name.value], !isListType(field.type));
+        const targetResource = this.resources.lookup(targetType.name.value);
+
+        if (targetResource.isRootType) {
+          entry[name] = oneOrMany(pValues[name], !isListType(type));
+        } else {
+          const entries = pValues[name].map(nodeId => {
+            const entry: ResourceEntry = {};
+            const nodeBindings = bindingGropuedByS[nodeId];
+            const propBindings = groupBy(nodeBindings, 'p');
+
+            (targetResource.definition.fields || []).forEach(field => {
+              const type   = field.type;
+              const name   = field.name.value;
+              const values = (propBindings[name] || []).map(({o}) => o);
+
+              entry[name] = oneOrMany(values, !isListType(type));
+            });
+
+            return entry;
+          });
+
+          entry[name] = oneOrMany(entries, !isListType(type));
+        }
       });
 
       return entry;
