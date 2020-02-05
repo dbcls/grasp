@@ -28,7 +28,7 @@ const queryResolvers: Record<string, ResourceResolver> = {};
 
 const resourceResolvers: Record<string, Record<string, ResourceResolver>> = {};
 
-resources.root.forEach(resource => {
+resources.all.forEach(resource => {
   const fieldResolvers: Record<string, ResourceResolver> = resourceResolvers[resource.definition.name.value] = {};
 
   (resource.definition.fields || []).forEach(field => {

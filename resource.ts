@@ -27,7 +27,6 @@ handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[
   }
 });
 
-
 function buildEntry(bindingsGroupedBySubject: Record<string, Array<Binding>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
     const entry: ResourceEntry = {};
 

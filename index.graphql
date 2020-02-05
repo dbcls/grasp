@@ -118,8 +118,8 @@ CONSTRUCT {
   ?publisher <name_en> ?publisher_name_en .
   ?publisher <page> ?publisher_page .
 
-  ?publisher <foo> _:v1 .
-  _:v1 <bar> "baz" .
+  ?iri <foo> _:v1 .
+  _:v1 <bar> ?references .
 }
 FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
 WHERE
@@ -146,6 +146,7 @@ type Dataset {
   description_en: String
   references: [PubmedReference!]!
   publisher: [Publisher!]!
+  foo: Foo
 }
 
 """
@@ -183,13 +184,11 @@ type PubmedReference {
 }
 
 type Foo @embedded {
-  bar: String
+  bar: [PubmedReference]
 }
 
 type Publisher @embedded {
   name_ja: String
   name_en: String
   page: String
-
-  foo: Foo
 }
