@@ -18,6 +18,9 @@ const queryResolvers: Record<string, ResourceResolver> = {};
   queryResolvers[field.name.value] = async (_parent, args) => {
     const resourceName = unwrapCompositeType(field.type).name.value;
     const resource     = resources.lookup(resourceName);
+    if (!resource) {
+      throw new Error(`resource ${resourceName} is not found`);
+    }
 
     return await resource.fetch(args, !isListType(field.type));
   }
@@ -37,7 +40,7 @@ resources.root.forEach(resource => {
     const resourceName = unwrapCompositeType(type).name.value;
     const resource     = resources.lookup(resourceName);
 
-    if (!resource.isRootType) { return; }
+    if (!resource || resource.isEmbeddedType) { return; }
 
     fieldResolvers[name] = async (parent) => {
       const value = parent[name];

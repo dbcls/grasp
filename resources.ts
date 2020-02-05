@@ -14,14 +14,8 @@ export default class Resources {
     return this.all.filter(resource => resource.isRootType)
   }
 
-  lookup(name: string): Resource {
-    const resource = this.all.find(resource => resource.definition.name.value === name);
-
-    if (!resource) {
-      throw new Error(`resource ${name} not found`);
-    }
-
-    return resource;
+  lookup(name: string): Resource | null {
+    return this.all.find(resource => resource.definition.name.value === name) || null;
   }
 
   isUserDefined(type: TypeNode): boolean {

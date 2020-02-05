@@ -27,6 +27,23 @@ handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[
   }
 });
 
+
+function buildEntry(nodeBindings: Array<Binding>, targetResource: Resource): ResourceEntry {
+    const entry: ResourceEntry = {};
+    const propValues = mapValues(groupBy(nodeBindings, 'p'), bs => bs.map(({o}) => o));
+
+    (targetResource.definition.fields || []).forEach(field => {
+      const type   = field.type;
+      const name   = field.name.value;
+      const values = propValues[name] || [];
+
+      entry[name] = oneOrMany(values, !isListType(type));
+    });
+
+    return entry;
+}
+
+
 export default class Resource {
   resources: Resources;
   definition: ObjectTypeDefinitionNode;
@@ -98,39 +115,18 @@ export default class Resource {
       const entry: ResourceEntry = {};
       const pValues = mapValues(groupBy(sBindings, 'p'), bs => bs.map(({o}) => o));
 
-      (this.definition.fields || []).forEach(field => {
+      (this.definition.fields || []).forEach(field => { // *1
         const type = field.type;
         const name = field.name.value;
 
         const targetType = unwrapCompositeType(type);
 
-        if (!this.resources.isUserDefined(targetType)) {
-          entry[name] = oneOrMany(pValues[name], !isListType(type));
-          return;
-        }
-
         const targetResource = this.resources.lookup(targetType.name.value);
-
-        if (targetResource.isRootType) {
-          entry[name] = oneOrMany(pValues[name], !isListType(type));
-        } else {
-          const entries = pValues[name].map(nodeId => {
-            const entry: ResourceEntry = {};
-            const nodeBindings = bindingGropuedByS[nodeId];
-            const propBindings = groupBy(nodeBindings, 'p');
-
-            (targetResource.definition.fields || []).forEach(field => {
-              const type   = field.type;
-              const name   = field.name.value;
-              const values = (propBindings[name] || []).map(({o}) => o);
-
-              entry[name] = oneOrMany(values, !isListType(type));
-            });
-
-            return entry;
-          });
-
+        if (targetResource?.isEmbeddedType) {
+          const entries = pValues[name].map(nodeId => buildEntry(bindingGropuedByS[nodeId], targetResource));
           entry[name] = oneOrMany(entries, !isListType(type));
+        } else {
+          entry[name] = oneOrMany(pValues[name], !isListType(type));
         }
       });
 
@@ -168,5 +164,9 @@ export default class Resource {
 
   get isRootType(): boolean {
     return !this.definition.directives?.some(directive => directive.name.value === 'embedded');
+  }
+
+  get isEmbeddedType(): boolean {
+    return !this.isRootType;
   }
 }
