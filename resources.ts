@@ -15,7 +15,7 @@ export default class Resources {
   }
 
   lookup(name: string): Resource {
-    const resource = this.all.find((resource: Resource) => resource.definition.name.value === name);
+    const resource = this.all.find(resource => resource.definition.name.value === name);
 
     if (!resource) {
       throw new Error(`resource ${name} not found`);
