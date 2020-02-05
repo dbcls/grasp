@@ -1,3 +1,5 @@
+directive @embedded on OBJECT
+
 type Query {
   """
   returns a quanto entry of IRI
@@ -102,6 +104,7 @@ https://integbio.jp/rdf/sparql
 --- sparql ---
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 
 CONSTRUCT {
   ?iri <iri> ?iri .
@@ -110,6 +113,9 @@ CONSTRUCT {
   ?iri <description_en> ?description_en .
   ?iri <description_ja> ?description_ja .
   ?iri <references> ?references .
+  ?iri <publisher> ?publisher .
+  ?publisher <name> ?publisherName .
+  ?publisher <page> ?publisherPage .
 }
 FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
 WHERE
@@ -119,6 +125,10 @@ WHERE
   OPTIONAL { ?iri dcterms:references ?references }
   OPTIONAL { ?iri dcterms:title ?title_en . FILTER (lang(?title_en) = "en" ) }
   OPTIONAL { ?iri dcterms:description ?description_en . FILTER (lang(?description_en) = "en" ) }
+
+  OPTIONAL { ?iri dcterms:publisher ?publisher . }
+  OPTIONAL { ?publisher rdfs:label ?publisherName . }
+  OPTIONAL { ?publisher foaf:page ?publisherPage . }
 
   {{filter-by-iri}}
 }
@@ -130,6 +140,7 @@ type Dataset {
   description_ja: String!
   description_en: String
   references: [PubmedReference!]!
+  publisher: [Publisher!]!
 }
 
 """
@@ -164,4 +175,9 @@ type PubmedReference {
   date: String!
   creator: String!
   publicationName: String!
+}
+
+type Publisher @embedded {
+  name: String
+  page: String
 }

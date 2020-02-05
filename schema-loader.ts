@@ -1,8 +1,6 @@
 import { ObjectTypeDefinitionNode, TypeNode, DocumentNode } from 'graphql';
 import { parse } from 'graphql/language/parser';
 
-import { unwrapCompositeType } from './utils';
-
 export default class SchemaLoader {
   originalTypeDefs: DocumentNode;
   queryDef: ObjectTypeDefinitionNode;
@@ -22,12 +20,6 @@ export default class SchemaLoader {
     this.queryDef = queryDef;
 
     this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== 'Query');
-  }
-
-  isUserDefined(type: TypeNode): boolean {
-    const unwrapped = unwrapCompositeType(type);
-
-    return this.resourceTypeDefs.some(def => def.name.value === unwrapped.name.value);
   }
 }
 
