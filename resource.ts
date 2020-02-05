@@ -28,16 +28,26 @@ handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[
 });
 
 
-function buildEntry(nodeBindings: Array<Binding>, targetResource: Resource): ResourceEntry {
+function buildEntry(bindingsGroupedBySubject: Record<string, Array<Binding>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
     const entry: ResourceEntry = {};
-    const propValues = mapValues(groupBy(nodeBindings, 'p'), bs => bs.map(({o}) => o));
 
-    (targetResource.definition.fields || []).forEach(field => {
+    const nodeBindings = bindingsGroupedBySubject[subject];
+    const pValues = mapValues(groupBy(nodeBindings, 'p'), bs => bs.map(({o}) => o));
+
+    (resource.definition.fields || []).forEach(field => {
       const type   = field.type;
       const name   = field.name.value;
-      const values = propValues[name] || [];
+      const values = pValues[name] || [];
 
-      entry[name] = oneOrMany(values, !isListType(type));
+      const targetType = unwrapCompositeType(type);
+      const targetResource = resources.lookup(targetType.name.value);
+
+      if (targetResource?.isEmbeddedType) {
+        const entries = values.map(nodeId => buildEntry(bindingsGroupedBySubject, nodeId, targetResource, resources));
+        entry[name] = oneOrMany(entries, !isListType(type));
+      } else {
+        entry[name] = oneOrMany(values, !isListType(type));
+      }
     });
 
     return entry;
@@ -108,29 +118,11 @@ export default class Resource {
   async fetch(args: object, one: boolean): Promise<ResourceEntry[] | ResourceEntry> {
     const bindings = await this.query(args);
 
-    const bindingGropuedByS = groupBy(bindings, 's');
+    const bindingGropuedBySubject = groupBy(bindings, 's');
     const primaryBindings = bindings.filter(binding => !binding.s.startsWith('_:'));
 
-    const entries = Object.entries(groupBy(primaryBindings, 's')).map(([_s, sBindings]) => {
-      const entry: ResourceEntry = {};
-      const pValues = mapValues(groupBy(sBindings, 'p'), bs => bs.map(({o}) => o));
-
-      (this.definition.fields || []).forEach(field => { // *1
-        const type = field.type;
-        const name = field.name.value;
-
-        const targetType = unwrapCompositeType(type);
-
-        const targetResource = this.resources.lookup(targetType.name.value);
-        if (targetResource?.isEmbeddedType) {
-          const entries = pValues[name].map(nodeId => buildEntry(bindingGropuedByS[nodeId], targetResource));
-          entry[name] = oneOrMany(entries, !isListType(type));
-        } else {
-          entry[name] = oneOrMany(pValues[name], !isListType(type));
-        }
-      });
-
-      return entry;
+    const entries = Object.entries(groupBy(primaryBindings, 's')).map(([s, _sBindings]) => {
+      return buildEntry(bindingGropuedBySubject, s, this, this.resources);
     });
 
     return oneOrMany(entries, one);

@@ -35,8 +35,6 @@ resources.root.forEach(resource => {
     const type = field.type;
     const name = field.name.value;
 
-    if (!resources.isUserDefined(type)) { return; }
-
     const resourceName = unwrapCompositeType(type).name.value;
     const resource     = resources.lookup(resourceName);
 

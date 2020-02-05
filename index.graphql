@@ -118,7 +118,7 @@ CONSTRUCT {
   ?publisher <name_en> ?publisher_name_en .
   ?publisher <page> ?publisher_page .
 
-  ?iri <foo> _:v1 .
+  ?publisher <foo> _:v1 .
   _:v1 <bar> "baz" .
 }
 FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
@@ -146,8 +146,6 @@ type Dataset {
   description_en: String
   references: [PubmedReference!]!
   publisher: [Publisher!]!
-
-  foo: Foo
 }
 
 """
