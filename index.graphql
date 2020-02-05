@@ -114,8 +114,9 @@ CONSTRUCT {
   ?iri <description_ja> ?description_ja .
   ?iri <references> ?references .
   ?iri <publisher> ?publisher .
-  ?publisher <name> ?publisherName .
-  ?publisher <page> ?publisherPage .
+  ?publisher <name_ja> ?publisher_name_ja .
+  ?publisher <name_en> ?publisher_name_en .
+  ?publisher <page> ?publisher_page .
 }
 FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
 WHERE
@@ -127,8 +128,9 @@ WHERE
   OPTIONAL { ?iri dcterms:description ?description_en . FILTER (lang(?description_en) = "en" ) }
 
   OPTIONAL { ?iri dcterms:publisher ?publisher . }
-  OPTIONAL { ?publisher rdfs:label ?publisherName . }
-  OPTIONAL { ?publisher foaf:page ?publisherPage . }
+  OPTIONAL { ?publisher rdfs:label ?publisher_name_ja . FILTER (lang(?publisher_name_ja) = "ja" ) }
+  OPTIONAL { ?publisher rdfs:label ?publisher_name_en . FILTER (lang(?publisher_name_en) = "en" ) }
+  OPTIONAL { ?publisher foaf:page ?publisher_page . }
 
   {{filter-by-iri}}
 }
@@ -178,6 +180,7 @@ type PubmedReference {
 }
 
 type Publisher @embedded {
-  name: String
+  name_ja: String
+  name_en: String
   page: String
 }
