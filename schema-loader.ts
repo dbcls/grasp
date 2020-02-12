@@ -1,5 +1,9 @@
+import fs from 'fs';
 import { ObjectTypeDefinitionNode, TypeNode, DocumentNode } from 'graphql';
+import { join } from 'path';
 import { parse } from 'graphql/language/parser';
+
+const {readdir, readFile} = fs.promises;
 
 export default class SchemaLoader {
   originalTypeDefs: DocumentNode;
@@ -21,5 +25,16 @@ export default class SchemaLoader {
 
     this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== 'Query');
   }
-}
 
+  static async loadFrom(baseDir: string): Promise<SchemaLoader> {
+    let schema = '';
+
+    for (const path of await readdir(baseDir)) {
+      if (!path.endsWith('.graphql')) { continue; }
+
+      schema += await readFile(join(baseDir, path));
+    }
+
+    return new SchemaLoader(schema);
+  }
+}
