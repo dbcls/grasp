@@ -146,7 +146,6 @@ type Dataset {
   description_en: String
   references: [PubmedReference!]!
   publisher: [Publisher!]!
-  foo: Foo
 }
 
 """
@@ -181,10 +180,6 @@ type PubmedReference {
   date: String!
   creator: String!
   publicationName: String!
-}
-
-type Foo @embedded {
-  bar: [PubmedReference]
 }
 
 type Publisher @embedded {
