@@ -1,6 +1,6 @@
 import { ApolloServer } from 'apollo-server';
 
-import { isListType } from './utils';
+import { isListType, oneOrMany } from './utils';
 import { ResourceEntry } from './resource';
 import { unwrapCompositeType } from './utils';
 import Resources from './resources';
@@ -21,7 +21,7 @@ SchemaLoader.loadFrom('./resources').then(loader => {
         throw new Error(`resource ${resourceName} is not found`);
       }
 
-      return await resource.fetch(args, !isListType(field.type));
+      return oneOrMany(await resource.fetch(args), !isListType(field.type));
     }
   });
 
@@ -44,7 +44,7 @@ SchemaLoader.loadFrom('./resources').then(loader => {
 
         if (!resource || resource.isEmbeddedType) { return value; }
 
-        return await resource.fetch({iri: value}, !isListType(type));
+        return oneOrMany(await resource.fetch({iri: value}), !isListType(type))
       };
     });
   });

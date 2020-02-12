@@ -123,7 +123,7 @@ export default class Resource {
     return new Resource(resources, def, endpoint, sparql);
   }
 
-  async fetch(args: object, one: boolean): Promise<ResourceEntry[] | ResourceEntry> {
+  async fetch(args: object): Promise<ResourceEntry[]> {
     const bindings = await this.query(args);
 
     const bindingGropuedBySubject = groupBy(bindings, 's');
@@ -132,8 +132,7 @@ export default class Resource {
     const entries = Object.entries(groupBy(primaryBindings, 's')).map(([s, _sBindings]) => {
       return buildEntry(bindingGropuedBySubject, s, this, this.resources);
     });
-
-    return oneOrMany(entries, one);
+    return entries;
   }
 
   async query(args: object): Promise<Array<Triple>> {
