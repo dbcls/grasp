@@ -19,6 +19,7 @@ type Query {
 https://integbio.jp/rdf/sparql
 
 --- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/>
 PREFIX sos: <http://purl.jp/bio/01/quanto/ontology/sos#>
 PREFIX quanto: <http://purl.jp/bio/01/quanto/resource/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -26,22 +27,22 @@ PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX pav: <http://purl.org/pav/>
 
 CONSTRUCT {
-  ?iri <iri> ?iri .
-  ?iri <id> ?id .
-  ?iri <encoding> ?encoding .
-  ?iri <file_type> ?file_type .
-  ?iri <version> ?version .
-  ?iri <contributor> ?contributor .
-  ?iri <fastqc_version> ?fastqc_version .
-  ?iri <filtered_seq> ?filtered_seq .
-  ?iri <min_seq_len> ?min_seq_len .
-  ?iri <median_seq_len> ?median_seq_len .
-  ?iri <max_seq_len> ?max_seq_len .
-  ?iri <mean_bc_quality> ?mean_bc_quality .
-  ?iri <median_bc_quality> ?median_bc_quality .
-  ?iri <n_content> ?n_content .
-  ?iri <gc_content> ?gc_content .
-  ?iri <total_seq> ?total_seq .
+  ?iri :iri ?iri .
+  ?iri :id ?id .
+  ?iri :encoding ?encoding .
+  ?iri :file_type ?file_type .
+  ?iri :version ?version .
+  ?iri :contributor ?contributor .
+  ?iri :fastqc_version ?fastqc_version .
+  ?iri :filtered_seq ?filtered_seq .
+  ?iri :min_seq_len ?min_seq_len .
+  ?iri :median_seq_len ?median_seq_len .
+  ?iri :max_seq_len ?max_seq_len .
+  ?iri :mean_bc_quality ?mean_bc_quality .
+  ?iri :median_bc_quality ?median_bc_quality .
+  ?iri :n_content ?n_content .
+  ?iri :gc_content ?gc_content .
+  ?iri :total_seq ?total_seq .
 }
 FROM <http://quanto.dbcls.jp>
 WHERE {
@@ -102,24 +103,22 @@ type SequenceStatisticsReport {
 https://integbio.jp/rdf/sparql
 
 --- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 
 CONSTRUCT {
-  ?iri <iri> ?iri .
-  ?iri <title_ja> ?title_ja .
-  ?iri <title_en> ?title_en .
-  ?iri <description_en> ?description_en .
-  ?iri <description_ja> ?description_ja .
-  ?iri <references> ?references .
-  ?iri <publisher> ?publisher .
-  ?publisher <name_ja> ?publisher_name_ja .
-  ?publisher <name_en> ?publisher_name_en .
-  ?publisher <page> ?publisher_page .
-
-  ?iri <foo> _:v1 .
-  _:v1 <bar> ?references .
+  ?iri :iri ?iri .
+  ?iri :title_ja ?title_ja .
+  ?iri :title_en ?title_en .
+  ?iri :description_en ?description_en .
+  ?iri :description_ja ?description_ja .
+  ?iri :references ?references .
+  ?iri :publisher ?publisher .
+  ?publisher :name_ja ?publisher_name_ja .
+  ?publisher :name_en ?publisher_name_en .
+  ?publisher :page ?publisher_page .
 }
 FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
 WHERE
@@ -153,16 +152,17 @@ type Dataset {
 https://integbio.jp/rdf/sparql
 
 --- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
 PREFIX prism: <http://prismstandard.org/namespaces/1.2/basic/>
 
 CONSTRUCT {
-  ?iri <iri> ?iri .
-  ?iri <title> ?title .
-  ?iri <date> ?date .
-  ?iri <creator> ?creator .
-  ?iri <publicationName> ?publicationName .
+  ?iri :iri ?iri .
+  ?iri :title ?title .
+  ?iri :date ?date .
+  ?iri :creator ?creator .
+  ?iri :publicationName ?publicationName .
 }
 WHERE
 {

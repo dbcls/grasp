@@ -1,15 +1,21 @@
-import { ObjectTypeDefinitionNode } from 'graphql';
-import { URLSearchParams } from 'url';
+import Handlebars = require('handlebars');
 import fetch from 'node-fetch';
 import groupBy = require('lodash.groupby');
-import Handlebars = require('handlebars');
 import mapValues = require('lodash.mapvalues');
+import transform = require('lodash.transform');
+import { ObjectTypeDefinitionNode } from 'graphql';
+import { URLSearchParams } from 'url';
 
-import { oneOrMany, isListType, unwrapCompositeType } from './utils';
 import Resources from './resources';
+import { oneOrMany, isListType, unwrapCompositeType } from './utils';
+
+interface Triple {
+  s: string;
+  p: string;
+  o: string;
+}
 
 type CompiledTemplate = (args: object) => string;
-type Binding = Record<string, any>;
 export type ResourceEntry = Record<string, any>;
 
 const handlebars = Handlebars.create();
@@ -27,11 +33,14 @@ handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[
   }
 });
 
-function buildEntry(bindingsGroupedBySubject: Record<string, Array<Binding>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
+function buildEntry(bindingsGroupedBySubject: Record<string, Array<Triple>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
     const entry: ResourceEntry = {};
 
-    const nodeBindings = bindingsGroupedBySubject[subject];
-    const pValues = mapValues(groupBy(nodeBindings, 'p'), bs => bs.map(({o}) => o));
+    const pValues = transform(bindingsGroupedBySubject[subject], (acc, {p, o}: Triple) => {
+      const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\//, '');
+
+      (acc[k] || (acc[k] = [])).push(o);
+    }, {} as Record<string, string[]>);
 
     (resource.definition.fields || []).forEach(field => {
       const type   = field.type;
@@ -127,7 +136,7 @@ export default class Resource {
     return oneOrMany(entries, one);
   }
 
-  async query(args: object): Promise<Array<Binding>> {
+  async query(args: object): Promise<Array<Triple>> {
     if (!this.queryTemplate || !this.endpoint) {
       throw new Error('query template and endpoint should be specified in order to query');
     }
@@ -148,7 +157,7 @@ export default class Resource {
     const data = await fetch(this.endpoint, opts).then(res => res.json());
     console.log('--- SPARQL RESULT ---', JSON.stringify(data, null, '  '));
 
-    return data.results.bindings.map((b: Binding) => {
+    return data.results.bindings.map((b: Record<string, any>) => {
       return mapValues(b, ({value}) => value);
     });
   }
