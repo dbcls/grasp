@@ -34,19 +34,17 @@ SchemaLoader.loadFrom('./resources').then(loader => {
       const type = field.type;
       const name = field.name.value;
 
-      const resourceName = unwrapCompositeType(type).name.value;
-      const resource     = resources.lookup(resourceName);
-
-      if (!resource || resource.isEmbeddedType) { return; }
-
       fieldResolvers[name] = async (parent) => {
         const value = parent[name];
 
-        if (value) {
-          return await resource.fetch({iri: value}, !isListType(type));
-        }
+        if (!value) { return isListType(type) ? [] : value; }
 
-        return isListType(type) ? [] : null;
+        const resourceName = unwrapCompositeType(type).name.value;
+        const resource     = resources.lookup(resourceName);
+
+        if (!resource || resource.isEmbeddedType) { return value; }
+
+        return await resource.fetch({iri: value}, !isListType(type));
       };
     });
   });
