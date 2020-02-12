@@ -135,6 +135,11 @@ export default class Resource {
     return entries;
   }
 
+  async fetchByIRIs(iris: ReadonlyArray<string>): Promise<Array<ResourceEntry | null>> {
+    const entries = await this.fetch({iri: iris});
+    return iris.map(iri => entries.find(entry => entry.iri === iri) || null);
+  }
+
   async query(args: object): Promise<Array<Triple>> {
     if (!this.queryTemplate || !this.endpoint) {
       throw new Error('query template and endpoint should be specified in order to query');
@@ -154,7 +159,7 @@ export default class Resource {
       }
     };
     const data = await fetch(this.endpoint, opts).then(res => res.json());
-    console.log('--- SPARQL RESULT ---', JSON.stringify(data, null, '  '));
+    //console.log('--- SPARQL RESULT ---', JSON.stringify(data, null, '  '));
 
     return data.results.bindings.map((b: Record<string, any>) => {
       return mapValues(b, ({value}) => value);
