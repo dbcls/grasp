@@ -1,7 +1,6 @@
 import Handlebars = require('handlebars');
 import fetch from 'node-fetch';
 import groupBy = require('lodash.groupby');
-import mapValues = require('lodash.mapvalues');
 import transform = require('lodash.transform');
 import { ObjectTypeDefinitionNode } from 'graphql';
 import { URLSearchParams } from 'url';
@@ -9,14 +8,21 @@ import { URLSearchParams } from 'url';
 import Resources from './resources';
 import { oneOrMany, isListType, unwrapCompositeType, ensureArray } from './utils';
 
+interface RDFTerm {
+  type: string;
+  value: string;
+  "xml:lang": string;
+  datatype: string;
+}
+
 interface Triple {
-  s: string;
-  p: string;
-  o: string;
+  s: RDFTerm;
+  p: RDFTerm;
+  o: RDFTerm;
 }
 
 type CompiledTemplate = (args: object) => string;
-export type ResourceEntry = Record<string, any>;
+export type ResourceEntry = Record<string, RDFTerm | RDFTerm[]>;
 
 const handlebars = Handlebars.create();
 
@@ -40,28 +46,40 @@ handlebars.registerHelper('filter-by', function(this: any, obj: string | string[
   return `FILTER (?iri IN (${iris.join(', ')}))`;
 });
 
+function assertIsIRI(term: RDFTerm): void {
+  if (term.type !== 'uri') { throw new Error(`${term.type} is given`); }
+}
+
+function isBlankNode(term: RDFTerm): boolean {
+  return term.type === 'bnode';
+}
+
 function buildEntry(bindingsGroupedBySubject: Record<string, Array<Triple>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
     const entry: ResourceEntry = {};
 
-    const pValues = transform(bindingsGroupedBySubject[subject], (acc, {p, o}: Triple) => {
-      const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\//, '');
+    const pTerms = transform(bindingsGroupedBySubject[subject], (acc, {p, o}: Triple) => {
+      assertIsIRI(p);
+      const k = p.value.replace(/^https:\/\/github\.com\/dbcls\/grasp\//, '');
 
       (acc[k] || (acc[k] = [])).push(o);
-    }, {} as Record<string, string[]>);
+    }, {} as Record<string, RDFTerm[]>);
 
     (resource.definition.fields || []).forEach(field => {
-      const type   = field.type;
-      const name   = field.name.value;
-      const values = pValues[name] || [];
+      const type  = field.type;
+      const name  = field.name.value;
+      const terms = pTerms[name] || [];
 
       const targetType = unwrapCompositeType(type);
       const targetResource = resources.lookup(targetType.name.value);
 
       if (targetResource?.isEmbeddedType) {
-        const entries = values.map(nodeId => buildEntry(bindingsGroupedBySubject, nodeId, targetResource, resources));
+        const entries = terms.map(nodeId => {
+          assertIsIRI(nodeId);
+          return buildEntry(bindingsGroupedBySubject, nodeId.value, targetResource, resources);
+        });
         entry[name] = oneOrMany(entries, !isListType(type));
       } else {
-        entry[name] = oneOrMany(values, !isListType(type));
+        entry[name] = oneOrMany(terms, !isListType(type));
       }
     });
 
@@ -134,7 +152,7 @@ export default class Resource {
     const bindings = await this.query(args);
 
     const bindingGropuedBySubject = groupBy(bindings, 's');
-    const primaryBindings = bindings.filter(binding => !binding.s.startsWith('_:'));
+    const primaryBindings = bindings.filter(binding => !isBlankNode(binding.s));
 
     const entries = Object.entries(groupBy(primaryBindings, 's')).map(([s, _sBindings]) => {
       return buildEntry(bindingGropuedBySubject, s, this, this.resources);
@@ -169,9 +187,7 @@ export default class Resource {
 
     const data = await fetch(this.endpoint, opts).then(res => res.json());
 
-    return data.results.bindings.map((b: Record<string, any>) => {
-      return mapValues(b, ({value}) => value);
-    });
+    return data.results.bindings;
   }
 
   get isRootType(): boolean {
