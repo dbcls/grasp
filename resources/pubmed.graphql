@@ -23,9 +23,7 @@ WHERE
   { ?iri dcterms:creator ?creator . }
   { ?iri prism:publicationName ?publicationName . }
 
-  {{#filter-by iri as |iri|}}
-    <{{iri}}>
-  {{/filter-by}}
+  {{filter-by-iri}}
 
   {{#filter-by id as |id|}}
     pubmed:{{id}}

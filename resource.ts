@@ -20,6 +20,16 @@ export type ResourceEntry = Record<string, any>;
 
 const handlebars = Handlebars.create();
 
+handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[]}): string {
+  const iris = ensureArray(this.iri);
+
+  if (iris.length === 0) { return ''; }
+
+  const wrapped = iris.map(iri => `<${iri}>`);
+
+  return `FILTER (?iri IN (${wrapped.join(', ')}))`;
+});
+
 handlebars.registerHelper('filter-by', function(this: any, obj: string | string[], options: Handlebars.HelperOptions): string {
   const values = ensureArray(obj);
 
