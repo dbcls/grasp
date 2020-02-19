@@ -50,7 +50,9 @@ WHERE {
   ?iri sos:totalSequences/rdf:value ?total_seq .
   ?iri sos:filteredSequences/rdf:value ?filtered_seq .
 
-  {{filter-by iri iri=true}}
+  {{#filter-by iri as |iri|}}
+    <{{iri}}>
+  {{/filter-by}}
 }
 """
 type SequenceStatisticsReport {

@@ -25,13 +25,7 @@ handlebars.registerHelper('filter-by', function(this: any, obj: string | string[
 
   if (values.length === 0) { return ''; }
 
-  const iris = values.map(v => {
-    if (options.fn) {
-      return options.fn(this, {blockParams: [v]}).trim();
-    } else {
-      return options.hash.iri ? `<${v}>` : v;
-    }
-  });
+  const iris = options.fn ? values.map(v => options.fn(this, {blockParams: [v]}).trim()) : values;
 
   return `FILTER (?iri IN (${iris.join(', ')}))`;
 });

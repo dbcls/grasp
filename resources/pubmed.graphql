@@ -23,10 +23,12 @@ WHERE
   { ?iri dcterms:creator ?creator . }
   { ?iri prism:publicationName ?publicationName . }
 
-  {{filter-by iri iri=true}}
+  {{#filter-by iri as |iri|}}
+    <{{iri}}>
+  {{/filter-by}}
 
-  {{#filter-by id as |_id|}}
-    pubmed:{{_id}}
+  {{#filter-by id as |id|}}
+    pubmed:{{id}}
   {{/filter-by}}
 }
 """
