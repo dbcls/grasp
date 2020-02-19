@@ -26,7 +26,7 @@ function wrapIRI(iri: string): string {
 
 handlebars.registerHelper('quote', function(value: string | string[], options: Record<string, any>): string | string[] {
   const iri = options.hash.iri;
-  console.log("---- QUOTE", value)
+
   if (Array.isArray(value)) {
     return value.map((v) => iri ? `<${v}>` : `"${v}"`);
   } else {
@@ -35,7 +35,6 @@ handlebars.registerHelper('quote', function(value: string | string[], options: R
 })
 
 handlebars.registerHelper('filter-by', function(this: Record<string, any>, key: string, value: string | string[]): string {
-  console.log("---- filter-by ", value)
   if (Array.isArray(value)) {
     if (value.length === 0) {
       return '';
@@ -146,7 +145,6 @@ export default class Resource {
   }
 
   async fetch(args: object): Promise<ResourceEntry[]> {
-    console.log("fetch args", args)
     const bindings = await this.query(args);
 
     const bindingGropuedBySubject = groupBy(bindings, 's');
@@ -156,7 +154,6 @@ export default class Resource {
       return buildEntry(bindingGropuedBySubject, s, this, this.resources);
     });
 
-    console.log("---------- fetch result", entries)
     return entries;
   }
 
@@ -183,8 +180,8 @@ export default class Resource {
         Accept: 'application/sparql-results+json'
       }
     };
+
     const data = await fetch(this.endpoint, opts).then(res => res.json());
-    //console.log('--- SPARQL RESULT ---', JSON.stringify(data, null, '  '));
 
     return data.results.bindings.map((b: Record<string, any>) => {
       return mapValues(b, ({value}) => value);
