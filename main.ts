@@ -23,16 +23,18 @@ SchemaLoader.loadFrom('./resources').then(loader => {
     queryResolvers[field.name.value] = async (_parent, args: {iri: string | Array<string>}, context) => {
       const resourceName = unwrapCompositeType(field.type).name.value;
       const resource     = resources.lookup(resourceName);
+
       if (!resource) {
         throw new Error(`resource ${resourceName} is not found`);
       }
 
-      const loader = context.loaders.get(resource);
-      if (!loader) {
-        throw new Error(`missing resource loader for ${resource.definition.name.value}`);
-      }
-
       if (isEqual(Object.keys(args), ['iri'])) {
+        const loader = context.loaders.get(resource);
+
+        if (!loader) {
+          throw new Error(`missing resource loader for ${resource.definition.name.value}`);
+        }
+
         const iris = args.iri instanceof Array ? args.iri : [args.iri];
         return oneOrMany(await loader.loadMany(iris), !isListType(field.type));
       }
@@ -49,7 +51,7 @@ SchemaLoader.loadFrom('./resources').then(loader => {
       const type = field.type;
       const name = field.name.value;
 
-      fieldResolvers[name] = async (parent, _args, context) => {
+      fieldResolvers[name] = async (parent, args, context) => {
         const value = parent[name];
 
         if (!value) { return isListType(type) ? [] : value; }
@@ -59,12 +61,20 @@ SchemaLoader.loadFrom('./resources').then(loader => {
 
         if (!resource || resource.isEmbeddedType) { return value; }
 
-        const loader = context.loaders.get(resource);
-        if (!loader) {
-          throw new Error(`missing resource loader for ${resource.definition.name.value}`);
-        }
+        if (Object.keys(args).length === 0) {
+          const loader = context.loaders.get(resource);
 
-        return oneOrMany(await loader.loadMany(value), !isListType(type));
+          if (!loader) {
+            throw new Error(`missing resource loader for ${resource.definition.name.value}`);
+          }
+
+          return oneOrMany(await loader.loadMany(value), !isListType(type));
+        } else {
+          const argIRIs = args.iri instanceof Array ? args.iri : [args.iri];
+          const allIRIs = Array.from(new Set([...value, ...argIRIs]));
+
+          return oneOrMany(await resource.fetch({...args, ...{iri: allIRIs}}), !isListType(type));
+        }
       };
     });
   });
