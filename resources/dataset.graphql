@@ -34,7 +34,7 @@ WHERE
   OPTIONAL { ?publisher rdfs:label ?publisher_name_en . FILTER (lang(?publisher_name_en) = "en") }
   OPTIONAL { ?publisher foaf:page ?publisher_page . }
 
-  {{filter-by-iri}}
+  {{filter-by iri iri=true}}
 }
 """
 type Dataset {

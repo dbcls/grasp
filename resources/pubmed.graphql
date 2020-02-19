@@ -23,13 +23,11 @@ WHERE
   { ?iri dcterms:creator ?creator . }
   { ?iri prism:publicationName ?publicationName . }
 
-  {{filter-by "iri" (quote iri iri="true")}}
+  {{filter-by iri iri=true}}
 
-  {{#if id}}
-    FILTER(?iri IN ({{#map-join id as |_id|}}
-      pubmed:{{_id}}
-    {{/map-join}}))
-  {{/if}}
+  {{#filter-by id as |_id|}}
+    pubmed:{{_id}}
+  {{/filter-by}}
 }
 """
 type Pubmed {

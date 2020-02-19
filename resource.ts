@@ -20,42 +20,20 @@ export type ResourceEntry = Record<string, any>;
 
 const handlebars = Handlebars.create();
 
-function wrapIRI(iri: string): string {
-  return `<${iri}>`;
-}
+handlebars.registerHelper('filter-by', function(this: any, obj: string | string[], options: Handlebars.HelperOptions): string {
+  const values = ensureArray(obj);
 
-handlebars.registerHelper('quote', function(value: string | string[], options: Record<string, any>): string | string[] {
-  const iri = options.hash.iri;
+  if (values.length === 0) { return ''; }
 
-  if (Array.isArray(value)) {
-    return value.map((v) => iri ? `<${v}>` : `"${v}"`);
-  } else {
-    return iri ? `<${value}>` : `"${value}"`;
-  }
-})
-
-handlebars.registerHelper('filter-by', function(this: Record<string, any>, key: string, value: string | string[]): string {
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return '';
+  const iris = values.map(v => {
+    if (options.fn) {
+      return options.fn(this, {blockParams: [v]}).trim();
+    } else {
+      return options.hash.iri ? `<${v}>` : v;
     }
-    return `FILTER (?${key} IN (${value.join(', ')}))`;
-  } else {
-    return `FILTER (?${key} = ${value})`;
-  }
-});
+  });
 
-handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[]}): string {
-  if (Array.isArray(this.iri)) {
-    const refs = this.iri.map(wrapIRI);
-    return `FILTER (?iri IN (${refs.join(', ')}))`;
-  } else {
-    return `FILTER (?iri = ${wrapIRI(this.iri)})`;
-  }
-});
-
-handlebars.registerHelper('map-join', function(this: any, obj: string | string[], options: Handlebars.HelperOptions): string {
-  return ensureArray(obj).map(v => options.fn(this, {blockParams: [v]}).trim()).join(options.hash.separator || ', ');
+  return `FILTER (?iri IN (${iris.join(', ')}))`;
 });
 
 function buildEntry(bindingsGroupedBySubject: Record<string, Array<Triple>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
