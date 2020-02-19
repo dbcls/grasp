@@ -25,9 +25,17 @@ WHERE
 
   {{filter-by "iri" (quote iri iri="true")}}
 
+  {{! filter-by "iri" (add-prefix "pubmed:" id)}}
+
+#  FILTER(?iri {{! #map-join ids as |id|}}
+#    pubmed:{{id}}
+#  {{! /map-join}})
+
   {{#if id}}
   FILTER(?iri = pubmed:{{id}})
   {{/if}}
+
+
 }
 """
 type Pubmed {
