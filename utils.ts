@@ -28,3 +28,11 @@ export function unwrapCompositeType(type: TypeNode): NamedTypeNode {
       throw new Error(`unsupported type: ${(type as TypeNode).kind}`);
   }
 }
+
+export function ensureArray<T>(obj: T | Array<T>): Array<T> {
+  if (Array.isArray(obj)) {
+    return obj;
+  } else {
+    return obj ? [obj] : [];
+  }
+}

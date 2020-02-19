@@ -6,20 +6,12 @@ import isEqual = require('lodash.isequal');
 import Resource, { ResourceEntry } from './resource';
 import Resources from './resources';
 import SchemaLoader from './schema-loader';
-import { isListType, oneOrMany, unwrapCompositeType } from './utils';
+import { isListType, oneOrMany, unwrapCompositeType, ensureArray } from './utils';
 
 type ResourceResolver = (parent: ResourceEntry, args: {iri: string | Array<string>}, context: Context) => Promise<ResourceEntry | ResourceEntry[] | null>;
 
 interface Context {
   loaders: Map<Resource, Dataloader<string, ResourceEntry | null>>
-}
-
-function ensureArray<T>(obj: T | Array<T>): Array<T> {
-  if (Array.isArray(obj)) {
-    return obj;
-  } else {
-    return obj ? [obj] : [];
-  }
 }
 
 SchemaLoader.loadFrom('./resources').then(loader => {

@@ -7,7 +7,7 @@ import { ObjectTypeDefinitionNode } from 'graphql';
 import { URLSearchParams } from 'url';
 
 import Resources from './resources';
-import { oneOrMany, isListType, unwrapCompositeType } from './utils';
+import { oneOrMany, isListType, unwrapCompositeType, ensureArray } from './utils';
 
 interface Triple {
   s: string;
@@ -52,6 +52,10 @@ handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[
   } else {
     return `FILTER (?iri = ${wrapIRI(this.iri)})`;
   }
+});
+
+handlebars.registerHelper('map-join', function(this: any, obj: string | string[], options: Handlebars.HelperOptions): string {
+  return ensureArray(obj).map(v => options.fn(this, {blockParams: [v]}).trim()).join(options.hash.separator || ', ');
 });
 
 function buildEntry(bindingsGroupedBySubject: Record<string, Array<Triple>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
