@@ -9,5 +9,5 @@ type Query {
   Dataset(iri: String!): Dataset
   Datasets(iri: [String!]!): [Dataset!]!
   Pubmed(iri: String!): Pubmed
-  Pubmeds(iri: [String!]!): [Pubmed!]!
+  Pubmeds(iri: [String!], id: [String!]): [Pubmed!]!
 }

@@ -7,6 +7,7 @@ PREFIX : <https://github.com/dbcls/grasp/>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
 PREFIX prism: <http://prismstandard.org/namespaces/1.2/basic/>
+PREFIX pubmed: <http://rdf.ncbi.nlm.nih.gov/pubmed/>
 
 CONSTRUCT {
   ?iri :iri ?iri .
@@ -22,7 +23,13 @@ WHERE
   { ?iri dcterms:creator ?creator . }
   { ?iri prism:publicationName ?publicationName . }
 
+  {{#if iri}}
   {{filter-by-iri}}
+  {{/if}}
+
+  {{#if id}}
+  FILTER(?iri = pubmed:{{id}})
+  {{/if}}
 }
 """
 type Pubmed {
