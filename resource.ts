@@ -24,6 +24,28 @@ function wrapIRI(iri: string): string {
   return `<${iri}>`;
 }
 
+handlebars.registerHelper('quote', function(value: string | string[], options: Record<string, any>): string | string[] {
+  const iri = options.hash.iri;
+  console.log("---- QUOTE", value)
+  if (Array.isArray(value)) {
+    return value.map((v) => iri ? `<${v}>` : `"${v}"`);
+  } else {
+    return iri ? `<${value}>` : `"${value}"`;
+  }
+})
+
+handlebars.registerHelper('filter-by', function(this: Record<string, any>, key: string, value: string | string[]): string {
+  console.log("---- filter-by ", value)
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return '';
+    }
+    return `FILTER (?${key} IN (${value.join(', ')}))`;
+  } else {
+    return `FILTER (?${key} = ${value})`;
+  }
+});
+
 handlebars.registerHelper('filter-by-iri', function(this: {iri: string | string[]}): string {
   if (Array.isArray(this.iri)) {
     const refs = this.iri.map(wrapIRI);
@@ -124,6 +146,7 @@ export default class Resource {
   }
 
   async fetch(args: object): Promise<ResourceEntry[]> {
+    console.log("fetch args", args)
     const bindings = await this.query(args);
 
     const bindingGropuedBySubject = groupBy(bindings, 's');
@@ -132,6 +155,8 @@ export default class Resource {
     const entries = Object.entries(groupBy(primaryBindings, 's')).map(([s, _sBindings]) => {
       return buildEntry(bindingGropuedBySubject, s, this, this.resources);
     });
+
+    console.log("---------- fetch result", entries)
     return entries;
   }
 

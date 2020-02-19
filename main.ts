@@ -14,6 +14,14 @@ interface Context {
   loaders: Map<Resource, Dataloader<string, ResourceEntry | null>>
 }
 
+function ensureArray<T>(obj: T | Array<T>): Array<T> {
+  if (Array.isArray(obj)) {
+    return obj;
+  } else {
+    return obj ? [obj] : [];
+  }
+}
+
 SchemaLoader.loadFrom('./resources').then(loader => {
   const resources = new Resources(loader.resourceTypeDefs);
 
@@ -35,7 +43,7 @@ SchemaLoader.loadFrom('./resources').then(loader => {
           throw new Error(`missing resource loader for ${resource.definition.name.value}`);
         }
 
-        const iris = args.iri instanceof Array ? args.iri : [args.iri];
+        const iris = ensureArray(args.iri);
         return oneOrMany(await loader.loadMany(iris), !isListType(field.type));
       }
       return oneOrMany(await resource.fetch(args), !isListType(field.type));
@@ -70,7 +78,7 @@ SchemaLoader.loadFrom('./resources').then(loader => {
 
           return oneOrMany(await loader.loadMany(value), !isListType(type));
         } else {
-          const argIRIs = args.iri instanceof Array ? args.iri : [args.iri];
+          const argIRIs = ensureArray(args.iri);
           const allIRIs = Array.from(new Set([...value, ...argIRIs]));
 
           return oneOrMany(await resource.fetch({...args, ...{iri: allIRIs}}), !isListType(type));
