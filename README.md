@@ -13,6 +13,7 @@ Grasp works as follows:
 5. Grasp reforms the results to fit the given GraphQL query.
 6. Grasp sends the results back to the client.
 
+<!--
 ```uml
 actor Client
 participant Grasp
@@ -26,6 +27,9 @@ Grasp -> "SPARQL Endpoint": Send SPARQL Queries
 Grasp -> Grasp: Translate Results
 Grasp -> Client: GraphQL Result
 ```
+-->
+
+![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/overview.svg)
 
 We need to define a GraphQL schema with some Grasp specific notations, which are carefully designed to keep full-compatibility with the GraphQL specification. More specifically, we need to define a SPARQL endpoint URL and a SPARQL query template per a *concept*, or a *type* in GraphQL terms. We also use GraphQL decorators for metadata (described later).
 
