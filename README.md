@@ -269,8 +269,6 @@ You need to restart Grasp to reload the definitions. You can use `npm run watch`
 
 ### Filter triples by parameters other than IRIs in SPARQL Query
 
-You can use `filter-by` helper.
-
 Consider that you want to query a `Dataset` with an `id` (like `dcterms:identifier`). Add the following field definition into the `Query`:
 
 ```graphql
