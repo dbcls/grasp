@@ -66,7 +66,7 @@ query {
 
 Then, press Ctrl+Enter. The query will be issued and results will be shown (on right pane).
 
-![localhost_4000_(Laptop with MDPI screen).png (136.2 kB)](https://img.esa.io/uploads/production/attachments/2476/2020/02/27/6986/10d68512-cadd-48ce-b1dc-ba50ec82883b.png)
+![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/graphql-playground.png)
 
 Now we've queried [Integbio Database Catalog/RDF](https://integbio.jp/rdf/?view=detail&id=dbcatalog) with GraphQL. Let's see how it works.
 
