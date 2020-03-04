@@ -44,5 +44,5 @@ type Dataset {
   description_ja: String!
   description_en: String
   references: [Pubmed!]!
-  publisher: [Publisher!]!
+  publisher: Publisher
 }
