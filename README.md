@@ -205,7 +205,7 @@ dataset *-- publisher
 ```
 -->
 
-![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/embedded.png)
+![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/embedded.svg?sanitize=true)
 
 In [resources/pubmed.graphql](https://github.com/dbcls/grasp/blob/master/resources/publisher.graphql), we have the following definition of `Publisher`:
 
