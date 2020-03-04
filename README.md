@@ -315,8 +315,8 @@ WHERE
 Further, `{{filter-by-iri}}` can be interpreted as the following:
 
 ```hbs
-{{#filter-by iri as |iri|}}
-    <{{iri}}>
+{{#filter-by iri as |_iri|}}
+  <{{_iri}}>
 {{{/filter-by}}
 ```
 
