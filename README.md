@@ -188,6 +188,7 @@ We cannot handle relations with a blank node in the previously mentioned way, as
 
 Consider the following case:
 
+<!--
 ``` uml
 object dataset {
   iri = <http://purl.jp/bio/03/dbcatalog/nbdc00012>
@@ -202,6 +203,9 @@ object publisher <<blank node>> {
 
 dataset *-- publisher
 ```
+-->
+
+![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/embedded.png)
 
 In [resources/pubmed.graphql](https://github.com/dbcls/grasp/blob/master/resources/publisher.graphql), we have the following definition of `Publisher`:
 
