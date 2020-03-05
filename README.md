@@ -13,22 +13,6 @@ Grasp works as follows:
 5. Grasp reforms the results to fit the given GraphQL query.
 6. Grasp sends the results back to the client.
 
-<!--
-```uml
-actor User
-participant Grasp
-participant "SPARQL Endpoint"
-
-autonumber
-User -> Grasp: Submit a GraphQL Query
-Grasp -> Grasp: Translate the Query
-Grasp -> "SPARQL Endpoint": Issue SPARQL Queries
-"SPARQL Endpoint" --> Grasp: SPARQL Results
-Grasp -> Grasp: Translate Results
-Grasp --> User: GraphQL Result
-```
--->
-
 ![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/overview.svg?sanitize=true)
 
 We need to define a GraphQL schema with some Grasp specific notations, which are carefully designed to keep full-compatibility with the GraphQL specification. More specifically, we need to define a SPARQL endpoint URL and a SPARQL query template per a *concept*, or a *type* in GraphQL terms. We also use GraphQL decorators for metadata (described later).
@@ -188,23 +172,6 @@ In this case, Grasp issues two SPARQL queries to complete a GraphQL query to fet
 We cannot handle relations with a blank node in the previously mentioned way, as the blank node can't be pointed with an IRI. In order to handle such relations, we introduce *embedded resources*.
 
 Consider the following case:
-
-<!--
-``` uml
-object dataset {
-  iri = <http://purl.jp/bio/03/dbcatalog/nbdc00012>
-  title_ja = "Atlas of Genetics and Cytogenetics in Oncology and Haematology"
-  ...
-}
-object publisher <<blank node>> {
-  name_ja = "ATLAS"
-  name_en = "ATLAS"
-  page = null
-}
-
-dataset *-- publisher
-```
--->
 
 ![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/embedded.svg?sanitize=true)
 

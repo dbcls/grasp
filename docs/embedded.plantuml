@@ -1,0 +1,12 @@
+object dataset {
+  iri = <http://purl.jp/bio/03/dbcatalog/nbdc00012>
+  title_ja = "Atlas of Genetics and Cytogenetics in Oncology and Haematology"
+  ...
+}
+object publisher <<blank node>> {
+  name_ja = "ATLAS"
+  name_en = "ATLAS"
+  page = null
+}
+
+dataset *-- publisher

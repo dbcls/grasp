@@ -1,0 +1,11 @@
+actor User
+participant Grasp
+participant "SPARQL Endpoint"
+
+autonumber
+User -> Grasp: Submit a GraphQL Query
+Grasp -> Grasp: Translate the Query
+Grasp -> "SPARQL Endpoint": Issue SPARQL Queries
+"SPARQL Endpoint" --> Grasp: SPARQL Results
+Grasp -> Grasp: Translate Results
+Grasp --> User: GraphQL Result
