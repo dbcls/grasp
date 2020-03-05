@@ -261,7 +261,7 @@ Note that we need to return graph containing triples whose 1) subject points the
 
 ## Write your own definition
 
-You can add your own definitions in `resources` directory.
+You can add your own definitions in `resources` directory. The resource definition files must start with `[0-9a-zA-Z]` and end with `.graphql`. The other files in the directory are ignored.
 
 You need to restart Grasp to reload the definitions. You can use `npm run watch` to restart the server automatically.
 

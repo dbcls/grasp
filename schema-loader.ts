@@ -30,7 +30,7 @@ export default class SchemaLoader {
     let schema = '';
 
     for (const path of await readdir(baseDir)) {
-      if (!path.endsWith('.graphql')) { continue; }
+      if (!/^[0-9a-zA-Z].*\.graphql$/.test(path)) { continue; }
 
       schema += await readFile(join(baseDir, path));
     }
