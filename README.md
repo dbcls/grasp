@@ -15,17 +15,17 @@ Grasp works as follows:
 
 <!--
 ```uml
-actor Client
+actor User
 participant Grasp
 participant "SPARQL Endpoint"
 
 autonumber
-Client -> Grasp: Submit a GraphQL Query
+User -> Grasp: Submit a GraphQL Query
 Grasp -> Grasp: Translate the Query
-Grasp -> "SPARQL Endpoint": Send SPARQL Queries
-"SPARQL Endpoint" -> Grasp: SPARQL Results
+Grasp -> "SPARQL Endpoint": Issue SPARQL Queries
+"SPARQL Endpoint" --> Grasp: SPARQL Results
 Grasp -> Grasp: Translate Results
-Grasp -> Client: GraphQL Result
+Grasp --> User: GraphQL Result
 ```
 -->
 ![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/overview.svg?sanitize=true)
