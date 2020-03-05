@@ -28,6 +28,7 @@ Grasp -> Grasp: Translate Results
 Grasp --> User: GraphQL Result
 ```
 -->
+
 ![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/overview.svg?sanitize=true)
 
 We need to define a GraphQL schema with some Grasp specific notations, which are carefully designed to keep full-compatibility with the GraphQL specification. More specifically, we need to define a SPARQL endpoint URL and a SPARQL query template per a *concept*, or a *type* in GraphQL terms. We also use GraphQL decorators for metadata (described later).
