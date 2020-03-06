@@ -1,3 +1,5 @@
+hide footbox
+
 actor User
 participant Grasp
 participant "SPARQL Endpoint"
