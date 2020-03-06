@@ -94,6 +94,8 @@ SchemaLoader.loadFrom('./resources').then(loader => {
         loaders: transform(resources.root, (acc, resource) => {
           acc.set(resource, new Dataloader(async (iris: ReadonlyArray<string>) => {
             return resource.fetchByIRIs(iris);
+          }, {
+            maxBatchSize: 100
           }));
         }, new Map<Resource, Dataloader<string, ResourceEntry | null>>())
       };
