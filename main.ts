@@ -1,5 +1,5 @@
 import { ApolloServer } from 'apollo-server';
-import Dataloader from 'dataloader';
+import DataLoader from 'dataloader';
 import transform = require('lodash.transform');
 import isEqual = require('lodash.isequal');
 
@@ -11,7 +11,7 @@ import { isListType, oneOrMany, unwrapCompositeType, ensureArray } from './utils
 type ResourceResolver = (parent: ResourceEntry, args: {iri: string | Array<string>}, context: Context) => Promise<ResourceEntry | ResourceEntry[] | null>;
 
 interface Context {
-  loaders: Map<Resource, Dataloader<string, ResourceEntry | null>>
+  loaders: Map<Resource, DataLoader<string, ResourceEntry | null>>
 }
 
 SchemaLoader.loadFrom('./resources').then(loader => {
@@ -92,12 +92,12 @@ SchemaLoader.loadFrom('./resources').then(loader => {
     context: () => {
       return {
         loaders: transform(resources.root, (acc, resource) => {
-          acc.set(resource, new Dataloader(async (iris: ReadonlyArray<string>) => {
+          acc.set(resource, new DataLoader(async (iris: ReadonlyArray<string>) => {
             return resource.fetchByIRIs(iris);
           }, {
             maxBatchSize: 100
           }));
-        }, new Map<Resource, Dataloader<string, ResourceEntry | null>>())
+        }, new Map<Resource, DataLoader<string, ResourceEntry | null>>())
       };
     }
   });
