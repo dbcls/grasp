@@ -62,7 +62,7 @@ Now we've queried [Integbio Database Catalog/RDF](https://integbio.jp/rdf/?view=
 
 The GraphQL query was translated into SPARQL queries and sent to a SPARQL endpoint, then the SPARQL results were returned to Grasp, finally the results were reformed into the GraphQL result.
 
-Grasp does those translation according to a GraphQL schema (type definition), SPARQL Endpoint URL and SPARQL query, which you provide. We refer to this as *resource* in Grasp. Let us dig into the definition.
+Grasp does those translation according to a GraphQL schema (type definition), SPARQL Endpoint URL and SPARQL query, which a Grasp admin (who sets up Grasp) provides. We refer to this as *resource* in Grasp. Let us dig into the definition.
 
 You will see the resource definition at  [resources/dataset.graphql](https://github.com/dbcls/grasp/blob/master/resources/dataset.graphql).
 
