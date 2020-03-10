@@ -35,7 +35,7 @@ Let's look at a simple example.
 
     $ npm run watch
 
-Visit http://localhost:4000 . You will see GraphQL Playground.
+Visit http://localhost:4000 (If `PORT` environment variable is specified, Grasp will listen on that port). You will see GraphQL Playground.
 
 Write a GraphQL query below in the query editor (left pane):
 
