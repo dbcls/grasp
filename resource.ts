@@ -167,11 +167,19 @@ export default class Resource {
       }
     };
 
-    const data = await fetch(this.endpoint, opts).then(res => res.json());
+    const res = await fetch(this.endpoint, opts);
 
-    return data.results.bindings.map((b: Record<string, any>) => {
-      return mapValues(b, ({value}) => value);
-    });
+    if (res.ok) {
+      const data = await res.json();
+
+      return data.results.bindings.map((b: Record<string, any>) => {
+        return mapValues(b, ({value}) => value);
+      });
+    } else {
+      const body = await res.text();
+
+      throw new Error(`SPARQL endpoint returns ${res.status} ${res.statusText}: ${body}`)
+    }
   }
 
   get isRootType(): boolean {
