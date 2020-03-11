@@ -285,7 +285,7 @@ type Query {
 Here, you want to issue a SPARQL query like:
 
 ```sparql
-?id VALUES { "NBDC00012" "NBDC00013" }
+VALUES ?id { "NBDC00012" "NBDC00013" }
 ```
 
 In this case, instad of doing simple interporation (as previously mentioned),
@@ -296,7 +296,7 @@ WHERE
 {
   ?iri dcterms:identifier ?id .
   {{#if ids}}
-    ?id VALUES { {{join " " (as-string ids)}} }
+    VALUES ?id { {{join " " (as-string ids)}} }
   {{/if}}
 }
 ```
