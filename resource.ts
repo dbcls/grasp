@@ -44,7 +44,7 @@ function buildEntry(bindingsGroupedBySubject: Record<string, Array<Triple>>, sub
     const entry: ResourceEntry = {};
 
     const pValues = transform(bindingsGroupedBySubject[subject], (acc, {p, o}: Triple) => {
-      const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\//, '');
+      const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, '');
 
       (acc[k] || (acc[k] = [])).push(o);
     }, {} as Record<string, string[]>);

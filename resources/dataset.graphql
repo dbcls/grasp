@@ -3,7 +3,7 @@
 https://integbio.jp/rdf/sparql
 
 --- sparql ---
-PREFIX : <https://github.com/dbcls/grasp/>
+PREFIX : <https://github.com/dbcls/grasp/ns/>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>

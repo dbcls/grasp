@@ -75,7 +75,7 @@ The query returns a RDF graph by the `CONSTRUCT` query form.  The graph has trip
 See the first part of the SPARQL query:
 
 ```sparql
-PREFIX : <https://github.com/dbcls/grasp/>
+PREFIX : <https://github.com/dbcls/grasp/ns/>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
 PREFIX foaf: <http://xmlns.com/foaf/0.1/>
@@ -87,7 +87,7 @@ CONSTRUCT {
 
 Here, we can see that the `Dataset` object has fields `iri`, `title_ja` and `title_en`, where`iri` works as an identifier.
 
-We use predicates with the special namespace (`https://github.com/dbcls/grasp/`) in order to specify the field names.
+We use predicates with the special namespace (`https://github.com/dbcls/grasp/ns/`) in order to specify the field names.
 
 After the comment block, we have `Dataset` GraphQL object type as follows. This corresponds to the above-mentioned SPARQL query.
 
