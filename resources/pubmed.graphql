@@ -22,12 +22,16 @@ WHERE
   { ?iri dcterms:date ?date . }
   { ?iri dcterms:creator ?creator . }
   { ?iri prism:publicationName ?publicationName . }
+  OPTIONAL { ?iri dcterms:identifier ?id . }
 
-  {{filter-by-iri}}
-
-  {{#filter-by id as |id|}}
-    pubmed:{{id}}
-  {{/filter-by}}
+  {{iri-is-in iri}}
+  {{#if id}}
+    VALUES ?iri {
+      {{#each id as |_id|}}
+        pubmed:{{_id}}
+      {{/each}}
+    }
+  {{/if}}
 }
 """
 type Pubmed {

@@ -6,7 +6,7 @@ type Query {
   """
   sequenceStatisticsReport(iri: String!): SequenceStatisticsReport
   sequenceStatisticsReports(iri: [String!]!): [SequenceStatisticsReport!]!
-  dataset(iri: String!): Dataset
+  dataset(iri: String, id: String): Dataset
   datasets(iri: [String!]!): [Dataset!]!
   pubmed(iri: String!): Pubmed
   pubmeds(iri: [String!], id: [String!]): [Pubmed!]!

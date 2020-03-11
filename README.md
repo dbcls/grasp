@@ -68,7 +68,7 @@ You will see the resource definition at  [resources/dataset.graphql](https://git
 
 SPARQL Endpoint URL and SPARQL query are written in the GraphQL comment of the type in a special form. SPARQL Endpoint is specified after the `--- endpoint ---` line. SPARQL query is placed after the `--- sparql ---` line.
 
-We can access the parameters on GraphQL query in the SPARQL query. In this example, we filter the triples by `iri` parameter via `{{filter-by-iri}}` helper, which generates `FILTER ?iri IN (...)`.
+We can access the parameters on GraphQL query in the SPARQL query. In this example, we filter the triples by `iri` parameter via `iri-is-in` helper, which generates `VALUES ?iri {...}`.
 
 The query returns a RDF graph by the `CONSTRUCT` query form.  The graph has triples which consist of the IRI identifying the object, the predicate corresponding to the field name of the object, and its value.
 
@@ -250,40 +250,76 @@ If we issue the following GraphQL query:
 
 ``` graphql
 query {
-  datasetById(id: "nbdc00012") {
+  datasetById(id: "NBDC00012") {
     ...
   }
 }
 ```
 
-In this case, we can obtain `"ndbc0012"` with `{{id}}` in the SPARQL query.
+The SPARQL template is written in Handlebars.
+In this case, we can obtain `"NBDC00012"` with `{{id}}` notation in the SPARQL query.
+You can also use Handlebars' built-in helpers such as `if` and `each`.
+See https://handlebarsjs.com/guide/ for details.
 
 ```hbs
 WHERE
 {
-  # ...
-  ?iri dcterms:identifier ?id . FILTER (?id = "{{id}}")
+  ?iri dcterms:identifier ?id .
+  {#if id}
+    ?iri dcterms:identifier "{{id}}" .
+  {/if}
 }
 ```
 
-For this situation, `{{filter-by}}` helper should be useful, as this helper generates `FILTER ... IN` from parameters with both a single value and a list of values:
+### Handling multiple value in query templates
+
+Consider you are defining a GraphQL query, which takes multiple values as a paramater.
+The field in Query should be like below:
+
+```graphql
+type Query {
+  datasetsByIds(ids: [String!]): [Dataset!]!
+}
+```
+
+Here, you want to issue a SPARQL query like:
+
+```sparql
+?id VALUES { "NBDC00012" "NBDC00013" }
+```
+
+In this case, instad of doing simple interporation (as previously mentioned),
+you can also use `join` and `as-strings` helpers:
 
 ```hbs
 WHERE
 {
-  # ...
-  {{#filter-by id as |_id|}}
-    "{{_id}}"
-  {{/filter-by}}
+  ?iri dcterms:identifier ?id .
+  {{#if ids}}
+    ?id VALUES { {{join " " (as-string ids)}} }
+  {{/if}}
 }
 ```
 
-Further, `{{filter-by-iri}}` can be interpreted as the following:
+Here, `as-string` wraps elements of the given array with `"` (double-quotations).
+`join` combines them using the first argument as the delimiter.
 
-```hbs
-{{#filter-by iri as |_iri|}}
-  <{{_iri}}>
-{{{/filter-by}}
+Consider another example of generating an `IN` clause from a parameter like this:
+
+```sparql
+FILTER (?iri IN (<http://...>, <http://...>))
 ```
 
-The SPARQL template is written in Handlebars. You can use Handlebars' built-in helpers such as `if` and `each`. See https://handlebarsjs.com/guide/ for details.
+You can write the template using helpers as follows:
+
+```hbs
+WHERE
+{
+  {{#if iris}}
+    FILTER (?iri IN ({{join ", " (as-iri iris)}}))
+  {{/if}}
+}
+```
+
+Note that we've specified `, ` as the delimiter for `join`.
+`as-iri` works almost same as `as-string` except wrapping the elements with `<` and `>`.
