@@ -94,6 +94,14 @@ Here, we can see that the `Dataset` object has fields `iri`, `title_ja` and `tit
 
 We use predicates with the special namespace (`https://github.com/dbcls/grasp/ns/`) in order to specify the field names.
 
+Grasp requires this SPARQL query to return triples whose subject is included in `iri` parameter (if `iri` specified). To achive this, we use `{{iri-is-in iri}}` statement. This will be replaced with
+
+```sparql
+VALUES ?iri {<http://example.com/...> <http://example.com/...>}
+```
+
+during query execution.
+
 After the comment block, we have `Dataset` GraphQL object type as follows. This corresponds to the above-mentioned SPARQL query.
 
 ```graphql
