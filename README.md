@@ -270,9 +270,9 @@ See https://handlebarsjs.com/guide/ for details.
 WHERE
 {
   ?iri dcterms:identifier ?id .
-  {#if id}
+  {{#if id}}
     ?iri dcterms:identifier "{{id}}" .
-  {/if}
+  {{/if}}
 }
 ```
 
