@@ -83,6 +83,11 @@ CONSTRUCT {
   ?iri :iri ?iri .
   ?iri :title_ja ?title_ja .
   ?iri :title_en ?title_en .
+  # ...
+} WHERE {
+  # ...
+  {{iri-is-in iri}}
+}
 ```
 
 Here, we can see that the `Dataset` object has fields `iri`, `title_ja` and `title_en`, where`iri` works as an identifier.
