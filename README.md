@@ -276,7 +276,7 @@ WHERE
 }
 ```
 
-### Handling multiple value in query templates
+### Handling multiple values in query templates
 
 Consider you are defining a GraphQL query, which takes multiple values as a paramater.
 The field in Query should be like below:
