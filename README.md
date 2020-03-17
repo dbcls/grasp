@@ -33,9 +33,13 @@ Let's look at a simple example.
 
 ### Run
 
-    $ npm run watch
+    $ RESOURCES_DIR=./examples npm run watch
 
-Visit http://localhost:4000 (If `PORT` environment variable is specified, Grasp will listen on that port). You will see GraphQL Playground.
+This loads the example resource definitions from `./example`.
+
+Visit http://localhost:4000. You will see GraphQL Playground.
+
+Note: You can change the port to listen on with `PORT` environment variable. Other configurations are described at  [Configuration](#configuration) section.
 
 Write a GraphQL query below in the query editor (left pane):
 
@@ -64,7 +68,7 @@ The GraphQL query was translated into SPARQL queries and sent to a SPARQL endpoi
 
 Grasp does those translation according to a GraphQL schema (type definition), SPARQL Endpoint URL and SPARQL query, which a Grasp admin (who sets up Grasp) provides. We refer to this as *resource* in Grasp. Let us dig into the definition.
 
-You will see the resource definition at  [resources/dataset.graphql](https://github.com/dbcls/grasp/blob/master/resources/dataset.graphql).
+You will see the resource definition at  [examples/dataset.graphql](https://github.com/dbcls/grasp/blob/master/examples/dataset.graphql).
 
 SPARQL Endpoint URL and SPARQL query are written in the GraphQL comment of the type in a special form. SPARQL Endpoint is specified after the `--- endpoint ---` line. SPARQL query is placed after the `--- sparql ---` line.
 
@@ -125,7 +129,7 @@ type Dataset {
 Note: `!` means that the field is non-nullable. See https://graphql.org/learn/schema/#lists-and-non-null
  for detail.
 
-Now we've defined the `Dataset` object type. In addition, we need to define a field to query type in order to fetch a `Dataset` with a GraphQL query. We're showing the corresponding part of [resources/index.graphql](https://github.com/dbcls/grasp/blob/master/resources/index.graphql):
+Now we've defined the `Dataset` object type. In addition, we need to define a field to query type in order to fetch a `Dataset` with a GraphQL query. We're showing the corresponding part of [examples/index.graphql](https://github.com/dbcls/grasp/blob/master/examples/index.graphql):
 
 ```graphql
 type Query {
@@ -179,7 +183,7 @@ You might notice that we have `references` in a `Dataset` object in the GraphQL 
 }
 ```
 
-In  [resources/dataset.graphql](https://github.com/dbcls/grasp/blob/master/resources/dataset.graphql), `references` field is defined as follows:
+In  [examples/dataset.graphql](https://github.com/dbcls/grasp/blob/master/examples/dataset.graphql), `references` field is defined as follows:
 
 ```graphql
 type Dataset {
@@ -189,7 +193,7 @@ type Dataset {
 }
 ```
 
-In this case, Grasp issues two SPARQL queries to complete a GraphQL query to fetch `Dataset` including all its `references` field. The first is to fetch a `Dataset`, with `references` having their IRIs. The second is to fetch `references` using the IRIs. The second query is processed according to your `Pubmed` resource definition ([resources/pubmed.graphql](https://github.com/dbcls/grasp/blob/master/resources/pubmed.graphql)). Grasp combines these SPARQL results from these queries into the final GraphQL response.
+In this case, Grasp issues two SPARQL queries to complete a GraphQL query to fetch `Dataset` including all its `references` field. The first is to fetch a `Dataset`, with `references` having their IRIs. The second is to fetch `references` using the IRIs. The second query is processed according to your `Pubmed` resource definition ([examples/pubmed.graphql](https://github.com/dbcls/grasp/blob/master/examples/pubmed.graphql)). Grasp combines these SPARQL results from these queries into the final GraphQL response.
 
 ### Treat blank nodes as relations
 
@@ -199,7 +203,7 @@ Consider the following case:
 
 ![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/embedded.svg?sanitize=true)
 
-In [resources/pubmed.graphql](https://github.com/dbcls/grasp/blob/master/resources/publisher.graphql), we have the following definition of `Publisher`:
+In [examples/pubmed.graphql](https://github.com/dbcls/grasp/blob/master/examples/publisher.graphql), we have the following definition of `Publisher`:
 
 ```graphql
 type Dataset {
@@ -253,7 +257,8 @@ Note that we need to return graph containing triples whose 1) subject points the
 
 ## Write your own definition
 
-You can add your own definitions in `resources` directory. The resource definition files must start with `[0-9a-zA-Z]` and end with `.graphql`. The other files in the directory are ignored.
+You can add your own definitions in the directory specified with `RESOURCES_DIR` (default is `./resources`).
+The resource definition files must start with `[0-9a-zA-Z]` and end with `.graphql`. The other files in the directory are ignored.
 
 You need to restart Grasp to reload the definitions. You can use `npm run watch` to restart the server automatically.
 
@@ -370,3 +375,9 @@ If you want to run Grasp on other than `/` (say, `/foo`), configure `ROOT_PATH` 
 (default: Initinity)
 
 Grasp issues queries in batches to reduce number of queries. This may result in too large query to be processed by some SPARQL endpoints. You can use `MAX_BATCH_SIZE` in order to avoid this problem by restricting the number of itemes to fetch.
+
+### `RESOURCES_DIR`
+
+(default: `resources`)
+
+Load resources from the specified directory.

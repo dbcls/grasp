@@ -15,7 +15,12 @@ interface Context {
   loaders: Map<Resource, DataLoader<string, ResourceEntry | null>>
 }
 
-SchemaLoader.loadFrom('./resources').then(loader => {
+const port = process.env.PORT || 4000;
+const path = process.env.ROOT_PATH || '/';
+const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
+const resourcesDir = process.env.RESOURCES_DIR || './resources';
+
+SchemaLoader.loadFrom(resourcesDir).then(loader => {
   const resources = new Resources(loader.resourceTypeDefs);
 
   const queryResolvers: Record<string, ResourceResolver> = {};
@@ -84,10 +89,6 @@ SchemaLoader.loadFrom('./resources').then(loader => {
     Query: queryResolvers,
     ...resourceResolvers,
   };
-
-  const port = process.env.PORT || 4000;
-  const path = process.env.ROOT_PATH || '/';
-  const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
 
   const app = express();
 
