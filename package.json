@@ -5,14 +5,14 @@
     "@types/lodash.isequal": "^4.5.5",
     "@types/lodash.mapvalues": "^4.6.6",
     "@types/lodash.transform": "^4.6.6",
-    "@types/node": "^13.5.2",
-    "@types/node-fetch": "^2.5.4",
-    "apollo-server": "^2.9.16",
+    "@types/node": "^13.9.1",
+    "@types/node-fetch": "^2.5.5",
+    "apollo-server": "^2.11.0",
     "apollo-server-express": "^2.11.0",
     "dataloader": "^2.0.0",
     "graphql": "^14.6.0",
-    "graphql-tag": "^2.10.1",
-    "handlebars": "^4.7.2",
+    "graphql-tag": "^2.10.3",
+    "handlebars": "^4.7.3",
     "lodash.groupby": "^4.6.0",
     "lodash.isequal": "^4.5.0",
     "lodash.mapvalues": "^4.6.0",
@@ -21,7 +21,7 @@
     "nodemon": "^2.0.2",
     "outdent": "^0.7.0",
     "ts-node": "^8.6.2",
-    "typescript": "^3.7.5"
+    "typescript": "^3.8.3"
   },
   "scripts": {
     "start": "ts-node main.ts",
