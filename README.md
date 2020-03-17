@@ -102,13 +102,7 @@ should look complicated. Let us explain.
 
 In the first place, the reason why this is needed is that *Grasp requires this SPARQL query to return certain triples*. More specifically, whose subject is any of `iri` (possibly `iri` contains multiple values).
 
-The SPARQL query is actually written in Handlebars template. This part can be roughly interpreted as "If `iri` is given, render the VALUE-clause to select bindings by the `iri` (possibly contains multiple IRIs):
-
-```sparql
-VALUES ?iri {<http://example.com/...> <http://example.com/...>}
-```
-
-".
+The SPARQL query is actually written in Handlebars template. This part can be roughly interpreted as "If `iri` is given, render the VALUE-clause to select bindings by the `iri` (possibly contains multiple IRIs): `VALUES ?iri {<http://example.com/...> <http://example.com/...>}`".
 
 `{{#if iri}} ... {{/if}}` is a built-in helper of [Handlebars](https://handlebarsjs.com/guide/). The argument of `if` helper, in this case `iri`, is *falsy* (that is, not passed to the query), it isn't rendered.
 
