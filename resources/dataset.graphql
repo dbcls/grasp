@@ -36,11 +36,9 @@ WHERE
   OPTIONAL { ?publisher rdfs:label ?publisher_name_en . FILTER (lang(?publisher_name_en) = "en") }
   OPTIONAL { ?publisher foaf:page ?publisher_page . }
 
-  {{iri-is-in iri}}
+  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
 
-  {{#if id}}
-    ?iri dcterms:identifier "{{id}}" .
-  {{/if}}
+  {{#if id}}?iri dcterms:identifier "{{id}}" .{{/if}}
 }
 """
 type Dataset {

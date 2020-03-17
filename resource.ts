@@ -20,16 +20,6 @@ export type ResourceEntry = Record<string, any>;
 
 const handlebars = Handlebars.create();
 
-handlebars.registerHelper('iri-is-in', function(iri: string | string[] | null | undefined): string {
-  const iris = ensureArray(iri);
-
-  if (iris.length === 0) { return ''; }
-
-  const wrapped = iris.map(iri => `<${iri}>`);
-
-  return `VALUES ?iri {${wrapped.join(' ')}}`;
-});
-
 handlebars.registerHelper('join', function(separator: string, strs: string | string[]): string {
   return ensureArray(strs).join(separator);
 });

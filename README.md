@@ -68,8 +68,6 @@ You will see the resource definition at  [resources/dataset.graphql](https://git
 
 SPARQL Endpoint URL and SPARQL query are written in the GraphQL comment of the type in a special form. SPARQL Endpoint is specified after the `--- endpoint ---` line. SPARQL query is placed after the `--- sparql ---` line.
 
-We can access the parameters on GraphQL query in the SPARQL query. In this example, we filter the triples by `iri` parameter via `iri-is-in` helper, which generates `VALUES ?iri {...}`.
-
 The query returns a RDF graph by the `CONSTRUCT` query form.  The graph has triples which consist of the IRI identifying the object, the predicate corresponding to the field name of the object, and its value.
 
 See the first part of the SPARQL query:
@@ -86,7 +84,7 @@ CONSTRUCT {
   # ...
 } WHERE {
   # ...
-  {{iri-is-in iri}}
+  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
 }
 ```
 
@@ -94,13 +92,32 @@ Here, we can see that the `Dataset` object has fields `iri`, `title_ja` and `tit
 
 We use predicates with the special namespace (`https://github.com/dbcls/grasp/ns/`) in order to specify the field names.
 
-Grasp requires this SPARQL query to return triples whose subject is included in `iri` parameter (if `iri` specified). To achive this, we use `{{iri-is-in iri}}` statement. This will be replaced with
+The last part,
+
+```
+  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
+```
+
+should look complicated. Let us explain.
+
+In the first place, the reason why this is needed is that *Grasp requires this SPARQL query to return certain triples*. More specifically, whose subject is any of `iri` (possibly `iri` contains multiple values).
+
+The SPARQL query is actually written in Handlebars template. This part can be roughly interpreted as "If `iri` is given, render the VALUE-clause to select bindings by the `iri` (possibly contains multiple IRIs):
 
 ```sparql
 VALUES ?iri {<http://example.com/...> <http://example.com/...>}
 ```
 
-during query execution.
+".
+
+`{{#if iri}} ... {{/if}}` is a built-in helper of [Handlebars](https://handlebarsjs.com/guide/). The argument of `if` helper, in this case `iri`, is *falsy* (that is, not passed to the query), it isn't rendered.
+
+`join` is a helper defined by Grasp that concatenates the elements of the second argument using the first argument as the delimiter.
+
+`as-iriref` is a helper that wraps the elements of the second parameter with `<` and `>`.
+
+Taken together, this part consequently selects triples by `iri`, if `iri` given. For more about the use of Grasp-defined helpers, see the later section.
+
 
 After the comment block, we have `Dataset` GraphQL object type as follows. This corresponds to the above-mentioned SPARQL query.
 
