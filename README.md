@@ -347,3 +347,26 @@ WHERE
 
 Note that we've specified `, ` as the delimiter for `join`.
 `as-iri` works almost same as `as-string` except wrapping the elements with `<` and `>`.
+
+
+## Configuration
+
+Grasp can be configured with the following environment variables.
+
+### `PORT`
+
+(default: `4000`)
+
+Port to listen on.
+
+### `ROOT_PATH`
+
+(default: `/`)
+
+If you want to run Grasp on other than `/` (say, `/foo`), configure `ROOT_PATH` to point the path.
+
+### `MAX_BATCH_SIZE`
+
+(default: Initinity)
+
+Grasp issues queries in batches to reduce number of queries. This may result in too large query to be processed by some SPARQL endpoints. You can use `MAX_BATCH_SIZE` in order to avoid this problem by restricting the number of itemes to fetch.

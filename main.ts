@@ -1,4 +1,5 @@
-import { ApolloServer } from 'apollo-server';
+import express from 'express';
+import { ApolloServer } from 'apollo-server-express';
 import DataLoader from 'dataloader';
 import transform = require('lodash.transform');
 import isEqual = require('lodash.isequal');
@@ -85,6 +86,10 @@ SchemaLoader.loadFrom('./resources').then(loader => {
   };
 
   const port = process.env.PORT || 4000;
+  const path = process.env.ROOT_PATH || '/';
+  const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
+
+  const app = express();
 
   const server = new ApolloServer({
     typeDefs: loader.originalTypeDefs,
@@ -94,15 +99,15 @@ SchemaLoader.loadFrom('./resources').then(loader => {
         loaders: transform(resources.root, (acc, resource) => {
           acc.set(resource, new DataLoader(async (iris: ReadonlyArray<string>) => {
             return resource.fetchByIRIs(iris);
-          }, {
-            maxBatchSize: 100
-          }));
+          }, { maxBatchSize }));
         }, new Map<Resource, DataLoader<string, ResourceEntry | null>>())
       };
     }
   });
 
-  server.listen({ port }).then(({ url }) => {
-    console.log(`🚀 Server ready at ${url}`);
+  server.applyMiddleware({ app, path });
+
+  app.listen(port, () => {
+    console.log(`🚀 Server ready at http://localhost:${port}${server.graphqlPath}`);
   });
 });
