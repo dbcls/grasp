@@ -302,7 +302,7 @@ WHERE
 
 ### Handling multiple values in query templates
 
-Consider you are defining a GraphQL query, which takes multiple values as a paramater.
+Consider you are defining a GraphQL query, which takes multiple values as a parameter.
 The field in Query should be like below:
 
 ```graphql
@@ -317,7 +317,7 @@ Here, you want to issue a SPARQL query like:
 VALUES ?id { "NBDC00012" "NBDC00013" }
 ```
 
-In this case, instad of doing simple interporation (as previously mentioned),
+In this case, instead of doing simple interpolation (as previously mentioned),
 you can also use `join` and `as-strings` helpers:
 
 ```hbs
@@ -372,9 +372,9 @@ If you want to run Grasp on other than `/` (say, `/foo`), configure `ROOT_PATH` 
 
 ### `MAX_BATCH_SIZE`
 
-(default: Initinity)
+(default: Infinity)
 
-Grasp issues queries in batches to reduce number of queries. This may result in too large query to be processed by some SPARQL endpoints. You can use `MAX_BATCH_SIZE` in order to avoid this problem by restricting the number of itemes to fetch.
+Grasp issues queries in batches to reduce number of queries. This may result in too large query to be processed by some SPARQL endpoints. You can use `MAX_BATCH_SIZE` in order to avoid this problem by restricting the number of items to fetch.
 
 ### `RESOURCES_DIR`
 
