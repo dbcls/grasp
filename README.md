@@ -62,6 +62,12 @@ Then, press Ctrl+Enter. The query will be issued and results will be shown (on r
 
 Now we've queried [Integbio Database Catalog/RDF](https://integbio.jp/rdf/?view=detail&id=dbcatalog) with GraphQL. Let's see how it works.
 
+### Run in Docker container
+
+    $ docker run --rm -it -p 4000:4000 -v /full/path/to/resources:/resources -e RESOURCES_DIR=/resources dbcls/grasp:<tag>
+
+And access `localhost:4000`. See available image tags at [dbcls/grasp](https://hub.docker.com/repository/docker/dbcls/grasp).
+
 ## How does this works?
 
 The GraphQL query was translated into SPARQL queries and sent to a SPARQL endpoint, then the SPARQL results were returned to Grasp, finally the results were reformed into the GraphQL result.
