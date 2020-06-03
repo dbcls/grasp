@@ -1,0 +1,5 @@
+#!/bin/bash
+
+TAG="snapshot-$(git rev-parse --short $SOURCE_COMMIT)"
+docker tag $IMAGE_NAME $DOCKER_REPO:$TAG
+docker push $DOCKER_REPO:$TAG
