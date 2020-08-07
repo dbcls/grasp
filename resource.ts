@@ -33,31 +33,31 @@ handlebars.registerHelper('as-string', function(strs: string | string[]): string
 });
 
 function buildEntry(bindingsGroupedBySubject: Record<string, Array<Triple>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
-    const entry: ResourceEntry = {};
+  const entry: ResourceEntry = {};
 
-    const pValues = transform(bindingsGroupedBySubject[subject], (acc, {p, o}: Triple) => {
-      const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, '');
+  const pValues = transform(bindingsGroupedBySubject[subject], (acc, {p, o}: Triple) => {
+    const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, '');
 
-      (acc[k] || (acc[k] = [])).push(o);
-    }, {} as Record<string, string[]>);
+    (acc[k] || (acc[k] = [])).push(o);
+  }, {} as Record<string, string[]>);
 
-    (resource.definition.fields || []).forEach(field => {
-      const type   = field.type;
-      const name   = field.name.value;
-      const values = pValues[name] || [];
+  (resource.definition.fields || []).forEach(field => {
+    const type   = field.type;
+    const name   = field.name.value;
+    const values = pValues[name] || [];
 
-      const targetType = unwrapCompositeType(type);
-      const targetResource = resources.lookup(targetType.name.value);
+    const targetType = unwrapCompositeType(type);
+    const targetResource = resources.lookup(targetType.name.value);
 
-      if (targetResource?.isEmbeddedType) {
-        const entries = values.map(nodeId => buildEntry(bindingsGroupedBySubject, nodeId, targetResource, resources));
-        entry[name] = oneOrMany(entries, !isListType(type));
-      } else {
-        entry[name] = oneOrMany(values, !isListType(type));
-      }
-    });
+    if (targetResource?.isEmbeddedType) {
+      const entries = values.map(nodeId => buildEntry(bindingsGroupedBySubject, nodeId, targetResource, resources));
+      entry[name] = oneOrMany(entries, !isListType(type));
+    } else {
+      entry[name] = oneOrMany(values, !isListType(type));
+    }
+  });
 
-    return entry;
+  return entry;
 }
 
 
@@ -90,8 +90,8 @@ export default class Resource {
 
     enum State {
       Default,
-        Endpoint,
-        Sparql,
+      Endpoint,
+      Sparql,
     };
     let state: State = State.Default;
 
