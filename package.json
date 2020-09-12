@@ -17,7 +17,7 @@
     "lodash.isequal": "^4.5.0",
     "lodash.mapvalues": "^4.6.0",
     "lodash.transform": "^4.6.0",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "nodemon": "^2.0.2",
     "outdent": "^0.7.0",
     "ts-node": "^8.6.2",
