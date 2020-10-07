@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "start": "ts-node main.ts",
+    "watch": "nodemon -e ts,graphql"
+  },
   "dependencies": {
     "@types/handlebars": "^4.1.0",
     "@types/lodash.groupby": "^4.6.6",
@@ -23,8 +27,7 @@
     "ts-node": "^9.0.0",
     "typescript": "^4.0.3"
   },
-  "scripts": {
-    "start": "ts-node main.ts",
-    "watch": "nodemon -e ts,graphql"
+  "engines": {
+    "node": ">=12"
   }
 }
