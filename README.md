@@ -351,13 +351,13 @@ You can write the template using helpers as follows:
 WHERE
 {
   {{#if iris}}
-    FILTER (?iri IN ({{join ", " (as-iri iris)}}))
+    FILTER (?iri IN ({{join ", " (as-iriref iris)}}))
   {{/if}}
 }
 ```
 
 Note that we've specified `, ` as the delimiter for `join`.
-`as-iri` works almost same as `as-string` except wrapping the elements with `<` and `>`.
+`as-iriref` works almost same as `as-string` except wrapping the elements with `<` and `>`.
 
 
 ## Configuration
