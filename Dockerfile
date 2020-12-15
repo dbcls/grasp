@@ -6,5 +6,5 @@ USER app
 WORKDIR /app
 COPY --chown=app:app . .
 
-RUN npm ci
+RUN npm ci --production
 CMD npm run watch
