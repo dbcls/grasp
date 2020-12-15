@@ -23,7 +23,7 @@ Let's look at a simple example.
 
 ### Requirements
 
-* [Node.js](https://nodejs.org/) 12.x
+* [Node.js](https://nodejs.org/) 14 or later
 
 ### Install
 
@@ -64,7 +64,7 @@ Now we've queried [Integbio Database Catalog/RDF](https://integbio.jp/rdf/?view=
 
 ### Run in Docker container
 
-    $ docker run --rm -it -p 4000:4000 -v /full/path/to/resources:/resources -e RESOURCES_DIR=/resources dbcls/grasp:<tag>
+    $ docker run --rm -it -p 4000:4000 -v /full/path/to/resources:/app/resources dbcls/grasp:<tag>
 
 And access `localhost:4000`. See available image tags at [dbcls/grasp](https://hub.docker.com/repository/docker/dbcls/grasp).
 
