@@ -1,0 +1,39 @@
+"""
+--- endpoint ---
+https://dbpedia.org/sparql
+
+--- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX dbo: <http://dbpedia.org/ontology/> 
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX schema: <http://schema.org/>
+
+CONSTRUCT {
+  ?iri :iri ?iri .
+  ?iri :bookTitle ?title .
+  ?iri :authorUri ?author . 
+  ?iri :authorName ?authorName . 
+}
+WHERE
+{
+  ?iri a schema:Book ;
+    rdfs:label ?title ;
+    dbo:author ?author . 
+  FILTER (LANG(?title) = 'en') 
+
+  ?author foaf:name ?authorName . 
+  FILTER (LANG(?authorName) = 'en') 
+
+  {{#if iris}}
+    VALUES ?iri { {{join " " (as-iriref iris)}} }
+  {{/if}}
+}
+"""
+type Dbpedia2 {
+  iri: String!
+  bookTitle: String
+  authorUri: String
+  authorName: String
+}
+
