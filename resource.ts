@@ -145,17 +145,16 @@ export default class Resource {
       throw new Error('query template and endpoint should be specified in order to query');
     }
     const sparqlQuery = this.queryTemplate(args);
+    const body = sparqlQuery.replace(/\n/g, " ");
 
     console.log('--- SPARQL QUERY ---', sparqlQuery);
 
-    const sparqlParams = new URLSearchParams();
-    sparqlParams.append('query', sparqlQuery);
-
     const opts = {
       method: 'POST',
-      body: sparqlParams,
+      body,
       headers: {
-        Accept: 'application/sparql-results+json'
+        Accept: 'application/sparql-results+json',
+       'Content-Type': 'application/sparql-query'
       }
     };
 
