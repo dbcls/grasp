@@ -30,7 +30,7 @@ WHERE
   {{/if}}
 }
 """
-type Dbpedia2 {
+type DbpediaBooks {
   iri: String!
   bookTitle: String
   authorUri: String

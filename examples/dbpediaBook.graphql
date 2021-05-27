@@ -28,7 +28,7 @@ WHERE
   {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
 }
 """
-type Dbpedia1 {
+type DbpediaBook {
   iri: String!
   bookTitle: String
   authorUri: String

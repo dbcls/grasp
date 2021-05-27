@@ -25,7 +25,7 @@ If using nvm
 
 `$ RESOURCES_DIR=./examples npm run watch`
 
-This loads the example resource definitions from `./examples`. The resource definitions targetting DBpedia are contained in `./examples/dbpedia1.graphql` and `./examples/dbpedia2.graphql`
+This loads the example resource definitions from `./examples`. The resource definitions targetting DBpedia are contained in `./examples/dbpediaBook.graphql` and `./examples/dbpediaBooks.graphql`
 
 Visit <http://localhost:4000>. You will see GraphQL Playground.
 
@@ -35,7 +35,7 @@ Enter either of the following GraphQL queries into the query editor.
 
 ```
 query {
-  dbpedia1(iri: "http://dbpedia.org/resource/Corona_(novel)") {
+  dbpediaBook(iri: "http://dbpedia.org/resource/Corona_(novel)") {
     iri
     bookTitle
     authorUri
@@ -49,7 +49,7 @@ query {
 ```
 {
   "data": {
-    "dbpedia1": {
+    "dbpediaBook": {
       "iri": "http://dbpedia.org/resource/Corona_(novel)",
       "bookTitle": "Corona (novel)",
       "authorUri": "http://dbpedia.org/resource/Greg_Bear",
@@ -63,7 +63,7 @@ query {
 
 ```
 query {
-  dbpedia2(iris: 
+  dbpediaBooks(iris: 
 	[ 
 		"http://dbpedia.org/resource/AI_Superpowers"
 		"http://dbpedia.org/resource/A_History_of_British_Birds"
@@ -83,7 +83,7 @@ query {
 ```
 {
   "data": {
-    "dbpedia2": [
+    "dbpediaBooks": [
       {
         "iri": "http://dbpedia.org/resource/AI_Superpowers",
         "bookTitle": "AI Superpowers",
