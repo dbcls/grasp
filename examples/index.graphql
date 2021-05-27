@@ -10,4 +10,6 @@ type Query {
   datasets(iri: [String!]!): [Dataset!]!
   pubmed(iri: String!): Pubmed
   pubmeds(iri: [String!], id: [String!]): [Pubmed!]!
+  dbpediaBook(iri: String): DbpediaBook
+  dbpediaBooks(iris: [String!]): [DbpediaBooks!]!
 }
