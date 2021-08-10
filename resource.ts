@@ -9,10 +9,41 @@ import { URLSearchParams } from 'url';
 import Resources from './resources';
 import { oneOrMany, isListType, unwrapCompositeType, ensureArray } from './utils';
 
-interface Triple {
+interface AbbreviatedTriple {
   s: string;
   p: string;
   o: string;
+}
+
+interface FullTermTriple {
+  subject: string;
+  predicate: string;
+  object: string;
+}
+
+type Triple = AbbreviatedTriple 
+            | FullTermTriple
+
+/**
+ * Typeguard for Triple type.
+ *
+ * @param triple {Triple}
+ * @returns {Boolean} true if object is an abbreviated triple:  { s:... , p:... , o:... }
+ */
+function isAbbr(triple: any): triple is AbbreviatedTriple {
+  return (triple as AbbreviatedTriple).s !== undefined
+}
+
+function getSubject(triple: Triple): string {
+  return isAbbr(triple) ? triple.s : triple.subject
+}
+
+function getPredicate(triple: Triple): string {
+  return isAbbr(triple) ? triple.p : triple.predicate
+}
+
+function getObject(triple: Triple): string {
+  return isAbbr(triple) ? triple.o : triple['object']
 }
 
 type CompiledTemplate = (args: object) => string;
@@ -32,13 +63,14 @@ handlebars.registerHelper('as-string', function(strs: string | string[]): string
   return ensureArray(strs).map(str => `"${str}"`);
 });
 
+
 function buildEntry(bindingsGroupedBySubject: Record<string, Array<Triple>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
   const entry: ResourceEntry = {};
 
-  const pValues = transform(bindingsGroupedBySubject[subject], (acc, {p, o}: Triple) => {
-    const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, '');
+  const pValues = transform(bindingsGroupedBySubject[subject], (acc, triple: Triple) => {
+    const k = getPredicate(triple).replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, '');
 
-    (acc[k] || (acc[k] = [])).push(o);
+    (acc[k] || (acc[k] = [])).push(getObject(triple));
   }, {} as Record<string, string[]>);
 
   (resource.definition.fields || []).forEach(field => {
@@ -126,7 +158,7 @@ export default class Resource {
     const bindings = await this.query(args);
 
     const bindingGropuedBySubject = groupBy(bindings, 's');
-    const primaryBindings = bindings.filter(binding => !binding.s.startsWith('_:'));
+    const primaryBindings = bindings.filter(binding => !getSubject(binding).startsWith('_:'));
 
     const entries = Object.entries(groupBy(primaryBindings, 's')).map(([s, _sBindings]) => {
       return buildEntry(bindingGropuedBySubject, s, this, this.resources);
