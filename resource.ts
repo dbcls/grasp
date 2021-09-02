@@ -1,13 +1,18 @@
-import Handlebars = require('handlebars');
-import fetch from 'node-fetch';
-import groupBy = require('lodash.groupby');
-import mapValues = require('lodash.mapvalues');
-import transform = require('lodash.transform');
-import { ObjectTypeDefinitionNode } from 'graphql';
-import { URLSearchParams } from 'url';
+import Handlebars from "handlebars";
+import fetch from "node-fetch";
+import groupBy from "lodash.groupby";
+import mapValues from "lodash.mapvalues";
+import transform from "lodash.transform";
+import { ObjectTypeDefinitionNode } from "graphql";
+import { URLSearchParams } from "url";
 
-import Resources from './resources';
-import { oneOrMany, isListType, unwrapCompositeType, ensureArray } from './utils';
+import Resources from "./resources";
+import {
+  oneOrMany,
+  isListType,
+  unwrapCompositeType,
+  ensureArray,
+} from "./utils";
 
 interface Triple {
   s: string;
@@ -20,37 +25,57 @@ export type ResourceEntry = Record<string, any>;
 
 const handlebars = Handlebars.create();
 
-handlebars.registerHelper('join', function(separator: string, strs: string | string[]): string {
-  return ensureArray(strs).join(separator);
-});
+handlebars.registerHelper(
+  "join",
+  function (separator: string, strs: string | string[]): string {
+    return ensureArray(strs).join(separator);
+  }
+);
 
-handlebars.registerHelper('as-iriref', function(strs: string | string[]): string[] {
-  return ensureArray(strs).map(str => `<${str}>`);
-});
+handlebars.registerHelper(
+  "as-iriref",
+  function (strs: string | string[]): string[] {
+    return ensureArray(strs).map((str) => `<${str}>`);
+  }
+);
 
-handlebars.registerHelper('as-string', function(strs: string | string[]): string[] {
-  return ensureArray(strs).map(str => `"${str}"`);
-});
+handlebars.registerHelper(
+  "as-string",
+  function (strs: string | string[]): string[] {
+    return ensureArray(strs).map((str) => `"${str}"`);
+  }
+);
 
-function buildEntry(bindingsGroupedBySubject: Record<string, Array<Triple>>, subject: string, resource: Resource, resources: Resources): ResourceEntry {
+function buildEntry(
+  bindingsGroupedBySubject: Record<string, Array<Triple>>,
+  subject: string,
+  resource: Resource,
+  resources: Resources
+): ResourceEntry {
   const entry: ResourceEntry = {};
 
-  const pValues = transform(bindingsGroupedBySubject[subject], (acc, {p, o}: Triple) => {
-    const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, '');
+  const pValues = transform(
+    bindingsGroupedBySubject[subject],
+    (acc, { p, o }: Triple) => {
+      const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, "");
 
-    (acc[k] || (acc[k] = [])).push(o);
-  }, {} as Record<string, string[]>);
+      (acc[k] || (acc[k] = [])).push(o);
+    },
+    {} as Record<string, string[]>
+  );
 
-  (resource.definition.fields || []).forEach(field => {
-    const type   = field.type;
-    const name   = field.name.value;
+  (resource.definition.fields || []).forEach((field) => {
+    const type = field.type;
+    const name = field.name.value;
     const values = pValues[name] || [];
 
     const targetType = unwrapCompositeType(type);
     const targetResource = resources.lookup(targetType.name.value);
 
     if (targetResource?.isEmbeddedType) {
-      const entries = values.map(nodeId => buildEntry(bindingsGroupedBySubject, nodeId, targetResource, resources));
+      const entries = values.map((nodeId) =>
+        buildEntry(bindingsGroupedBySubject, nodeId, targetResource, resources)
+      );
       entry[name] = oneOrMany(entries, !isListType(type));
     } else {
       entry[name] = oneOrMany(values, !isListType(type));
@@ -60,22 +85,33 @@ function buildEntry(bindingsGroupedBySubject: Record<string, Array<Triple>>, sub
   return entry;
 }
 
-
 export default class Resource {
   resources: Resources;
   definition: ObjectTypeDefinitionNode;
   endpoint: string | null;
   queryTemplate: CompiledTemplate | null;
 
-  constructor(resources: Resources, definition: ObjectTypeDefinitionNode, endpoint: string | null, sparql: string | null) {
-    this.resources     = resources;
-    this.definition    = definition;
-    this.endpoint      = endpoint;
-    this.queryTemplate = sparql ? handlebars.compile(sparql, {noEscape: true}) : null;
+  constructor(
+    resources: Resources,
+    definition: ObjectTypeDefinitionNode,
+    endpoint: string | null,
+    sparql: string | null
+  ) {
+    this.resources = resources;
+    this.definition = definition;
+    this.endpoint = endpoint;
+    this.queryTemplate = sparql
+      ? handlebars.compile(sparql, { noEscape: true })
+      : null;
   }
 
-  static buildFromTypeDefinition(resources: Resources, def: ObjectTypeDefinitionNode): Resource {
-    if (def.directives?.some(directive => directive.name.value === 'embedded')) {
+  static buildFromTypeDefinition(
+    resources: Resources,
+    def: ObjectTypeDefinitionNode
+  ): Resource {
+    if (
+      def.directives?.some((directive) => directive.name.value === "embedded")
+    ) {
       return new Resource(resources, def, null, null);
     }
 
@@ -86,21 +122,21 @@ export default class Resource {
     const lines = description.split(/\r?\n/);
 
     let endpoint: string | null = null,
-      sparql = '';
+      sparql = "";
 
     enum State {
       Default,
       Endpoint,
       Sparql,
-    };
+    }
     let state: State = State.Default;
 
     lines.forEach((line: string) => {
       switch (line) {
-        case '--- endpoint ---':
+        case "--- endpoint ---":
           state = State.Endpoint;
           return;
-        case '--- sparql ---':
+        case "--- sparql ---":
           state = State.Sparql;
           return;
       }
@@ -111,7 +147,7 @@ export default class Resource {
           state = State.Default;
           break;
         case State.Sparql:
-          sparql += line + '\n';
+          sparql += line + "\n";
           break;
       }
     });
@@ -125,57 +161,71 @@ export default class Resource {
   async fetch(args: object): Promise<ResourceEntry[]> {
     const bindings = await this.query(args);
 
-    const bindingGropuedBySubject = groupBy(bindings, 's');
-    const primaryBindings = bindings.filter(binding => !binding.s.startsWith('_:'));
+    const bindingGropuedBySubject = groupBy(bindings, "s");
+    const primaryBindings = bindings.filter(
+      (binding) => !binding.s.startsWith("_:")
+    );
 
-    const entries = Object.entries(groupBy(primaryBindings, 's')).map(([s, _sBindings]) => {
-      return buildEntry(bindingGropuedBySubject, s, this, this.resources);
-    });
+    const entries = Object.entries(groupBy(primaryBindings, "s")).map(
+      ([s, _sBindings]) => {
+        return buildEntry(bindingGropuedBySubject, s, this, this.resources);
+      }
+    );
 
     return entries;
   }
 
-  async fetchByIRIs(iris: ReadonlyArray<string>): Promise<Array<ResourceEntry | null>> {
-    const entries = await this.fetch({iri: iris});
-    return iris.map(iri => entries.find(entry => entry.iri === iri) || null);
+  async fetchByIRIs(
+    iris: ReadonlyArray<string>
+  ): Promise<Array<ResourceEntry | null>> {
+    const entries = await this.fetch({ iri: iris });
+    return iris.map(
+      (iri) => entries.find((entry) => entry.iri === iri) || null
+    );
   }
 
   async query(args: object): Promise<Array<Triple>> {
     if (!this.queryTemplate || !this.endpoint) {
-      throw new Error('query template and endpoint should be specified in order to query');
+      throw new Error(
+        "query template and endpoint should be specified in order to query"
+      );
     }
     const sparqlQuery = this.queryTemplate(args);
 
-    console.log('--- SPARQL QUERY ---', sparqlQuery);
+    console.log("--- SPARQL QUERY ---", sparqlQuery);
 
     const sparqlParams = new URLSearchParams();
-    sparqlParams.append('query', sparqlQuery);
+    sparqlParams.append("query", sparqlQuery);
 
     const opts = {
-      method: 'POST',
+      method: "POST",
       body: sparqlParams,
       headers: {
-        Accept: 'application/sparql-results+json'
-      }
+        Accept: "application/sparql-results+json",
+      },
     };
 
     const res = await fetch(this.endpoint, opts);
 
     if (res.ok) {
-      const data = await res.json();
+      const data = (await res.json()) as any;
 
       return data.results.bindings.map((b: Record<string, any>) => {
-        return mapValues(b, ({value}) => value);
+        return mapValues(b, ({ value }) => value);
       });
     } else {
       const body = await res.text();
 
-      throw new Error(`SPARQL endpoint returns ${res.status} ${res.statusText}: ${body}`)
+      throw new Error(
+        `SPARQL endpoint returns ${res.status} ${res.statusText}: ${body}`
+      );
     }
   }
 
   get isRootType(): boolean {
-    return !this.definition.directives?.some(directive => directive.name.value === 'embedded');
+    return !this.definition.directives?.some(
+      (directive) => directive.name.value === "embedded"
+    );
   }
 
   get isEmbeddedType(): boolean {
