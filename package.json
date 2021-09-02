@@ -24,7 +24,7 @@
     "lodash.transform": "^4.6.0",
     "node-fetch": "^3.0.0",
     "nodemon": "^2.0.6",
-    "outdent": "^0.7.1",
+    "outdent": "^0.8.0",
     "ts-node": "^10.2.1",
     "typescript": "^4.1.3"
   },
