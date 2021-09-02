@@ -1,5 +1,7 @@
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
+import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
+
 import DataLoader from "dataloader";
 import transform from "lodash.transform";
 import isEqual from "lodash.isequal";
@@ -143,13 +145,16 @@ SchemaLoader.loadFrom(resourcesDir).then((loader) => {
         ),
       };
     },
+    plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
   });
 
-  server.applyMiddleware({ app, path });
+  server.start().then(() => {
+    server.applyMiddleware({ app, path });
 
-  app.listen(port, () => {
-    console.log(
-      `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
-    );
+    app.listen(port, () => {
+      console.log(
+        `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
+      );
+    });
   });
 });
