@@ -211,7 +211,13 @@ export default class Resource {
       const data = (await res.json()) as any;
 
       return data.results.bindings.map((b: Record<string, any>) => {
-        return mapValues(b, ({ value }) => value);
+        const normalizedBinding = {
+          s: b.s || b.subject,
+          p: b.p || b.predicate,
+          o: b.o || b.object,
+        };
+
+        return mapValues(normalizedBinding, ({ value }) => value);
       });
     } else {
       const body = await res.text();
