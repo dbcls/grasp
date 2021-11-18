@@ -164,13 +164,14 @@ export default class Resource {
 
   async fetch(args: object): Promise<ResourceEntry[]> {
     const bindings = await this.query(args);
-
-    const bindingGroupedBySubject = groupBy(bindings, "subject");
+    const bindingGroupedBySubject = groupBy(bindings, (binding) => binding.subject.value);
+    
     const primaryBindings = bindings.filter(
       (binding) => binding.subject.termType !== "BlankNode"
     );
 
-    const entries = Object.entries(groupBy(primaryBindings, "subject")).map(
+    const primaryBindingsGroupedBySubject = groupBy(primaryBindings, (binding) => binding.subject.value);
+    const entries = Object.entries(primaryBindingsGroupedBySubject).map(
       ([subject, _sBindings]) => {
         return buildEntry(bindingGroupedBySubject, subject, this, this.resources);
       }
