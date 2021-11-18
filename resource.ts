@@ -83,18 +83,18 @@ function buildEntry(
 export default class Resource {
   resources: Resources;
   definition: ObjectTypeDefinitionNode;
-  endpoint: string | null;
+  sparqlClient: SparqlClient | null;
   queryTemplate: CompiledTemplate | null;
 
   constructor(
     resources: Resources,
     definition: ObjectTypeDefinitionNode,
-    endpoint: string | null,
+    sparqlClient: SparqlClient | null,
     sparql: string | null
   ) {
     this.resources = resources;
     this.definition = definition;
-    this.endpoint = endpoint;
+    this.sparqlClient = sparqlClient;
     this.queryTemplate = sparql
       ? handlebars.compile(sparql, { noEscape: true })
       : null;
@@ -159,7 +159,8 @@ export default class Resource {
     if (!endpoint) {
       throw new Error(`endpoint is not defined for type ${def.name.value}`);
     }
-    return new Resource(resources, def, endpoint, sparql);
+    const sparqlClient = new SparqlClient({ endpointUrl: endpoint, user: 'admin', password: 'admin' });
+    return new Resource(resources, def, sparqlClient, sparql);
   }
 
   async fetch(args: object): Promise<ResourceEntry[]> {
@@ -190,7 +191,7 @@ export default class Resource {
   }
 
   async query(args: object): Promise<Array<Quad>> {
-    if (!this.queryTemplate || !this.endpoint) {
+    if (!this.queryTemplate || !this.sparqlClient) {
       throw new Error(
         "query template and endpoint should be specified in order to query"
       );
@@ -199,18 +200,8 @@ export default class Resource {
 
     console.log("--- SPARQL QUERY ---\n", sparqlQuery);
 
-    // TODO: support authentication
-    const username = 'admin'
-    const password = 'admin'
-
-    const client = new SparqlClient({ endpointUrl: this.endpoint })
-    const stream = await client.query.construct(sparqlQuery, 
-      {
-        headers: {
-          Authorization: 'Basic ' + Buffer.from(`${username}:${password}`, 'binary').toString('base64'),
-        },
-        operation: 'postUrlencoded'
-      })
+    const stream = await this.sparqlClient.query.construct(sparqlQuery, 
+      { operation: 'postUrlencoded' })
 
     return new Promise((resolve) => {
       const quads: Array<Quad> = [];
