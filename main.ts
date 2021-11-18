@@ -30,6 +30,7 @@ const port = process.env.PORT || 4000;
 const path = process.env.ROOT_PATH || "/";
 const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
 const resourcesDir = process.env.RESOURCES_DIR || "./resources";
+const configFile = process.env.CONFIG_FILE || "./config.json";
 
 SchemaLoader.loadFrom(resourcesDir).then((loader) => {
   const resources = new Resources(loader.resourceTypeDefs);

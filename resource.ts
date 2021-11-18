@@ -1,5 +1,5 @@
 import Handlebars from "handlebars";
-import fetch from "node-fetch";
+import type { Quad } from "@rdfjs/types"
 import groupBy from "lodash.groupby";
 import mapValues from "lodash.mapvalues";
 import transform from "lodash.transform";
@@ -13,12 +13,7 @@ import {
   unwrapCompositeType,
   ensureArray,
 } from "./utils";
-
-interface Triple {
-  s: string;
-  p: string;
-  o: string;
-}
+import * as SparqlClient from "sparql-http-client";
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
@@ -47,7 +42,7 @@ handlebars.registerHelper(
 );
 
 function buildEntry(
-  bindingsGroupedBySubject: Record<string, Array<Triple>>,
+  bindingsGroupedBySubject: Record<string, Array<Quad>>,
   subject: string,
   resource: Resource,
   resources: Resources
@@ -56,10 +51,10 @@ function buildEntry(
 
   const pValues = transform(
     bindingsGroupedBySubject[subject],
-    (acc, { p, o }: Triple) => {
-      const k = p.replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, "");
+    (acc, { predicate, object }: Quad) => {
+      const k = predicate.value.replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, "");
 
-      (acc[k] || (acc[k] = [])).push(o);
+      (acc[k] || (acc[k] = [])).push(object.value);
     },
     {} as Record<string, string[]>
   );
@@ -105,13 +100,22 @@ export default class Resource {
       : null;
   }
 
+  /**
+   * Construct a resource using a TypeDefinition object  
+   * 
+   * @param resources 
+   * @param def 
+   * @returns 
+   */
   static buildFromTypeDefinition(
     resources: Resources,
     def: ObjectTypeDefinitionNode
   ): Resource {
+    
     if (
       def.directives?.some((directive) => directive.name.value === "embedded")
     ) {
+      //TODO: check out bug with embedded directive
       return new Resource(resources, def, null, null);
     }
 
@@ -161,14 +165,14 @@ export default class Resource {
   async fetch(args: object): Promise<ResourceEntry[]> {
     const bindings = await this.query(args);
 
-    const bindingGropuedBySubject = groupBy(bindings, "s");
+    const bindingGroupedBySubject = groupBy(bindings, "subject");
     const primaryBindings = bindings.filter(
-      (binding) => !binding.s.startsWith("_:")
+      (binding) => binding.subject.termType !== "BlankNode"
     );
 
-    const entries = Object.entries(groupBy(primaryBindings, "s")).map(
-      ([s, _sBindings]) => {
-        return buildEntry(bindingGropuedBySubject, s, this, this.resources);
+    const entries = Object.entries(groupBy(primaryBindings, "subject")).map(
+      ([subject, _sBindings]) => {
+        return buildEntry(bindingGroupedBySubject, subject, this, this.resources);
       }
     );
 
@@ -184,7 +188,7 @@ export default class Resource {
     );
   }
 
-  async query(args: object): Promise<Array<Triple>> {
+  async query(args: object): Promise<Array<Quad>> {
     if (!this.queryTemplate || !this.endpoint) {
       throw new Error(
         "query template and endpoint should be specified in order to query"
@@ -192,40 +196,31 @@ export default class Resource {
     }
     const sparqlQuery = this.queryTemplate(args);
 
-    console.log("--- SPARQL QUERY ---", sparqlQuery);
+    console.log("--- SPARQL QUERY ---\n", sparqlQuery);
 
-    const sparqlParams = new URLSearchParams();
-    sparqlParams.append("query", sparqlQuery);
+    // TODO: support authentication
+    const username = 'admin'
+    const password = 'admin'
 
-    const opts = {
-      method: "POST",
-      body: sparqlParams,
-      headers: {
-        Accept: "application/sparql-results+json",
-      },
-    };
+    const client = new SparqlClient({ endpointUrl: this.endpoint })
+    const stream = await client.query.construct(sparqlQuery, 
+      {
+        headers: {
+          Authorization: 'Basic ' + Buffer.from(`${username}:${password}`, 'binary').toString('base64'),
+        },
+        operation: 'postUrlencoded'
+      })
 
-    const res = await fetch(this.endpoint, opts);
-
-    if (res.ok) {
-      const data = (await res.json()) as any;
-
-      return data.results.bindings.map((b: Record<string, any>) => {
-        const normalizedBinding = {
-          s: b.s || b.subject,
-          p: b.p || b.predicate,
-          o: b.o || b.object,
-        };
-
-        return mapValues(normalizedBinding, ({ value }) => value);
-      });
-    } else {
-      const body = await res.text();
-
-      throw new Error(
-        `SPARQL endpoint returns ${res.status} ${res.statusText}: ${body}`
-      );
-    }
+    return new Promise((resolve, reject) => {
+      const quads: Array<Quad> = [];
+      stream.on('data', (q: Quad) => quads.push(q))
+      stream.on('end', () => resolve(quads));
+      stream.on('error', (err: any) => {
+        throw new Error(
+          `SPARQL endpoint returns: ${err}`
+        );
+      })
+    })
   }
 
   get isRootType(): boolean {

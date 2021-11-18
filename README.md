@@ -1,5 +1,11 @@
 # Grasp: A bridge between GraphQL and SPARQL
 
+## TODO
+
+1. use zazuko's sparqlclient for queries
+2. migrate as much as possible to RDFJS
+3. make a config file possible for authenticated endpoints and such
+4. support multiple apis
 ## What is Grasp?
 
 Grasp is a bridge software that provides a GraphQL endpoint wrapping SPARQL endpoints.

@@ -26,6 +26,12 @@ export default class SchemaLoader {
     this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== 'Query');
   }
 
+  /**
+   * Read all GraphQL schema files in resources directory and concatenate to string
+   * 
+   * @param baseDir Resources directory with graphql schema files
+   * @returns SchemaLoader object as promise
+   */
   static async loadFrom(baseDir: string): Promise<SchemaLoader> {
     let schema = '';
 
