@@ -13,7 +13,7 @@ import {
   unwrapCompositeType,
   ensureArray,
 } from "./utils";
-import * as SparqlClient from "sparql-http-client";
+import SparqlClient from "sparql-http-client";
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
@@ -211,7 +211,7 @@ export default class Resource {
         operation: 'postUrlencoded'
       })
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const quads: Array<Quad> = [];
       stream.on('data', (q: Quad) => quads.push(q))
       stream.on('end', () => resolve(quads));

@@ -23,6 +23,7 @@
     "lodash.mapvalues": "^4.6.0",
     "lodash.transform": "^4.6.0",
     "@types/sparql-http-client": "^2.2.7",
+    "sparql-http-client": "^2.4.0",
     "@rdfjs/types": "^1.0.1",
     "nodemon": "^2.0.6",
     "outdent": "^0.8.0",
