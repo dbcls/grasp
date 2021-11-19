@@ -10,8 +10,8 @@ export default class SchemaLoader {
   queryDef: ObjectTypeDefinitionNode;
   resourceTypeDefs: Array<ObjectTypeDefinitionNode>;
 
-  constructor(graphql: string) {
-    this.originalTypeDefs = parse(graphql);
+  constructor(schema: string) {
+    this.originalTypeDefs = parse(schema);
 
     const typeDefinitionNodes = this.originalTypeDefs.definitions.filter((def): def is ObjectTypeDefinitionNode => {
       return def.kind === 'ObjectTypeDefinition';
@@ -27,7 +27,7 @@ export default class SchemaLoader {
   }
 
   /**
-   * Read all GraphQL schema files in resources directory and concatenate to string
+   * Read all GraphQL schema files in resources directory and concatenate to a single schema string
    * 
    * @param baseDir Resources directory with graphql schema files
    * @returns SchemaLoader object as promise

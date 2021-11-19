@@ -1,10 +1,8 @@
 import Handlebars from "handlebars";
 import type { Quad } from "@rdfjs/types"
 import groupBy from "lodash.groupby";
-import mapValues from "lodash.mapvalues";
 import transform from "lodash.transform";
 import { ObjectTypeDefinitionNode } from "graphql";
-import { URLSearchParams } from "url";
 
 import Resources from "./resources";
 import {
@@ -112,6 +110,7 @@ export default class Resource {
     def: ObjectTypeDefinitionNode
   ): Resource {
     
+    // Check whether Type definition has directive
     if (
       def.directives?.some((directive) => directive.name.value === "embedded")
     ) {
@@ -119,9 +118,11 @@ export default class Resource {
       return new Resource(resources, def, null, null);
     }
 
+    // Check whether the type description has a good description
     if (!def.description) {
       throw new Error(`description for type ${def.name.value} is not defined`);
     }
+    // Extract description as string
     const description = def.description.value;
     const lines = description.split(/\r?\n/);
 
@@ -135,6 +136,7 @@ export default class Resource {
     }
     let state: State = State.Default;
 
+    // Split lines in type definition 
     lines.forEach((line: string) => {
       switch (line) {
         case "--- endpoint ---":

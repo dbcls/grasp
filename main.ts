@@ -6,15 +6,15 @@ import DataLoader from "dataloader";
 import transform from "lodash.transform";
 import isEqual from "lodash.isequal";
 
-import Resource, { ResourceEntry } from "./resource";
-import Resources from "./resources";
-import SchemaLoader from "./schema-loader";
+import Resource, { ResourceEntry } from "./lib/resource";
+import Resources from "./lib/resources";
+import SchemaLoader from "./lib/schema-loader";
 import {
   isListType,
   oneOrMany,
   unwrapCompositeType,
   ensureArray,
-} from "./utils";
+} from "./lib/utils";
 
 type ResourceResolver = (
   parent: ResourceEntry,
@@ -32,6 +32,7 @@ const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
 const resourcesDir = process.env.RESOURCES_DIR || "./resources";
 const configFile = process.env.CONFIG_FILE || "./config.json";
 
+// Load schema from folder
 SchemaLoader.loadFrom(resourcesDir).then((loader) => {
   const resources = new Resources(loader.resourceTypeDefs);
 
