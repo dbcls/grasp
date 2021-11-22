@@ -144,6 +144,7 @@ const server = new ApolloServer({
             resource,
             new DataLoader(
               async (iris: ReadonlyArray<string>) => {
+                console.log(iris)
                 return resource.fetchByIRIs(iris);
               },
               { maxBatchSize }
