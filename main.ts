@@ -33,130 +33,127 @@ const resourcesDir = process.env.RESOURCES_DIR || "./resources";
 const configFile = process.env.CONFIG_FILE || "./config.json";
 
 // Load schema from folder
-SchemaLoader.loadFrom(resourcesDir).then((loader) => {
-  const resources = new Resources(loader.resourceTypeDefs);
+const loader = await SchemaLoader.loadFrom(resourcesDir);
 
-  const queryResolvers: Record<string, ResourceResolver> = {};
+const resources = new Resources(loader.resourceTypeDefs);
 
-  (loader.queryDef.fields || []).forEach((field) => {
-    queryResolvers[field.name.value] = async (
-      _parent,
-      args: { iri: string | Array<string> },
-      context
-    ) => {
-      const resourceName = unwrapCompositeType(field.type).name.value;
-      const resource = resources.lookup(resourceName);
+const queryResolvers: Record<string, ResourceResolver> = {};
 
-      if (!resource) {
-        throw new Error(`resource ${resourceName} is not found`);
+(loader.queryDef.fields || []).forEach((field) => {
+  queryResolvers[field.name.value] = async (
+    _parent,
+    args: { iri: string | Array<string> },
+    context
+  ) => {
+    const resourceName = unwrapCompositeType(field.type).name.value;
+    const resource = resources.lookup(resourceName);
+
+    if (!resource) {
+      throw new Error(`resource ${resourceName} is not found`);
+    }
+
+    if (isEqual(Object.keys(args), ["iri"])) {
+      const loader = context.loaders.get(resource);
+
+      if (!loader) {
+        throw new Error(
+          `missing resource loader for ${resource.definition.name.value}`
+        );
       }
 
-      if (isEqual(Object.keys(args), ["iri"])) {
-        const loader = context.loaders.get(resource);
+      const iris = ensureArray(args.iri);
+      return oneOrMany(await loader.loadMany(iris), !isListType(field.type));
+    }
+    return oneOrMany(await resource.fetch(args), !isListType(field.type));
+  };
+});
 
+const resourceResolvers: Record<string, Record<string, ResourceResolver>> = {};
+
+resources.all.forEach((resource) => {
+  const fieldResolvers: Record<string, ResourceResolver> = (resourceResolvers[
+    resource.definition.name.value
+  ] = {});
+
+  (resource.definition.fields || []).forEach((field) => {
+    const type = field.type;
+    const name = field.name.value;
+
+    fieldResolvers[name] = async (parent, args, context) => {
+      const value = parent[name];
+
+      if (!value) {
+        return isListType(type) ? [] : value;
+      }
+
+      const resourceName = unwrapCompositeType(type).name.value;
+      const resource = resources.lookup(resourceName);
+
+      if (!resource || resource.isEmbeddedType) {
+        return value;
+      }
+
+      if (Object.keys(args).length === 0) {
+        const loader = context.loaders.get(resource);
         if (!loader) {
           throw new Error(
             `missing resource loader for ${resource.definition.name.value}`
           );
         }
+        const entry = await loader.loadMany(value);
+        console.log(entry);
+        return oneOrMany(entry, !isListType(type));
+      } else {
+        const argIRIs = ensureArray(args.iri);
+        const allIRIs = Array.from(new Set([...value, ...argIRIs]));
 
-        const iris = ensureArray(args.iri);
-        return oneOrMany(await loader.loadMany(iris), !isListType(field.type));
+        return oneOrMany(
+          await resource.fetch({ ...args, ...{ iri: allIRIs } }),
+          !isListType(type)
+        );
       }
-      return oneOrMany(await resource.fetch(args), !isListType(field.type));
     };
   });
+});
 
-  const resourceResolvers: Record<
-    string,
-    Record<string, ResourceResolver>
-  > = {};
+const rootResolvers = {
+  Query: queryResolvers,
+  ...resourceResolvers,
+};
 
-  resources.all.forEach((resource) => {
-    const fieldResolvers: Record<string, ResourceResolver> = (resourceResolvers[
-      resource.definition.name.value
-    ] = {});
+const app = express();
 
-    (resource.definition.fields || []).forEach((field) => {
-      const type = field.type;
-      const name = field.name.value;
-
-      fieldResolvers[name] = async (parent, args, context) => {
-        const value = parent[name];
-
-        if (!value) {
-          return isListType(type) ? [] : value;
-        }
-
-        const resourceName = unwrapCompositeType(type).name.value;
-        const resource = resources.lookup(resourceName);
-
-        if (!resource || resource.isEmbeddedType) {
-          return value;
-        }
-
-        if (Object.keys(args).length === 0) {
-          const loader = context.loaders.get(resource);
-
-          if (!loader) {
-            throw new Error(
-              `missing resource loader for ${resource.definition.name.value}`
-            );
-          }
-
-          return oneOrMany(await loader.loadMany(value), !isListType(type));
-        } else {
-          const argIRIs = ensureArray(args.iri);
-          const allIRIs = Array.from(new Set([...value, ...argIRIs]));
-
-          return oneOrMany(
-            await resource.fetch({ ...args, ...{ iri: allIRIs } }),
-            !isListType(type)
+const server = new ApolloServer({
+  typeDefs: loader.originalTypeDefs,
+  resolvers: rootResolvers,
+  context: () => {
+    return {
+      loaders: transform(
+        resources.root,
+        (acc, resource) => {
+          acc.set(
+            resource,
+            new DataLoader(
+              async (iris: ReadonlyArray<string>) => {
+                return resource.fetchByIRIs(iris);
+              },
+              { maxBatchSize }
+            )
           );
-        }
-      };
-    });
-  });
+        },
+        new Map<Resource, DataLoader<string, ResourceEntry | null>>()
+      ),
+    };
+  },
+  plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
+});
 
-  const rootResolvers = {
-    Query: queryResolvers,
-    ...resourceResolvers,
-  };
+server.start().then(() => {
+  server.applyMiddleware({ app, path });
 
-  const app = express();
-
-  const server = new ApolloServer({
-    typeDefs: loader.originalTypeDefs,
-    resolvers: rootResolvers,
-    context: () => {
-      return {
-        loaders: transform(
-          resources.root,
-          (acc, resource) => {
-            acc.set(
-              resource,
-              new DataLoader(
-                async (iris: ReadonlyArray<string>) => {
-                  return resource.fetchByIRIs(iris);
-                },
-                { maxBatchSize }
-              )
-            );
-          },
-          new Map<Resource, DataLoader<string, ResourceEntry | null>>()
-        ),
-      };
-    },
-    plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
-  });
-
-  server.start().then(() => {
-    server.applyMiddleware({ app, path });
-
-    app.listen(port, () => {
-      console.log(
-        `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
-      );
-    });
+  app.listen(port, () => {
+    console.log(
+      `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
+    );
   });
 });
