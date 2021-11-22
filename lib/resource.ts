@@ -16,6 +16,8 @@ import SparqlClient from "sparql-http-client";
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
 
+const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
+
 const handlebars = Handlebars.create();
 
 handlebars.registerHelper(
@@ -50,7 +52,7 @@ function buildEntry(
   const pValues = transform(
     bindingsGroupedBySubject[subject],
     (acc, { predicate, object }: Quad) => {
-      const k = predicate.value.replace(/^https:\/\/github\.com\/dbcls\/grasp\/ns\//, "");
+      const k = predicate.value.replace(NS_REGEX, "");
 
       (acc[k] || (acc[k] = [])).push(object.value);
     },

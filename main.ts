@@ -70,22 +70,29 @@ const queryResolvers: Record<string, ResourceResolver> = {};
 
 const resourceResolvers: Record<string, Record<string, ResourceResolver>> = {};
 
+// Iterate over all resources
 resources.all.forEach((resource) => {
+  //Initalize empty field resolver
   const fieldResolvers: Record<string, ResourceResolver> = (resourceResolvers[
     resource.definition.name.value
   ] = {});
 
+  //Iterate over every field definition
   (resource.definition.fields || []).forEach((field) => {
     const type = field.type;
     const name = field.name.value;
 
+    // Create field resolver for field
     fieldResolvers[name] = async (parent, args, context) => {
+      // get the parent of this field
       const value = parent[name];
 
+      // If the parent exists, make sure it's an array
       if (!value) {
         return isListType(type) ? [] : value;
       }
 
+      // Get the underlying type
       const resourceName = unwrapCompositeType(type).name.value;
       const resource = resources.lookup(resourceName);
 
@@ -100,8 +107,8 @@ resources.all.forEach((resource) => {
             `missing resource loader for ${resource.definition.name.value}`
           );
         }
-        const entry = await loader.loadMany(value);
-        console.log(entry);
+        // TODO: if multiple values are returned when the schema defines single value, value is no array. Pick first element of array in case.
+        const entry = await loader.loadMany(ensureArray(value));
         return oneOrMany(entry, !isListType(type));
       } else {
         const argIRIs = ensureArray(args.iri);
@@ -120,6 +127,8 @@ const rootResolvers = {
   Query: queryResolvers,
   ...resourceResolvers,
 };
+
+// Initiate server
 
 const app = express();
 
