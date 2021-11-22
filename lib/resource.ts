@@ -1,4 +1,4 @@
-import Handlebars from "handlebars";
+import Handlebars from "./handlebars-template";
 import type { Quad } from "@rdfjs/types"
 import groupBy from "lodash.groupby";
 import transform from "lodash.transform";
@@ -8,8 +8,7 @@ import Resources from "./resources";
 import {
   oneOrMany,
   isListType,
-  unwrapCompositeType,
-  ensureArray,
+  unwrapCompositeType
 } from "./utils";
 import SparqlClient from "sparql-http-client";
 
@@ -18,28 +17,7 @@ export type ResourceEntry = Record<string, any>;
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
 
-const handlebars = Handlebars.create();
-
-handlebars.registerHelper(
-  "join",
-  function (separator: string, strs: string | string[]): string {
-    return ensureArray(strs).join(separator);
-  }
-);
-
-handlebars.registerHelper(
-  "as-iriref",
-  function (strs: string | string[]): string[] {
-    return ensureArray(strs).map((str) => `<${str}>`);
-  }
-);
-
-handlebars.registerHelper(
-  "as-string",
-  function (strs: string | string[]): string[] {
-    return ensureArray(strs).map((str) => `"${str}"`);
-  }
-);
+const handlebars = Handlebars();
 
 function buildEntry(
   bindingsGroupedBySubject: Record<string, Array<Quad>>,
