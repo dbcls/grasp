@@ -15,6 +15,8 @@ import {
   unwrapCompositeType,
   ensureArray,
 } from "./lib/utils";
+import SparqlClient from "sparql-http-client";
+import {Config} from "./lib/config";
 
 type ResourceResolver = (
   parent: ResourceEntry,
@@ -26,16 +28,26 @@ interface Context {
   loaders: Map<Resource, DataLoader<string, ResourceEntry | null>>;
 }
 
+// Load config
+const configFile = process.env.CONFIG_FILE || "./config.json";
+const config: Config = require(configFile);
+
+const services = config.services.map((service) => {
+  return new SparqlClient({ 
+    endpointUrl: service.url, 
+    user: service.user, 
+    password: service.password });
+})
+
 const port = process.env.PORT || 4000;
 const path = process.env.ROOT_PATH || "/";
 const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
 const resourcesDir = process.env.RESOURCES_DIR || "./resources";
-const configFile = process.env.CONFIG_FILE || "./config.json";
 
 // Load schema from folder
 const loader = await SchemaLoader.loadFrom(resourcesDir);
 
-const resources = new Resources(loader.resourceTypeDefs);
+const resources = new Resources(loader.resourceTypeDefs, services);
 
 const queryResolvers: Record<string, ResourceResolver> = {};
 
@@ -144,7 +156,6 @@ const server = new ApolloServer({
             resource,
             new DataLoader(
               async (iris: ReadonlyArray<string>) => {
-                console.log(iris)
                 return resource.fetchByIRIs(iris);
               },
               { maxBatchSize }
