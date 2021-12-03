@@ -8,7 +8,7 @@ const {readdir, readFile} = fs.promises;
 export default class SchemaLoader {
   originalTypeDefs: DocumentNode;
   queryDef: ObjectTypeDefinitionNode;
-  resourceTypeDefs: Array<ObjectTypeDefinitionNode>;
+  resourceTypeDefs: ObjectTypeDefinitionNode[];
 
   constructor(schema: string) {
     this.originalTypeDefs = parse(schema);
@@ -32,15 +32,27 @@ export default class SchemaLoader {
    * @param baseDir Resources directory with graphql schema files
    * @returns SchemaLoader object as promise
    */
-  static async loadFrom(baseDir: string): Promise<SchemaLoader> {
+  static async loadFromDirectory(baseDir: string): Promise<SchemaLoader> {
     let schema = '';
 
     for (const path of await readdir(baseDir)) {
       if (!/^[0-9a-zA-Z].*\.graphql$/.test(path)) { continue; }
 
-      schema += await readFile(join(baseDir, path));
+      schema += await readFile(join(baseDir, path), {encoding: 'utf-8'});
     }
 
     return new SchemaLoader(schema);
   }
+
+  /**
+   * Read GraphQL schema from a single schema file
+   * 
+   * @param baseDir Resources directory with graphql schema files
+   * @returns SchemaLoader object as promise
+   */
+     static async loadFromFile(path: string): Promise<SchemaLoader> {
+      let schema: string = await readFile(path, {encoding: 'utf-8'});
+  
+      return new SchemaLoader(schema);
+    }
 }

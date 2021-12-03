@@ -15,8 +15,8 @@ import {
   unwrapCompositeType,
   ensureArray,
 } from "./lib/utils";
-import SparqlClient from "sparql-http-client";
-import {Config} from "./lib/config";
+import {Config, Service} from "./lib/config";
+import { Console } from "console";
 
 type ResourceResolver = (
   parent: ResourceEntry,
@@ -29,15 +29,15 @@ interface Context {
 }
 
 // Load config
-const configFile = process.env.CONFIG_FILE || "./config.json";
-const config: Config = require(configFile);
+//const configFile = process.env.CONFIG_FILE || "./config.json";
+//const config: Config = require(configFile);
 
-const services = config.services.map((service) => {
-  return new SparqlClient({ 
-    endpointUrl: service.url, 
-    user: service.user, 
-    password: service.password });
-})
+// const services = config.services.map((service) => {
+//   return new SparqlClient({ 
+//     endpointUrl: service.url, 
+//     user: service.user, 
+//     password: service.password });
+// })
 
 const port = process.env.PORT || 4000;
 const path = process.env.ROOT_PATH || "/";
@@ -45,9 +45,9 @@ const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
 const resourcesDir = process.env.RESOURCES_DIR || "./resources";
 
 // Load schema from folder
-const loader = await SchemaLoader.loadFrom(resourcesDir);
+const loader = await SchemaLoader.loadFromDirectory(resourcesDir);
 
-const resources = new Resources(loader.resourceTypeDefs, services);
+const resources = new Resources(loader.resourceTypeDefs);
 
 const queryResolvers: Record<string, ResourceResolver> = {};
 
@@ -106,6 +106,7 @@ resources.all.forEach((resource) => {
 
       // Get the underlying type
       const resourceName = unwrapCompositeType(type).name.value;
+      // Check whether we can find a resource connected to this type
       const resource = resources.lookup(resourceName);
 
       if (!resource || resource.isEmbeddedType) {
@@ -119,8 +120,8 @@ resources.all.forEach((resource) => {
             `missing resource loader for ${resource.definition.name.value}`
           );
         }
-        // TODO: if multiple values are returned when the schema defines single value, value is no array. Pick first element of array in case.
         const entry = await loader.loadMany(ensureArray(value));
+        // TODO: if multiple values are returned when the schema defines single value, value is no array. Pick first element of array in case.
         return oneOrMany(entry, !isListType(type));
       } else {
         const argIRIs = ensureArray(args.iri);
@@ -154,6 +155,7 @@ const server = new ApolloServer({
         (acc, resource) => {
           acc.set(
             resource,
+            // Use DataLoader to pre-load and cache data from sparql endpoint
             new DataLoader(
               async (iris: ReadonlyArray<string>) => {
                 return resource.fetchByIRIs(iris);
