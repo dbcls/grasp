@@ -2,15 +2,17 @@ import Handlebars from "./handlebars-template";
 import type { Quad } from "@rdfjs/types"
 import groupBy from "lodash.groupby";
 import transform from "lodash.transform";
-import { ObjectTypeDefinitionNode } from "graphql";
+import { ObjectTypeDefinitionNode, ValueNode } from "graphql";
 
 import Resources from "./resources";
 import {
   oneOrMany,
   isListType,
-  unwrapCompositeType
+  unwrapCompositeType,
+  valueToString
 } from "./utils";
 import SparqlClient from "sparql-http-client";
+
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
@@ -20,31 +22,38 @@ const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
 const handlebars = Handlebars();
 
 function buildEntry(
-  bindingsGroupedBySubject: Record<string, Array<Quad>>,
+  bindingsGroupedBySubject: Record<string, Quad[]>,
   subject: string,
   resource: Resource,
   resources: Resources
 ): ResourceEntry {
   const entry: ResourceEntry = {};
 
+  // Turn the resulting Quads into records
   const pValues = transform(
     bindingsGroupedBySubject[subject],
     (acc, { predicate, object }: Quad) => {
+      // Extract property name from URI
       const k = predicate.value.replace(NS_REGEX, "");
-
+      // If property is not yet in the record accumulator, then initialise with empty array
+      // Push object value into array
       (acc[k] || (acc[k] = [])).push(object.value);
     },
     {} as Record<string, string[]>
   );
-
+  
+  // Resolve any non-scalar types
   (resource.definition.fields || []).forEach((field) => {
     const type = field.type;
     const name = field.name.value;
     const values = pValues[name] || [];
 
+    // Get the type
     const targetType = unwrapCompositeType(type);
+    // Find the corresponding resource
     const targetResource = resources.lookup(targetType.name.value);
 
+    // If the resource is embedded, build entries from exiting bindings
     if (targetResource?.isEmbeddedType) {
       const entries = values.map((nodeId) =>
         buildEntry(bindingsGroupedBySubject, nodeId, targetResource, resources)
@@ -145,15 +154,81 @@ export default class Resource {
     return new Resource(resources, def, sparqlClient, sparql);
   }
 
+  /**
+   * Construct a resource using a services list 
+   * 
+   * @param resources 
+   * @param def 
+   * @returns 
+   */
+   static buildFromServices(
+    resources: Resources,
+    def: ObjectTypeDefinitionNode,
+    serviceIndex: Map<string, SparqlClient>,
+    templateIndex: Map<string, string>
+  ): Resource {
+    
+    // Check whether Type definition has directive
+    if (
+      def.directives?.some((directive) => directive.name.value === "embedded")
+    ) {
+      //TODO: check out bug with embedded directive
+      return new Resource(resources, def, null, null);
+    }
+
+    // Find sparql directive
+    const sparqlDirective = def.directives?.find((directive) => directive.name.value === "sparql")
+
+    if (!sparqlDirective) {
+      //console.log(`No sparql directive found for type ${def.name.value}. Defaulting to embedded`)
+      throw new Error(`sparql directive for type ${def.name.value} is not defined`);
+    }
+   
+    const serviceArgument = sparqlDirective.arguments?.find((argument) => argument.name.value === "service")
+    const templateArgument = sparqlDirective.arguments?.find((argument) => argument.name.value === "template")
+
+    if (!serviceArgument) {
+      throw new Error(`service argument is not defined in sparql directive for type ${def.name.value}`);
+    }
+
+    if (!templateArgument) {
+      throw new Error(`query is not defined in sparql directive for type ${def.name.value}`);
+    }
+
+    const serviceName = valueToString(serviceArgument.value);
+    if (!serviceIndex.has(serviceName)) {
+      throw new Error(`service ${serviceName} is unknown for type ${def.name.value}`);
+    }
+
+    const templateName = valueToString(templateArgument.value);
+    if (!templateIndex.has(templateName)) {
+      throw new Error(`query template ${templateName} is unknown for type ${def.name.value}`);
+    }
+
+    const client = serviceIndex.get(serviceName) || null;
+    const template = templateIndex.get(templateName) || null;
+
+    return new Resource(resources, def, client, template);
+  }
+
+  /**
+   * Fetch the SPARQL bindings for the GraphQL Type and group the result by subject
+   * @param args 
+   * @returns 
+   */
   async fetch(args: object): Promise<ResourceEntry[]> {
     const bindings = await this.query(args);
     const bindingGroupedBySubject = groupBy(bindings, (binding) => binding.subject.value);
     
+    // Remove BlankNodes from primary bindings
+    // TODO: check whether this simply removes all results with blanknodes
     const primaryBindings = bindings.filter(
       (binding) => binding.subject.termType !== "BlankNode"
     );
 
+    // Group the primaryBindings by subject value
     const primaryBindingsGroupedBySubject = groupBy(primaryBindings, (binding) => binding.subject.value);
+    // Collect the final list of entries from primaryBindings
     const entries = Object.entries(primaryBindingsGroupedBySubject).map(
       ([subject, _sBindings]) => {
         return buildEntry(bindingGroupedBySubject, subject, this, this.resources);
@@ -163,6 +238,11 @@ export default class Resource {
     return entries;
   }
 
+  /**
+   * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
+   * @param iris 
+   * @returns 
+   */
   async fetchByIRIs(
     iris: ReadonlyArray<string>
   ): Promise<Array<ResourceEntry | null>> {
@@ -172,7 +252,12 @@ export default class Resource {
     );
   }
 
-  async query(args: object): Promise<Array<Quad>> {
+  /**
+   * Execute SPARQL query from query handlebars template
+   * @param args Arguments for handlebars templa
+   * @returns 
+   */
+  async query(args: object): Promise<Quad[]> {
     if (!this.queryTemplate || !this.sparqlClient) {
       throw new Error(
         "query template and endpoint should be specified in order to query"
@@ -186,7 +271,7 @@ export default class Resource {
       { operation: 'postUrlencoded' })
 
     return new Promise((resolve) => {
-      const quads: Array<Quad> = [];
+      const quads: Quad[] = [];
       stream.on('data', (q: Quad) => quads.push(q))
       stream.on('end', () => resolve(quads));
       stream.on('error', (err: any) => {

@@ -1,4 +1,4 @@
-import { TypeNode, NamedTypeNode } from 'graphql';
+import { TypeNode, NamedTypeNode, ValueNode } from 'graphql';
 
 export function isListType(type: TypeNode): boolean {
   switch (type.kind) {
@@ -27,6 +27,13 @@ export function unwrapCompositeType(type: TypeNode): NamedTypeNode {
     default:
       throw new Error(`unsupported type: ${(type as TypeNode).kind}`);
   }
+}
+
+export function valueToString(value: ValueNode): string {
+  if (value.kind === 'StringValue') {
+    return value.value
+  }
+  throw new Error(`unsupported type: ${(value as ValueNode).kind}`);
 }
 
 export function ensureArray<T>(obj: T | Array<T>): Array<T> {
