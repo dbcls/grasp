@@ -23,6 +23,7 @@
     "lodash.isequal": "^4.5.0",
     "lodash.mapvalues": "^4.6.0",
     "lodash.transform": "^4.6.0",
+    "node-cache": "^5.1.2",
     "nodemon": "^2.0.6",
     "outdent": "^0.8.0",
     "sparql-http-client": "^2.4.0",

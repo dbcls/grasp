@@ -12,14 +12,17 @@ import {
   valueToString
 } from "./utils";
 import SparqlClient from "sparql-http-client";
+import NodeCache from "node-cache";
 
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
+const TTL = 100;
 
 const handlebars = Handlebars();
+const cache = new NodeCache( { stdTTL: TTL, checkperiod: 120 } );
 
 function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
@@ -150,7 +153,7 @@ export default class Resource {
     if (!endpoint) {
       throw new Error(`endpoint is not defined for type ${def.name.value}`);
     }
-    const sparqlClient = new SparqlClient({ endpointUrl: endpoint, user: 'admin', password: 'admin' });
+    const sparqlClient = new SparqlClient({ endpointUrl: endpoint });
     return new Resource(resources, def, sparqlClient, sparql);
   }
 
@@ -180,7 +183,6 @@ export default class Resource {
     const sparqlDirective = def.directives?.find((directive) => directive.name.value === "sparql")
 
     if (!sparqlDirective) {
-      //console.log(`No sparql directive found for type ${def.name.value}. Defaulting to embedded`)
       throw new Error(`sparql directive for type ${def.name.value} is not defined`);
     }
    
@@ -265,6 +267,12 @@ export default class Resource {
     }
     const sparqlQuery = this.queryTemplate(args);
 
+    const quads:Quad[] | undefined = cache.get( sparqlQuery );
+    if ( quads != undefined ){
+        console.log("--- SPARQL QUERY (from cache) ---\n", sparqlQuery);
+        return quads;
+    }
+
     console.log("--- SPARQL QUERY ---\n", sparqlQuery);
 
     const stream = await this.sparqlClient.query.construct(sparqlQuery, 
@@ -273,7 +281,11 @@ export default class Resource {
     return new Promise((resolve) => {
       const quads: Quad[] = [];
       stream.on('data', (q: Quad) => quads.push(q))
-      stream.on('end', () => resolve(quads));
+      stream.on('end', () => {
+        // TODO: cache
+        const success = cache.set( sparqlQuery, quads );
+        resolve(quads)
+      });
       stream.on('error', (err: any) => {
         throw new Error(
           `SPARQL endpoint returns: ${err}`

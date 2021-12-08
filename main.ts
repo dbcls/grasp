@@ -28,22 +28,20 @@ interface Context {
 }
 
 // Load config
-const servicesFile = process.env.SERVICES_FILE || "./services.json";
-const schemaFile = process.env.SCHEMA_FILE || "./config.json";
 const port = process.env.PORT || 4000;
 const path = process.env.ROOT_PATH || "/";
 const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
 const resourcesDir = process.env.RESOURCES_DIR || "./resources";
+const servicesFile = process.env.SERVICES_FILE || "./services.json";
+const queryCacheTTL = process.env.QUERY_CACHE_TTL || 100;
 
 // Load config from file
 const config = await ConfigLoader.loadFromFiles(servicesFile, resourcesDir);
-const loader = await SchemaLoader.loadFromFile(schemaFile);
-
-const resources = new Resources(loader.resourceTypeDefs, config.serviceIndex, config.templateIndex);
 
 // Load schema from folder
-//const loader = await SchemaLoader.loadFromDirectory(resourcesDir);
+const loader = await SchemaLoader.loadFromDirectory(resourcesDir);
 
+const resources = new Resources(loader.resourceTypeDefs, config.serviceIndex, config.templateIndex);
 //const resources = new Resources(loader.resourceTypeDefs);
 
 const queryResolvers: Record<string, ResourceResolver> = {};
