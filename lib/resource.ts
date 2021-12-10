@@ -19,10 +19,9 @@ type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
-const TTL = 100;
 
 const handlebars = Handlebars();
-const cache = new NodeCache( { stdTTL: TTL, checkperiod: 120 } );
+const cache = new NodeCache( { stdTTL: 100, checkperiod: 120 } );
 
 function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
