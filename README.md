@@ -7,7 +7,7 @@ Grasp is a bridge software that provides a GraphQL endpoint wrapping SPARQL endp
 Grasp works as follows:
 
 1. Grasp receives a GraphQL query from a client.
-2. Grasp translates it into a SPARQL query (or queries).
+2. Grasp compiles a predefined [handlebars](https://handlebarsjs.com/) template into a SPARQL query (or queries).
 3. Grasp sends the query to a SPARQL endpoint (or endpoints).
 4. The SPARQL endpoints return the results to Grasp.
 5. Grasp reforms the results to fit the given GraphQL query.
@@ -15,7 +15,7 @@ Grasp works as follows:
 
 ![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/overview.svg?sanitize=true)
 
-We need to define a GraphQL schema with some Grasp specific notations, which are carefully designed to keep full-compatibility with the GraphQL specification. More specifically, we need to define a SPARQL endpoint URL and a SPARQL query template per a *concept*, or a *type* in GraphQL terms. We also use GraphQL decorators for metadata (described later).
+Grasp requires a GraphQL schema with some specific notations, which are carefully designed to keep full-compatibility with the GraphQL specification. More specifically, we need to define a SPARQL endpoint URL and a SPARQL query [handlebars](https://handlebarsjs.com/) template per *concept*, or a *Type* in GraphQL terms. We also use GraphQL decorators for metadata (described later).
 
 Let's look at a simple example.
 
@@ -68,15 +68,81 @@ Now we've queried [Integbio Database Catalog/RDF](https://integbio.jp/rdf/?view=
 
 And access `localhost:4000`. See available image tags at [dbcls/grasp](https://github.com/dbcls/grasp/pkgs/container/grasp).
 
-## How does this works?
+## Configuring SPARQL services
+
+## How does this work?
 
 The GraphQL query was translated into SPARQL queries and sent to a SPARQL endpoint, then the SPARQL results were returned to Grasp, finally the results were reformed into the GraphQL result.
 
-Grasp does those translation according to a GraphQL schema (type definition), SPARQL Endpoint URL and SPARQL query, which a Grasp admin (who sets up Grasp) provides. We refer to this as *resource* in Grasp. Let us dig into the definition.
+Grasp does those translation according to a GraphQL schema (type definition), SPARQL Endpoint URL and SPARQL query, which a Grasp admin (who sets up Grasp) provides. We refer to this as *resource* in Grasp. 
+There are two main methods of defining a resource:
+
+- using a GraphQL comment
+- using directives
+
+Let us dig into the definition.
+
+### Using a GraphQL comment
 
 You will see the resource definition at  [examples/dataset.graphql](https://github.com/dbcls/grasp/blob/master/examples/dataset.graphql).
 
 SPARQL Endpoint URL and SPARQL query are written in the GraphQL comment of the type in a special form. SPARQL Endpoint is specified after the `--- endpoint ---` line. SPARQL query is placed after the `--- sparql ---` line.
+
+Example:
+
+``` graphql
+"""
+--- endpoint ---
+https://integbio.jp/rdf/sparql
+
+--- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+CONSTRUCT {
+  ?iri :iri   ?iri;
+  :label      ?label;
+  :alt_label  ?alt_label ;                                               
+}
+WHERE
+{
+  { ?iri a skos:Concept }
+  OPTIONAL { ?iri skos:prefLabel ?label }
+  OPTIONAL { ?iri skos:altLabel ?alt_label }
+  
+  {{#if iri}}
+  VALUES ?iri { {{join " " (as-iriref iri)}} }
+  {{/if}}
+}
+"""
+type Concept {
+  iri: ID!
+  label: String
+  alt_label: String
+}
+```
+
+### Using the grasp directive
+
+Alternatively, you can use the following directive:
+
+`directive @grasp(service: String, template: String) on OBJECT`
+
+
+- `service`: the SPARQL Endpoint URL or name of the defined service
+- `template`: filename of the SPARQL query [handlebars](https://handlebarsjs.com/) template
+
+Example:
+
+``` graphql
+type Concept @grasp(service: "https://integbio.jp/rdf/sparql", template: "Concept.sparql") {
+  iri: ID!
+  label: String
+  alt_label: String
+}
+```
+
+### Creating a SPARQL query [handlebars](https://handlebarsjs.com/) template
 
 The query returns a RDF graph by the `CONSTRUCT` query form.  The graph has triples which consist of the IRI identifying the object, the predicate corresponding to the field name of the object, and its value.
 
@@ -201,7 +267,7 @@ type Dataset {
 
 In this case, Grasp issues two SPARQL queries to complete a GraphQL query to fetch `Dataset` including all its `references` field. The first is to fetch a `Dataset`, with `references` having their IRIs. The second is to fetch `references` using the IRIs. The second query is processed according to your `Pubmed` resource definition ([examples/pubmed.graphql](https://github.com/dbcls/grasp/blob/master/examples/pubmed.graphql)). Grasp combines these SPARQL results from these queries into the final GraphQL response.
 
-### Treat blank nodes as relations
+### Handle blank nodes with embedded resources
 
 We cannot handle relations with a blank node in the previously mentioned way, as the blank node can't be pointed with an IRI. In order to handle such relations, we introduce *embedded resources*.
 

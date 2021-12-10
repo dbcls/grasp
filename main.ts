@@ -173,5 +173,15 @@ server.start().then(() => {
     console.log(
       `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
     );
+    console.log(
+      `Resources directory: ${resourcesDir}`
+    );
+
+    console.log(
+      `Services file: ${servicesFile}`
+    );
+    console.log(
+      `Dataloader max. batch size: ${maxBatchSize}`
+    );
   });
 });
