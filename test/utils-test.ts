@@ -1,4 +1,4 @@
-import { ensureArray } from "../lib/utils";
+import { ensureArray, oneOrMany } from "../lib/utils";
 
 describe("utils", () => {
   describe("ensureArray", () => {
@@ -8,7 +8,7 @@ describe("utils", () => {
       });
 
       it("should return empty array if array with null", async () => {
-        return expect(ensureArray([null])).toEqual([]);
+        return expect(ensureArray([null])).toEqual([null]);
       });
     });
 
@@ -31,5 +31,33 @@ describe("utils", () => {
     });
   });
 
-  describe("ensureArray", () => {});
+  describe("oneOrMany", () => {
+    describe("with one", () => {
+      it("should return one if multi value", async () => {
+        return expect(oneOrMany(["a", "b"], true)).toEqual("a");
+      });
+
+      it("should return one if single value", async () => {
+        return expect(oneOrMany(["a"], true)).toEqual("a");
+      });
+
+      it("should return undefined if empty array", async () => {
+        return expect(oneOrMany([], true)).toEqual(undefined);
+      });
+    });
+
+    describe("with many", () => {
+      it("should return one if multi value", async () => {
+        return expect(oneOrMany(["a", "b"], false)).toEqual(["a", "b"]);
+      });
+
+      it("should return one if single value", async () => {
+        return expect(oneOrMany(["a"], false)).toEqual(["a"]);
+      });
+
+      it("should return empty array if empty array", async () => {
+        return expect(oneOrMany([], false)).toEqual([]);
+      });
+    });
+  });
 });
