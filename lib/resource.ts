@@ -1,19 +1,20 @@
 import Handlebars from "./handlebars-template";
-import type { Quad } from "@rdfjs/types"
+import type { Quad } from "@rdfjs/types";
 import groupBy from "lodash.groupby";
 import transform from "lodash.transform";
-import { ObjectTypeDefinitionNode, ValueNode } from "graphql";
+import { ObjectTypeDefinitionNode } from "graphql";
 
 import Resources from "./resources";
 import {
   oneOrMany,
   isListType,
   unwrapCompositeType,
-  valueToString
+  hasDirective,
+  getDirective,
+  getDirectiveArgumentValue,
 } from "./utils";
 import SparqlClient from "sparql-http-client";
 import NodeCache from "node-cache";
-
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
@@ -21,7 +22,7 @@ export type ResourceEntry = Record<string, any>;
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
 
 const handlebars = Handlebars();
-const cache = new NodeCache( { stdTTL: 100, checkperiod: 120 } );
+const cache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
 
 function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
@@ -43,7 +44,7 @@ function buildEntry(
     },
     {} as Record<string, string[]>
   );
-  
+
   // Resolve any non-scalar types
   (resource.definition.fields || []).forEach((field) => {
     const type = field.type;
@@ -72,14 +73,14 @@ function buildEntry(
 export default class Resource {
   resources: Resources;
   definition: ObjectTypeDefinitionNode;
-  sparqlClient: SparqlClient | null;
+  sparqlClient?: SparqlClient;
   queryTemplate: CompiledTemplate | null;
 
   constructor(
     resources: Resources,
     definition: ObjectTypeDefinitionNode,
-    sparqlClient: SparqlClient | null,
-    sparql: string | null
+    sparqlClient?: SparqlClient,
+    sparql?: string
   ) {
     this.resources = resources;
     this.definition = definition;
@@ -90,137 +91,133 @@ export default class Resource {
   }
 
   /**
-   * Construct a resource using a TypeDefinition object  
-   * 
-   * @param resources 
-   * @param def 
-   * @returns 
+   * Construct a resource using a TypeDefinition object
+   *
+   * @param resources
+   * @param def
+   * @returns
    */
   static buildFromTypeDefinition(
     resources: Resources,
-    def: ObjectTypeDefinitionNode
+    def: ObjectTypeDefinitionNode,
+    serviceIndex?: Map<string, SparqlClient>,
+    templateIndex?: Map<string, string>
   ): Resource {
-    
     // Check whether Type definition has directive
-    if (
-      def.directives?.some((directive) => directive.name.value === "embedded")
-    ) {
+    if (hasDirective(def, "embedded")) {
       //TODO: check out bug with embedded directive
-      return new Resource(resources, def, null, null);
+      return new Resource(resources, def);
     }
 
-    // Check whether the type description has a good description
-    if (!def.description) {
-      throw new Error(`description for type ${def.name.value} is not defined`);
-    }
-    // Extract description as string
-    const description = def.description.value;
-    const lines = description.split(/\r?\n/);
+    // Check wether type has a grasp directive
+    // Find grasp directive
+    let endpoint: string | undefined,
+      sparql: string | undefined;
 
-    let endpoint: string | null = null,
-      sparql = "";
-
-    enum State {
-      Default,
-      Endpoint,
-      Sparql,
-    }
-    let state: State = State.Default;
-
-    // Split lines in type definition 
-    lines.forEach((line: string) => {
-      switch (line) {
-        case "--- endpoint ---":
-          state = State.Endpoint;
-          return;
-        case "--- sparql ---":
-          state = State.Sparql;
-          return;
+    const graspDirective = getDirective(def, "grasp");
+    if (graspDirective) {
+      endpoint = getDirectiveArgumentValue(graspDirective, "endpoint");
+      if (!endpoint) {
+        throw new Error(
+          `argument 'endpoint' is not defined in grasp directive for type ${def.name.value}`
+        );
       }
 
-      switch (state) {
-        case State.Endpoint:
-          endpoint = line;
-          state = State.Default;
-          break;
-        case State.Sparql:
-          sparql += line + "\n";
-          break;
+      sparql = getDirectiveArgumentValue(graspDirective, "sparql");
+      if (!sparql) {
+        throw new Error(
+          `argument 'sparql' is not defined in grasp directive for type ${def.name.value}`
+        );
       }
-    });
+    } else {
+      // Check whether the type description has a good description
+      if (!def.description) {
+        throw new Error(
+          `description for type ${def.name.value} is not defined`
+        );
+      }
+      // Extract description as string
+      const description = def.description.value;
+      const lines = description.split(/\r?\n/);
 
-    if (!endpoint) {
-      throw new Error(`endpoint is not defined for type ${def.name.value}`);
+      enum State {
+        Default,
+        Endpoint,
+        Sparql,
+      }
+      let state: State = State.Default;
+
+      // Split lines in type definition
+      lines.forEach((line: string) => {
+        switch (line) {
+          case "--- endpoint ---":
+            state = State.Endpoint;
+            return;
+          case "--- sparql ---":
+            state = State.Sparql;
+            sparql = ""
+            return;
+        }
+
+        switch (state) {
+          case State.Endpoint:
+            endpoint = line;
+            state = State.Default;
+            break;
+          case State.Sparql:
+            sparql += line + "\n";
+            break;
+        }
+      });
+
+      if (!endpoint) {
+        throw new Error(`endpoint is not defined for type ${def.name.value}`);
+      }
     }
-    const sparqlClient = new SparqlClient({ endpointUrl: endpoint });
+
+    // If the sparql key is in the template index, use that template
+    if (templateIndex && sparql) {
+      console.log(sparql)
+      const template = templateIndex.get(sparql);
+      if (template) {
+        sparql = template;
+      } else {
+        console.log(
+          `query for type ${def.name.value} is not in template definitions; interpreting as SPARQL query.`
+        );
+      }
+    }
+
+    if (!serviceIndex || !serviceIndex.has(endpoint)) {
+      console.log(
+        `${endpoint} for type ${def.name.value} is not in service definitions; trying as endpoint url.`
+      );
+      const sparqlClient = new SparqlClient({ endpointUrl: endpoint });
+      return new Resource(resources, def, sparqlClient, sparql);
+    }
+
+    const sparqlClient = serviceIndex.get(endpoint);
+
+    if (!sparqlClient) {
+      throw new Error(
+        `invalid endpoint ${endpoint} for type ${def.name.value}`
+      );
+    }
     return new Resource(resources, def, sparqlClient, sparql);
   }
 
   /**
-   * Construct a resource using a services list 
-   * 
-   * @param resources 
-   * @param def 
-   * @returns 
-   */
-   static buildFromServices(
-    resources: Resources,
-    def: ObjectTypeDefinitionNode,
-    serviceIndex: Map<string, SparqlClient>,
-    templateIndex: Map<string, string>
-  ): Resource {
-    
-    // Check whether Type definition has directive
-    if (
-      def.directives?.some((directive) => directive.name.value === "embedded")
-    ) {
-      //TODO: check out bug with embedded directive
-      return new Resource(resources, def, null, null);
-    }
-
-    // Find sparql directive
-    const sparqlDirective = def.directives?.find((directive) => directive.name.value === "sparql")
-
-    if (!sparqlDirective) {
-      throw new Error(`sparql directive for type ${def.name.value} is not defined`);
-    }
-   
-    const serviceArgument = sparqlDirective.arguments?.find((argument) => argument.name.value === "service")
-    const templateArgument = sparqlDirective.arguments?.find((argument) => argument.name.value === "template")
-
-    if (!serviceArgument) {
-      throw new Error(`service argument is not defined in sparql directive for type ${def.name.value}`);
-    }
-
-    if (!templateArgument) {
-      throw new Error(`query is not defined in sparql directive for type ${def.name.value}`);
-    }
-
-    const serviceName = valueToString(serviceArgument.value);
-    if (!serviceIndex.has(serviceName)) {
-      throw new Error(`service ${serviceName} is unknown for type ${def.name.value}`);
-    }
-
-    const templateName = valueToString(templateArgument.value);
-    if (!templateIndex.has(templateName)) {
-      throw new Error(`query template ${templateName} is unknown for type ${def.name.value}`);
-    }
-
-    const client = serviceIndex.get(serviceName) || null;
-    const template = templateIndex.get(templateName) || null;
-
-    return new Resource(resources, def, client, template);
-  }
-
-  /**
    * Fetch the SPARQL bindings for the GraphQL Type and group the result by subject
-   * @param args 
-   * @returns 
+   * @param args
+   * @returns
    */
   async fetch(args: object): Promise<ResourceEntry[]> {
     const bindings = await this.query(args);
-    const bindingGroupedBySubject = groupBy(bindings, (binding) => binding.subject.value);
-    
+    const bindingGroupedBySubject = groupBy(
+      bindings,
+      (binding) => binding.subject.value
+    );
+
     // Remove BlankNodes from primary bindings
     // TODO: check whether this simply removes all results with blanknodes
     const primaryBindings = bindings.filter(
@@ -228,11 +225,19 @@ export default class Resource {
     );
 
     // Group the primaryBindings by subject value
-    const primaryBindingsGroupedBySubject = groupBy(primaryBindings, (binding) => binding.subject.value);
+    const primaryBindingsGroupedBySubject = groupBy(
+      primaryBindings,
+      (binding) => binding.subject.value
+    );
     // Collect the final list of entries from primaryBindings
     const entries = Object.entries(primaryBindingsGroupedBySubject).map(
       ([subject, _sBindings]) => {
-        return buildEntry(bindingGroupedBySubject, subject, this, this.resources);
+        return buildEntry(
+          bindingGroupedBySubject,
+          subject,
+          this,
+          this.resources
+        );
       }
     );
 
@@ -241,8 +246,8 @@ export default class Resource {
 
   /**
    * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
-   * @param iris 
-   * @returns 
+   * @param iris
+   * @returns
    */
   async fetchByIRIs(
     iris: ReadonlyArray<string>
@@ -256,7 +261,7 @@ export default class Resource {
   /**
    * Execute SPARQL query from query handlebars template
    * @param args Arguments for handlebars templa
-   * @returns 
+   * @returns
    */
   async query(args: object): Promise<Quad[]> {
     if (!this.queryTemplate || !this.sparqlClient) {
@@ -266,31 +271,30 @@ export default class Resource {
     }
     const sparqlQuery = this.queryTemplate(args);
 
-    const quads:Quad[] | undefined = cache.get( sparqlQuery );
-    if ( quads != undefined ){
-        console.log("--- SPARQL QUERY (from cache) ---\n", sparqlQuery);
-        return quads;
+    const quads: Quad[] | undefined = cache.get(sparqlQuery);
+    if (quads != undefined) {
+      console.log("--- SPARQL QUERY (from cache) ---\n", sparqlQuery);
+      return quads;
     }
 
     console.log("--- SPARQL QUERY ---\n", sparqlQuery);
 
-    const stream = await this.sparqlClient.query.construct(sparqlQuery, 
-      { operation: 'postUrlencoded' })
+    const stream = await this.sparqlClient.query.construct(sparqlQuery, {
+      operation: "postUrlencoded",
+    });
 
     return new Promise((resolve) => {
       const quads: Quad[] = [];
-      stream.on('data', (q: Quad) => quads.push(q))
-      stream.on('end', () => {
+      stream.on("data", (q: Quad) => quads.push(q));
+      stream.on("end", () => {
         // TODO: cache
-        const success = cache.set( sparqlQuery, quads );
-        resolve(quads)
+        const success = cache.set(sparqlQuery, quads);
+        resolve(quads);
       });
-      stream.on('error', (err: any) => {
-        throw new Error(
-          `SPARQL endpoint returns: ${err}`
-        );
-      })
-    })
+      stream.on("error", (err: any) => {
+        throw new Error(`SPARQL endpoint returns: ${err}`);
+      });
+    });
   }
 
   get isRootType(): boolean {

@@ -10,7 +10,7 @@ export default class Resources {
   all: Resource[];
 
   constructor(resourceTypeDefs: ObjectTypeDefinitionNode[], serviceIndex?: Map<string, SparqlClient>, templateIndex?:Map<string, string>) {
-    this.all = (serviceIndex && templateIndex) ? resourceTypeDefs.map(def => Resource.buildFromServices(this, def, serviceIndex, templateIndex)): resourceTypeDefs.map(def => Resource.buildFromTypeDefinition(this, def));
+    this.all = resourceTypeDefs.map(def => Resource.buildFromTypeDefinition(this, def, serviceIndex, templateIndex));
   }
   
   /**

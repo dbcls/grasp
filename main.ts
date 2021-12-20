@@ -35,14 +35,14 @@ const resourcesDir = process.env.RESOURCES_DIR || "./resources";
 const servicesFile = process.env.SERVICES_FILE || "./services.json";
 const queryCacheTTL = process.env.QUERY_CACHE_TTL || 100;
 
-// Load config from file
+// Load services and query templates from file
 const config = await ConfigLoader.loadFromFiles(servicesFile, resourcesDir);
 
 // Load schema from folder
 const loader = await SchemaLoader.loadFromDirectory(resourcesDir);
 
+// Load all resource definitions
 const resources = new Resources(loader.resourceTypeDefs, config.serviceIndex, config.templateIndex);
-//const resources = new Resources(loader.resourceTypeDefs);
 
 const queryResolvers: Record<string, ResourceResolver> = {};
 

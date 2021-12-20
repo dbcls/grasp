@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { ObjectTypeDefinitionNode, TypeNode, DocumentNode } from 'graphql';
+import { ObjectTypeDefinitionNode, DocumentNode } from 'graphql';
 import { join } from 'path';
 import { parse } from 'graphql/language/parser';
 

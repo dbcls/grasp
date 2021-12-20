@@ -68,8 +68,6 @@ Now we've queried [Integbio Database Catalog/RDF](https://integbio.jp/rdf/?view=
 
 And access `localhost:4000`. See available image tags at [dbcls/grasp](https://github.com/dbcls/grasp/pkgs/container/grasp).
 
-## Configuring SPARQL services
-
 ## How does this work?
 
 The GraphQL query was translated into SPARQL queries and sent to a SPARQL endpoint, then the SPARQL results were returned to Grasp, finally the results were reformed into the GraphQL result.
@@ -129,13 +127,81 @@ Alternatively, you can use the following directive:
 `directive @grasp(service: String, template: String) on OBJECT`
 
 
-- `service`: the SPARQL Endpoint URL or name of the defined service
-- `template`: filename of the SPARQL query [handlebars](https://handlebarsjs.com/) template
+- `endpoint`: the SPARQL Endpoint URL or name of the defined service
+- `sparql`: filename of the SPARQL query [handlebars](https://handlebarsjs.com/) template
 
 Example:
 
 ``` graphql
-type Concept @grasp(service: "https://integbio.jp/rdf/sparql", template: "Concept.sparql") {
+type Concept @grasp(endpoint: "https://integbio.jp/rdf/sparql", sparql: "Concept.sparql") {
+  iri: ID!
+  label: String
+  alt_label: String
+}
+```
+
+### Configuring SPARQL services
+
+When a SPARQL endpoint requires more details than a simple URL,
+for instance, when the endpoint requires security credentials,
+the endpoint parameters can be configured in a `services.json` file.
+Set the `SERVICES_FILE` environment variable, so Grasp can locate the configuration file.
+
+```json
+{
+    "dbpedia-sparql": {
+        "url": "http://dbpedia.org/sparql/",
+        "graph": "http://dbpedia.org",
+        "user": "",
+        "password": ""
+    },
+}
+```
+Possible parameters:
+- `url`: the url of the endpoint
+- `graph`: the named graph to query
+- `user`: username in case authentication is needed
+- `password`: password in case authentication is needed
+  
+Currently, only basic auth is supported.
+
+Each endpoint configuration is identified by a unique key (in the example: `dbpedia-sparql`).
+This key can be used in the GraphQL type definitions to refer to the right endpoint.
+
+``` graphql
+type Concept @grasp(endpoint: "dbpedia-sparql", sparql: "Concept.sparql") {
+  iri: ID!
+  label: String
+  alt_label: String
+}
+```
+
+``` graphql
+"""
+--- endpoint ---
+dbpedia-sparql
+
+--- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+
+CONSTRUCT {
+  ?iri :iri   ?iri;
+  :label      ?label;
+  :alt_label  ?alt_label ;                                               
+}
+WHERE
+{
+  { ?iri a skos:Concept }
+  OPTIONAL { ?iri skos:prefLabel ?label }
+  OPTIONAL { ?iri skos:altLabel ?alt_label }
+  
+  {{#if iri}}
+  VALUES ?iri { {{join " " (as-iriref iri)}} }
+  {{/if}}
+}
+"""
+type Concept {
   iri: ID!
   label: String
   alt_label: String
@@ -453,3 +519,9 @@ Grasp issues queries in batches to reduce number of queries. This may result in 
 (default: `resources`)
 
 Load resources from the specified directory.
+
+### `SERVICES_FILE`
+
+(default: `services.json`)
+
+Load sparql endpoints from the specified config file.
