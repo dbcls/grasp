@@ -1,4 +1,5 @@
-import { ensureArray, oneOrMany } from "../lib/utils";
+import { ensureArray, oneOrMany, hasDirective } from "../lib/utils";
+import { ObjectTypeDefinitionNode } from 'graphql';
 
 describe("utils", () => {
   describe("ensureArray", () => {
@@ -59,5 +60,33 @@ describe("utils", () => {
         return expect(oneOrMany([], false)).toEqual([]);
       });
     });
+  });
+
+  describe("hasDirective", () => {
+    const def: ObjectTypeDefinitionNode = {
+      kind: 'ObjectTypeDefinition',
+       name: {
+        kind: 'Name', value: 'definition'
+       },
+       directives: [{
+          kind: 'Directive', name: {
+            kind: 'Name', value: 'test'
+           }
+       }]
+    };
+
+
+      it("should return true if directive is present", async () => {
+        return expect(hasDirective(def, 'test')).toEqual(true);
+      });
+
+      it("should return false if directive is not present", async () => {
+        return expect(hasDirective(def, 'test2')).toEqual(false);
+      });
+
+      it("should return undefined if directive name is null", async () => {
+        return expect(hasDirective(def, null)).toEqual(false);
+      });
+
   });
 });

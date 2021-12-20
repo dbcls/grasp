@@ -1,0 +1,26 @@
+"""
+--- endpoint ---
+https://integbio.jp/rdf/sparql
+
+--- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+CONSTRUCT {
+  ?iri :iri ?iri .
+}
+WHERE
+{
+  { ?iri dcterms:identifier ?id }
+}
+"""
+type Test {
+  iri: String!
+  id: String!
+  title_ja: String!
+  title_en: String
+  description_ja: String!
+  description_en: String
+  references: [Pubmed!]!
+  publisher: Publisher
+}
