@@ -64,6 +64,12 @@ Now we've queried [Integbio Database Catalog/RDF](https://integbio.jp/rdf/?view=
 
 ### Run in Docker container
 
+From a local build:
+
+  $ docker build -t grasp:latest .
+  $ docker run --rm -it -p 4000:4000 -v /full/path/to/resources:/app/resources grasp:latest
+
+
     $ docker run --rm -it -p 4000:4000 -v /full/path/to/resources:/app/resources ghcr.io/dbcls/grasp:<tag>
 
 And access `localhost:4000`. See available image tags at [dbcls/grasp](https://github.com/dbcls/grasp/pkgs/container/grasp).

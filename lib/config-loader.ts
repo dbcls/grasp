@@ -12,21 +12,8 @@ interface Service {
 }
 
 export default class ConfigLoader {
-  serviceIndex: Map<string, SparqlClient>;
-  templateIndex: Map<string, string>;
 
-  constructor(
-    serviceIndex: Map<string, SparqlClient>,
-    templateIndex: Map<string, string>
-  ) {
-    this.serviceIndex = serviceIndex;
-    this.templateIndex = templateIndex;
-  }
-
-  static async loadFromFiles(
-    serviceFile: string,
-    baseDir: string
-  ): Promise<ConfigLoader> {
+  static async loadTemplateIndexFromDirectory(baseDir: string): Promise<Map<string, string>> {
     const templateIndex: Map<string, string> = new Map();
 
     for (const path of await readdir(baseDir)) {
@@ -39,14 +26,18 @@ export default class ConfigLoader {
       });
       templateIndex.set(path, query);
     }
+    return templateIndex;
+  }
 
+  static async loadServiceIndexFromFile(serviceFile: string): Promise<Map<string, SparqlClient>> {
+    
     const services: {[key: string]: Service } = JSON.parse(
-      await readFile(join(serviceFile), {
+      await readFile(serviceFile, {
         encoding: "utf-8",
       })
     );
 
-    const serviceIndex = new Map(
+    return new Map(
       Object.keys(services).map((name) => {
         const s: Service = services[name];
         return [
@@ -59,7 +50,5 @@ export default class ConfigLoader {
         ];
       })
     );
-
-    return new ConfigLoader(serviceIndex, templateIndex);
   }
 }

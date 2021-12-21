@@ -32,17 +32,18 @@ const port = process.env.PORT || 4000;
 const path = process.env.ROOT_PATH || "/";
 const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
 const resourcesDir = process.env.RESOURCES_DIR || "./resources";
-const servicesFile = process.env.SERVICES_FILE || "./services.json";
+const servicesFile = process.env.SERVICES_FILE;
 const queryCacheTTL = process.env.QUERY_CACHE_TTL || 100;
 
 // Load services and query templates from file
-const config = await ConfigLoader.loadFromFiles(servicesFile, resourcesDir);
+const templateIndex = await ConfigLoader.loadTemplateIndexFromDirectory(resourcesDir);
+const serviceIndex = servicesFile ? await ConfigLoader.loadServiceIndexFromFile(servicesFile): undefined;
 
 // Load schema from folder
 const loader = await SchemaLoader.loadFromDirectory(resourcesDir);
 
 // Load all resource definitions
-const resources = new Resources(loader.resourceTypeDefs, config.serviceIndex, config.templateIndex);
+const resources = new Resources(loader.resourceTypeDefs, serviceIndex, templateIndex);
 
 const queryResolvers: Record<string, ResourceResolver> = {};
 
@@ -174,14 +175,14 @@ server.start().then(() => {
       `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
     );
     console.log(
-      `Resources directory: ${resourcesDir}`
+      ` - Resources directory: ${resourcesDir}`
     );
 
     console.log(
-      `Services file: ${servicesFile}`
+      ` - Services file: ${servicesFile || "none"}`
     );
     console.log(
-      `Dataloader max. batch size: ${maxBatchSize}`
+      ` - Dataloader max. batch size: ${maxBatchSize}`
     );
   });
 });

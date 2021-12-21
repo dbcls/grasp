@@ -177,7 +177,6 @@ export default class Resource {
 
     // If the sparql key is in the template index, use that template
     if (templateIndex && sparql) {
-      console.log(sparql)
       const template = templateIndex.get(sparql);
       if (template) {
         sparql = template;
@@ -190,7 +189,7 @@ export default class Resource {
 
     if (!serviceIndex || !serviceIndex.has(endpoint)) {
       console.log(
-        `${endpoint} for type ${def.name.value} is not in service definitions; trying as endpoint url.`
+        `Endpoint '${endpoint}' for type ${def.name.value} is not in service definitions; trying as url.`
       );
       const sparqlClient = new SparqlClient({ endpointUrl: endpoint });
       return new Resource(resources, def, sparqlClient, sparql);
