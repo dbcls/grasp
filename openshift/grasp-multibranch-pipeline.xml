@@ -1,0 +1,94 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject plugin="workflow-multibranch">
+    <actions/>
+    <description>Job for grasp</description>
+    <properties>
+        <org.jenkinsci.plugins.docker.workflow.declarative.FolderConfig plugin="docker-workflow">
+            <dockerLabel></dockerLabel>
+            <registry plugin="docker-commons"/>
+        </org.jenkinsci.plugins.docker.workflow.declarative.FolderConfig>
+        <org.csanchez.jenkins.plugins.kubernetes.KubernetesFolderProperty plugin="kubernetes">
+            <permittedClouds/>
+        </org.csanchez.jenkins.plugins.kubernetes.KubernetesFolderProperty>
+    </properties>
+    <folderViews class="jenkins.branch.MultiBranchProjectViewHolder" plugin="branch-api">
+        <owner class="org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject" reference="../.."/>
+    </folderViews>
+    <healthMetrics>
+        <com.cloudbees.hudson.plugins.folder.health.WorstChildHealthMetric plugin="cloudbees-folder">
+            <nonRecursive>false</nonRecursive>
+        </com.cloudbees.hudson.plugins.folder.health.WorstChildHealthMetric>
+    </healthMetrics>
+    <icon class="jenkins.branch.MetadataActionFolderIcon" plugin="branch-api">
+        <owner class="org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject" reference="../.."/>
+    </icon>
+    <orphanedItemStrategy class="com.cloudbees.hudson.plugins.folder.computed.DefaultOrphanedItemStrategy" plugin="cloudbees-folder">
+        <pruneDeadBranches>true</pruneDeadBranches>
+        <daysToKeep>-1</daysToKeep>
+        <numToKeep>-1</numToKeep>
+    </orphanedItemStrategy>
+    <triggers/>
+    <disabled>false</disabled>
+    <sources class="jenkins.branch.MultiBranchProject$BranchSourceList" plugin="branch-api">
+        <data>
+            <jenkins.branch.BranchSource>
+                <source class="org.jenkinsci.plugins.github_branch_source.GitHubSCMSource" plugin="github-branch-source">
+                    <id>0191c2de-dc62-45db-922f-a348f8931e32</id>
+                    <apiUri>https://api.github.com</apiUri>
+                    <credentialsId>meemoo-ci</credentialsId>
+                    <repoOwner>viaacode</repoOwner>
+                    <repository>grasp</repository>
+                    <repositoryUrl>https://github.com/viaacode/grasp</repositoryUrl>
+                    <traits>
+                        <org.jenkinsci.plugins.github__branch__source.BranchDiscoveryTrait>
+                            <strategyId>3</strategyId>
+                        </org.jenkinsci.plugins.github__branch__source.BranchDiscoveryTrait>
+                        <org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait>
+                            <strategyId>2</strategyId>
+                        </org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait>
+                        <org.jenkinsci.plugins.github__branch__source.TagDiscoveryTrait/>
+                        <jenkins.scm.impl.trait.WildcardSCMHeadFilterTrait plugin="scm-api">
+                            <includes>main v*.*.* PR*</includes>
+                            <excludes></excludes>
+                        </jenkins.scm.impl.trait.WildcardSCMHeadFilterTrait>
+                    </traits>
+                </source>
+                <strategy class="jenkins.branch.DefaultBranchPropertyStrategy">
+                    <properties class="empty-list"/>
+                </strategy>
+                <buildStrategies>
+                    <jenkins.branch.buildstrategies.basic.AllBranchBuildStrategyImpl plugin="basic-branch-build-strategies">
+                        <strategies>
+                            <jenkins.branch.buildstrategies.basic.SkipInitialBuildOnFirstBranchIndexing/>
+                            <jenkins.branch.buildstrategies.basic.AnyBranchBuildStrategyImpl>
+                                <strategies>
+                                    <jenkins.branch.buildstrategies.basic.NamedBranchBuildStrategyImpl>
+                                        <filters>
+                                            <jenkins.branch.buildstrategies.basic.NamedBranchBuildStrategyImpl_-ExactNameFilter>
+                                                <name>main</name>
+                                                <caseSensitive>false</caseSensitive>
+                                            </jenkins.branch.buildstrategies.basic.NamedBranchBuildStrategyImpl_-ExactNameFilter>
+                                        </filters>
+                                    </jenkins.branch.buildstrategies.basic.NamedBranchBuildStrategyImpl>
+                                    <jenkins.branch.buildstrategies.basic.TagBuildStrategyImpl>
+                                        <atLeastMillis>-1</atLeastMillis>
+                                        <atMostMillis>172800000</atMostMillis>
+                                    </jenkins.branch.buildstrategies.basic.TagBuildStrategyImpl>
+                                    <jenkins.branch.buildstrategies.basic.ChangeRequestBuildStrategyImpl>
+                                        <ignoreTargetOnlyChanges>true</ignoreTargetOnlyChanges>
+                                        <ignoreUntrustedChanges>false</ignoreUntrustedChanges>
+                                    </jenkins.branch.buildstrategies.basic.ChangeRequestBuildStrategyImpl>
+                                </strategies>
+                            </jenkins.branch.buildstrategies.basic.AnyBranchBuildStrategyImpl>
+                        </strategies>
+                    </jenkins.branch.buildstrategies.basic.AllBranchBuildStrategyImpl>
+                </buildStrategies>
+            </jenkins.branch.BranchSource>
+        </data>
+        <owner class="org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject" reference="../.."/>
+    </sources>
+    <factory class="org.jenkinsci.plugins.workflow.multibranch.WorkflowBranchProjectFactory">
+        <owner class="org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject" reference="../.."/>
+        <scriptPath>openshift/Jenkinsfile</scriptPath>
+    </factory>
+</org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject>

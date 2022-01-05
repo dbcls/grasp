@@ -1,0 +1,135 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  annotations:
+    tags: "exec"
+  name: "grasp"
+  labels:
+    app: "grasp"
+objects:
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      name: "grasp-${env}"
+      namespace: "metadata-mgm"
+      labels:
+        app: "grasp"
+        app.kubernetes.io/component: "grasp-${env}"
+        app.kubernetes.io/instance: "grasp-${env}"
+        app.kubernetes.io/name: "grasp"
+        app.kubernetes.io/part-of: "grasp"
+        app.openshift.io/runtime: "grasp"
+        app.openshift.io/runtime-version: "${env}"
+        env: ${env}
+    spec:
+      ports:
+        - protocol: TCP
+          port: ${{svc_port}}
+          targetPort: ${{svc_port}}
+          name: http
+      selector:
+        app: "grasp"
+        env: ${env}
+      clusterIP:
+      type: ClusterIP
+      sessionAffinity: None
+    status:
+      loadBalancer: {}
+  - kind: Deployment
+    apiVersion: apps/v1
+    metadata:
+      annotations:
+        alpha.image.policy.openshift.io/resolve-names: "*"
+      name: "grasp-${env}"
+      namespace: "metadata-mgm"
+      labels:
+        app: "grasp"
+        app.kubernetes.io/component: "grasp-${env}"
+        app.kubernetes.io/instance: "grasp-${env}"
+        app.kubernetes.io/name: "grasp"
+        app.kubernetes.io/part-of: "grasp"
+        app.openshift.io/runtime: "grasp"
+        app.openshift.io/runtime-version: ${env}
+        env: ${env}
+    spec:
+      replicas: 0
+      selector:
+        matchLabels:
+          app: "grasp"
+          env: ${env}
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            app: "grasp"
+            deploymentconfig: "grasp-${env}"
+            env: ${env}
+          annotations:
+            openshift.io/generated-by: OpenShiftWebConsole
+        spec:
+          volumes:
+            - name: org-api
+              configMap:
+                name: organizations-api-${env}
+                defaultMode: 420
+            - name: services
+              configMap:
+                name: grasp-services-${env}
+                defaultMode: 420
+
+
+          containers:
+            - name: "grasp-${env}"
+              terminationMessagePath: /dev/termination-log
+              resources:
+                limits:
+                  cpu: '${cpu_limit}m'
+                  memory: '${memory_limit}Mi'
+                requests:
+                  cpu: '${cpu_requested}m'
+                  memory: '${memory_requested}Mi'
+              ports:
+                - containerPort: ${{svc_port}}
+                  protocol: TCP
+              imagePullPolicy: IfNotPresent
+              terminationMessagePolicy: File
+              image: >-
+                image-registry.openshift-image-registry.svc:5000/metadata-mgm/grasp:${env}
+              volumeMounts:
+              - name: org-api
+                mountPath: /app/organizations-api
+              - name: services
+                mountPath: /app/services
+              env:
+              - name: SERVICES_FILE
+                value: /app/services/services.json
+              - name: RESOURCES_DIR
+                value: /app/organizations-api	    
+
+
+
+          restartPolicy: Always
+          terminationGracePeriodSeconds: 30
+          dnsPolicy: ClusterFirst
+          securityContext: {}
+          schedulerName: default-scheduler
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 25%
+          maxSurge: 25%
+      revisionHistoryLimit: 10
+      progressDeadlineSeconds: 600
+parameters:
+  - name: env
+    value: "env"
+  - name: "memory_requested"
+    value: "128"
+  - name: "memory_limit"
+    value: "328"
+  - name: "cpu_requested"
+    value: "100"
+  - name: "cpu_limit"
+    value: "300"
+  - name: "svc_port"
+    value: "4000"

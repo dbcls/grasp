@@ -1,0 +1,201 @@
+pipeline {
+    agent {
+        kubernetes {
+            defaultContainer 'default'
+            yaml """\
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          labels:
+            component: builder
+            lang: ${getBaseImageName()}
+            app: grasp
+        spec:
+          containers:
+          - name: default
+            image: ${getImageFromDockerfile()}
+            command:
+            - cat
+            tty: true
+          - name: oc
+            image: image-registry.openshift-image-registry.svc:5000/ci-cd/py:3.7
+            command:
+            - cat
+            tty: true
+            imagePullPolicy: Always
+        """.stripIndent()
+        }
+    }
+    options {
+        timeout(time: 45, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
+    environment {
+        OC_PROJECT = 'metadata-mgm'
+        BASE_IMG = "${getImageFromDockerfile()}"
+        BASE_IMG_NAME = "${getBaseImageName()}"
+        OC_URL = 'https://c113-e.private.eu-de.containers.cloud.ibm.com:30227'
+        JIRA_URL = 'meemoo.atlassian.net'
+        APP_NAME = 'grasp'
+    }
+
+    stages {
+        stage('Calculate extra ENV vars') {
+            steps {
+                container('oc') {
+                    script {
+                        env.GIT_SHORT_COMMIT = sh(script: "printf \$(git rev-parse --short ${GIT_COMMIT})", returnStdout: true)
+                        env.IMAGE_TAG = sh(script: 'git describe --tags || echo latest', returnStdout: true)
+                        // The name used for the build config based on the image tag
+                        // Replace '.' with '_' as '.' is not allowed.
+                        env.BUILD_CONFIG_NAME = sh(script: 'echo "${IMAGE_TAG}" | sed -r "s/\\./\\-/g"', returnStdout: true)
+                    }
+                }
+            }
+        }
+        stage('Test code') {
+            steps {
+                sh 'make -f ./openshift/Makefile test'
+            }
+        }
+        stage('Build code') {
+            when {
+                not {
+                    buildingTag()
+                }
+            }
+            steps {
+                container('oc') {
+                    script {
+                        sh '''#!/bin/bash
+                        oc project $OC_PROJECT
+                        oc import-image $BASE_IMG --confirm
+                        oc set image-lookup $BASE_IMG_NAME
+                        oc new-build -l ref=$BRANCH_NAME --strategy=docker --name $APP_NAME-$GIT_SHORT_COMMIT --to $APP_NAME:$GIT_SHORT_COMMIT --binary --context-dir="" || echo "Probably already exists, start new build"
+                        sleep 3
+                        oc annotate --overwrite buildconfig/$APP_NAME-$GIT_SHORT_COMMIT ref=$BRANCH_NAME shortcommit=$GIT_SHORT_COMMIT
+                        oc start-build $APP_NAME-$GIT_SHORT_COMMIT --from-dir=. --follow=true --wait=true
+                        '''
+                    }
+                }
+            }
+        }
+        stage('Deploy INT') {
+            when {
+                anyOf {
+                    changeRequest target: 'master'
+                    changeRequest target: 'main'
+                }
+            }
+            steps {
+                container('oc') {
+                    tagNewImage('int')
+                }
+            }
+            post {
+                always {
+                    script {
+                        env.BRANCH_NAME = env.CHANGE_BRANCH
+                    }
+                    jiraSendDeploymentInfo site: "${JIRA_URL}", environmentId: 'int', environmentName: 'int', environmentType: 'testing'
+                }
+            }
+        }
+        stage('Deploy QAS') {
+            when {
+                anyOf { branch 'master'; branch 'main' }
+            }
+            steps {
+                container('oc') {
+                    tagNewImage('qas')
+                }
+            }
+            post {
+                always {
+                    jiraSendDeploymentInfo site: "${JIRA_URL}", environmentId: 'qas', environmentName: 'qas', environmentType: 'staging'
+                }
+            }
+        }
+        stage('Deploy PRD') {
+            when {
+                buildingTag()
+            }
+            steps {
+                container('oc') {
+                    tagNewImage('prd')
+                }
+            }
+            post {
+                always {
+                    script {
+                        previous_tag = sh(script: 'git describe --abbrev=0 --tags `git rev-list --tags --skip=1 --max-count=1`', returnStdout: true).trim()
+                        echo getAllCommitsBetweenTags(previous_tag, env.TAG_NAME)
+                    }
+                    jiraSendDeploymentInfo site: "${JIRA_URL}", environmentId: 'prd', environmentName: 'prd', environmentType: 'production'
+                }
+            }
+        }
+    }
+    post {
+        success {
+            script {
+                if (env.BRANCH_NAME.startsWith('PR')) {
+                    setGitHubBuildStatus('Build', 'SUCCESS')
+                }
+            }
+        }
+        failure {
+            script {
+                if (env.BRANCH_NAME.startsWith('PR')) {
+                    setGitHubBuildStatus('Build', 'FAILURE')
+                }
+            }
+        }
+        always {
+            jiraSendBuildInfo site: "${JIRA_URL}"
+            container('default') {
+                // Archive tets results
+                script {
+                    if (fileExists('./test/test_results.xml')) {
+                        junit 'test/test_results.xml'
+                    } else {
+                        echo 'No test results found'
+                    }
+                }
+            }
+        }
+    }
+}
+
+void getImageFromDockerfile() {
+    return 'node:lts'
+}
+void getBaseImageName() {
+    return getImageFromDockerfile().split(':')[0]
+}
+
+void setGitHubBuildStatus(String message, String state) {
+    step([
+        $class: 'GitHubCommitStatusSetter',
+        reposSource: [$class: 'ManuallyEnteredRepositorySource', url: "${GIT_URL}"],
+        commitShaSource: [$class: 'ManuallyEnteredShaSource', sha: "${GIT_COMMIT}"],
+        errorHandlers: [[$class: 'ChangingBuildStatusErrorHandler', result: 'UNSTABLE']],
+        statusResultSource: [ $class: 'ConditionalStatusResultSource', results: [[$class: 'AnyBuildResult', message: message, state: state]] ]
+    ])
+}
+
+void getAllCommitsBetweenTags(String from, String to) {
+    commit_messages = sh(script: "git log ${from}...${to} --merges --format=%b", returnStdout: true)
+
+    return commit_messages
+}
+
+void tagNewImage(String environment) {
+    echo "Deploying to ${environment}"
+    sh """#!/bin/bash
+    oc project $OC_PROJECT
+    oc tag $APP_NAME:$GIT_SHORT_COMMIT $APP_NAME:${environment}
+    # Check the status of the rollout
+    oc rollout status deployment/$APP_NAME-${environment} --watch=true --timeout=10m
+    """
+}
