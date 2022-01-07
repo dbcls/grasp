@@ -5,8 +5,8 @@ import { ObjectTypeDefinitionNode } from "graphql";
 import { join } from "path";
 import SparqlClient from "sparql-http-client";
 import { Parser } from "sparqljs";
-import Handlebars from "../lib/handlebars-template";
-const handlebars = Handlebars();
+import Handlebars from "handlebars";
+const handlebars = Handlebars.create();
 const parser = new Parser();
 
 function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
