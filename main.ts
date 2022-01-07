@@ -16,6 +16,7 @@ import {
   ensureArray,
 } from "./lib/utils";
 import ConfigLoader from "./lib/config-loader";
+import logger from "./lib/logger";
 
 type ResourceResolver = (
   parent: ResourceEntry,
@@ -36,14 +37,22 @@ const servicesFile = process.env.SERVICES_FILE;
 const queryCacheTTL = process.env.QUERY_CACHE_TTL || 100;
 
 // Load services and query templates from file
-const templateIndex = await ConfigLoader.loadTemplateIndexFromDirectory(resourcesDir);
-const serviceIndex = servicesFile ? await ConfigLoader.loadServiceIndexFromFile(servicesFile): undefined;
+const templateIndex = await ConfigLoader.loadTemplateIndexFromDirectory(
+  resourcesDir
+);
+const serviceIndex = servicesFile
+  ? await ConfigLoader.loadServiceIndexFromFile(servicesFile)
+  : undefined;
 
 // Load schema from folder
 const loader = await SchemaLoader.loadFromDirectory(resourcesDir);
 
 // Load all resource definitions
-const resources = new Resources(loader.resourceTypeDefs, serviceIndex, templateIndex);
+const resources = new Resources(
+  loader.resourceTypeDefs,
+  serviceIndex,
+  templateIndex
+);
 
 const queryResolvers: Record<string, ResourceResolver> = {};
 
@@ -171,18 +180,13 @@ server.start().then(() => {
   server.applyMiddleware({ app, path });
 
   app.listen(port, () => {
-    console.log(
+    logger.info(
+      {
+        "Resources directory": resourcesDir,
+        "Services file": servicesFile || "none",
+        "Dataloader max. batch size": maxBatchSize,
+      },
       `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
-    );
-    console.log(
-      ` - Resources directory: ${resourcesDir}`
-    );
-
-    console.log(
-      ` - Services file: ${servicesFile || "none"}`
-    );
-    console.log(
-      ` - Dataloader max. batch size: ${maxBatchSize}`
     );
   });
 });
