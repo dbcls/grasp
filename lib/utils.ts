@@ -60,3 +60,15 @@ export function ensureArray<T>(obj: T | Array<T>): Array<T> {
     return obj ? [obj] : [];
   }
 }
+
+export function ntriplesLiteral(strs: string | string[]): string[] {
+  return ensureArray(strs).map((str) => `"${str}"`);
+}
+
+export function ntriplesIri(strs: string | string[]): string[] {
+  return ensureArray(strs).map((str) => `<${str}>`);
+}
+
+export function join(separator: string, strs: string | string[]): string {
+  return ensureArray(strs).join(separator);
+}
