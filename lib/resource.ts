@@ -1,5 +1,6 @@
 import Handlebars from "./handlebars-template";
 import type { Quad } from "@rdfjs/types";
+import { getTermRaw } from "rdf-literal";
 import groupBy from "lodash.groupby";
 import transform from "lodash.transform";
 import { ObjectTypeDefinitionNode } from "graphql";
@@ -38,9 +39,13 @@ function buildEntry(
     (acc, { predicate, object }: Quad) => {
       // Extract property name from URI
       const k = predicate.value.replace(NS_REGEX, "");
+      
+      // Converts any RDF term to a JavaScript primitive.
+      const v: any = getTermRaw(object);
+
       // If property is not yet in the record accumulator, then initialise with empty array
       // Push object value into array
-      (acc[k] || (acc[k] = [])).push(object.value);
+      (acc[k] || (acc[k] = [])).push(v);
     },
     {} as Record<string, string[]>
   );
@@ -212,6 +217,8 @@ export default class Resource {
    */
   async fetch(args: object): Promise<ResourceEntry[]> {
     const bindings = await this.query(args);
+
+    // Group all bindings by subject
     const bindingGroupedBySubject = groupBy(
       bindings,
       (binding) => binding.subject.value
