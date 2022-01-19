@@ -304,9 +304,7 @@ export default class Resource {
   }
 
   get isRootType(): boolean {
-    return !this.definition.directives?.some(
-      (directive) => directive.name.value === "embedded"
-    );
+    return !hasDirective(this.definition, "embedded")
   }
 
   get isEmbeddedType(): boolean {
