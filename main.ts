@@ -3,8 +3,8 @@ import { ApolloServer } from "apollo-server-express";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 
 import DataLoader from "dataloader";
-import transform from "lodash.transform";
-import isEqual from "lodash.isequal";
+import transform from "lodash/transform";
+import isEqual from "lodash/isequal";
 
 import Resource, { ResourceEntry } from "./lib/resource";
 import Resources from "./lib/resources";
