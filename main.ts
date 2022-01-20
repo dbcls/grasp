@@ -4,7 +4,7 @@ import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-co
 
 import DataLoader from "dataloader";
 import transform from "lodash/transform";
-import isEqual from "lodash/isequal";
+import isEqual from "lodash/isEqual";
 
 import Resource, { ResourceEntry } from "./lib/resource";
 import Resources from "./lib/resources";
