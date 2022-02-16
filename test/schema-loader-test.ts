@@ -58,9 +58,9 @@ describe("schema-loader", () => {
         `;
 
     it("should throw error", async () => {
-        return expect(() => new SchemaLoader(graphql)).toThrow();
+      return expect(() => new SchemaLoader(graphql)).toThrow();
     });
-  })
+  });
 
   describe("constructed with no query definition", () => {
     const graphql = `
@@ -74,17 +74,46 @@ describe("schema-loader", () => {
         `;
 
     it("should throw error", async () => {
-        return expect(() => new SchemaLoader(graphql)).toThrow();
+      return expect(() => new SchemaLoader(graphql)).toThrow();
     });
-  })
+  });
 
   describe("loadFromDirectory", () => {
-    it("should throw if dir does not exist", async () => {
-      return expect(SchemaLoader.loadFromDirectory("./xyz")).rejects.toThrow();
+    describe("should throw", () => {
+      it("if dir does not exist", () => {
+        return expect(
+          SchemaLoader.loadFromDirectory("./xyz")
+        ).rejects.toThrow();
+      });
+      it("if dir is empty", () => {
+        const dirPath = join(__dirname, "./assets/resources-empty");
+        return expect(
+          SchemaLoader.loadFromDirectory(dirPath)
+        ).rejects.toThrow();
+      });
     });
-    it("should throw if empty dir", async () => {
-      const dirPath = join(__dirname, "./assets/resources-empty");
-      return expect(SchemaLoader.loadFromDirectory(dirPath)).rejects.toThrow();
+    describe("with files in dir", () => {
+      const dirPath = join(__dirname, "./assets/resources");
+
+      it("should have query def", async () => {
+        const loader = await SchemaLoader.loadFromDirectory(dirPath);
+        expect(loader.queryDef.name).toHaveProperty("value");
+        return expect(loader.queryDef.name.value).toBe("Query");
+      });
+      it("should have four resource type definition", async () => {
+        const loader = await SchemaLoader.loadFromDirectory(dirPath);
+        return expect(loader.resourceTypeDefs).toHaveLength(4);
+      });
+      it("should not contain definitions of type Query", async () => {
+        const loader = await SchemaLoader.loadFromDirectory(dirPath);
+        return expect(loader.resourceTypeDefs).not.toContain(
+          expect.objectContaining({
+            name: {
+              value: "Query",
+            },
+          })
+        );
+      });
     });
   });
   describe("loadFromFile", () => {
