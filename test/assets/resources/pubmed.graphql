@@ -1,0 +1,44 @@
+"""
+--- endpoint ---
+https://integbio.jp/rdf/sparql
+
+--- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
+PREFIX prism: <http://prismstandard.org/namespaces/1.2/basic/>
+PREFIX pubmed: <http://rdf.ncbi.nlm.nih.gov/pubmed/>
+
+CONSTRUCT {
+  ?iri :iri ?iri .
+  ?iri :title ?title .
+  ?iri :date ?date .
+  ?iri :creator ?creator .
+  ?iri :publicationName ?publicationName .
+}
+WHERE
+{
+  { ?iri dcterms:title ?title . }
+  { ?iri dcterms:date ?date . }
+  { ?iri dcterms:creator ?creator . }
+  { ?iri prism:publicationName ?publicationName . }
+  OPTIONAL { ?iri dcterms:identifier ?id . }
+
+  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
+
+  {{#if id}}
+    VALUES ?iri {
+      {{#each id as |_id|}}
+        pubmed:{{_id}}
+      {{/each}}
+    }
+  {{/if}}
+}
+"""
+type Pubmed {
+  iri: String!
+  title: String!
+  date: String!
+  creator: String!
+  publicationName: String!
+}
