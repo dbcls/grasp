@@ -1,7 +1,66 @@
-import { ensureArray, oneOrMany, hasDirective } from "../lib/utils";
-import { ObjectTypeDefinitionNode } from 'graphql';
+import { ensureArray, oneOrMany, hasDirective, isListType } from "../lib/utils";
+import { ObjectTypeDefinitionNode, TypeNode } from "graphql";
 
 describe("utils", () => {
+  describe("isListType", () => {
+    describe("with list object", () => {
+      it("should return true", () => {
+        const def: TypeNode = {
+          kind: "ListType",
+          type: {
+            kind: "NamedType",
+            name: {
+              kind: "Name",
+              value: "test",
+            },
+          },
+        };
+        return expect(isListType(def)).toBeTruthy();
+      });
+      it("should return true when nested", () => {
+        const def: TypeNode = {
+          kind: "NonNullType",
+          type: {
+            kind: "ListType",
+            type: {
+              kind: "NamedType",
+              name: {
+                kind: "Name",
+                value: "test",
+              },
+            },
+          },
+        };
+        return expect(isListType(def)).toBeTruthy();
+      });
+    });
+    describe("with not list type", () => {
+      it("should return false if not list", () => {
+        const def: TypeNode = {
+          kind: "NamedType",
+          name: {
+            kind: "Name",
+            value: "test",
+          },
+        };
+        return expect(isListType(def)).toBeFalsy();
+      });
+      it("should return false when nested with no list", () => {
+        const def: TypeNode = {
+          kind: "NonNullType",
+          type: {
+              kind: "NamedType",
+              name: {
+                kind: "Name",
+                value: "test",
+              },
+
+          },
+        };
+        return expect(isListType(def)).toBeTruthy();
+      });      
+    });
+  });
   describe("ensureArray", () => {
     describe("with array", () => {
       it("should return empty array", async () => {
@@ -64,29 +123,32 @@ describe("utils", () => {
 
   describe("hasDirective", () => {
     const def: ObjectTypeDefinitionNode = {
-      kind: 'ObjectTypeDefinition',
-       name: {
-        kind: 'Name', value: 'definition'
-       },
-       directives: [{
-          kind: 'Directive', name: {
-            kind: 'Name', value: 'test'
-           }
-       }]
+      kind: "ObjectTypeDefinition",
+      name: {
+        kind: "Name",
+        value: "definition",
+      },
+      directives: [
+        {
+          kind: "Directive",
+          name: {
+            kind: "Name",
+            value: "test",
+          },
+        },
+      ],
     };
 
+    it("should return true if directive is present", async () => {
+      return expect(hasDirective(def, "test")).toEqual(true);
+    });
 
-      it("should return true if directive is present", async () => {
-        return expect(hasDirective(def, 'test')).toEqual(true);
-      });
+    it("should return false if directive is not present", async () => {
+      return expect(hasDirective(def, "test2")).toEqual(false);
+    });
 
-      it("should return false if directive is not present", async () => {
-        return expect(hasDirective(def, 'test2')).toEqual(false);
-      });
-
-      it("should return undefined if directive name is null", async () => {
-        return expect(hasDirective(def, null)).toEqual(false);
-      });
-
+    it("should return undefined if directive name is null", async () => {
+      return expect(hasDirective(def, null)).toEqual(false);
+    });
   });
 });
