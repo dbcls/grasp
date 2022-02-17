@@ -1,5 +1,38 @@
 directive @embedded on OBJECT
-type Test @embedded {
+
+"""
+--- endpoint ---
+https://integbio.jp/rdf/sparql
+
+--- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX db: <http://purl.jp/bio/03/dbcatalog/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+CONSTRUCT {
+  ?iri :iri ?iri .
+  ?iri :publisher ?publisher .
+  ?publisher :name_ja ?publisher_name_ja .
+  ?publisher :name_en ?publisher_name_en .
+  ?publisher :page ?publisher_page .
+}
+FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
+WHERE
+{
+  { ?iri dcterms:identifier ?id }
+  OPTIONAL { ?iri dcterms:publisher ?publisher . }
+  OPTIONAL { ?publisher rdfs:label ?publisher_name_ja . FILTER (lang(?publisher_name_ja) = "ja") }
+  OPTIONAL { ?publisher rdfs:label ?publisher_name_en . FILTER (lang(?publisher_name_en) = "en") }
+  OPTIONAL { ?publisher foaf:page ?publisher_page . }
+}
+"""
+type Test {
+  iri: ID!
+  publisher: Publisher
+}
+
+type Publisher @embedded {
   name_ja: String
   name_en: String
   page: String

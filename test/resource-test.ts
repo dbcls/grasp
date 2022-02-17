@@ -17,10 +17,10 @@ function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
     }
   );
 }
-function getTestResource(path: string): Resource {
+function getTestResource(path: string, name: string = "Test"): Resource {
   const resourceTypeDefs = getResourceTypeDefs(path);
   const testResourceTypeDef = resourceTypeDefs.filter(
-    (def) => def.name.value === "Test"
+    (def) => def.name.value === name
   )[0];
   return Resource.buildFromTypeDefinition(undefined, testResourceTypeDef);
 }
@@ -37,6 +37,13 @@ function expectQueriesToMatch(expected: string, actual: string) {
 }
 
 describe("resource", () => {
+  describe("constructed", () => {
+    describe("with undefined", () => {
+      it("should not throw error", async () => {
+        return expect(() => new Resource(undefined, undefined)).not.toThrow();
+      });
+    });
+  });
   describe("buildFromTypeDefinition", () => {
     describe("with undefined resource type definitions", () => {
       it("should throw error", async () => {
@@ -72,7 +79,7 @@ describe("resource", () => {
         return expectTemplatesToMatch(sparql, res);
       });
     });
-    describe("with directives", () => {
+    describe("with grasp directives", () => {
       const res = getTestResource("assets/with-directives.graphql");
 
       it("should have a SPARQL client", () => {
@@ -86,6 +93,17 @@ describe("resource", () => {
         it("should return sparql value", () => {
           return expect(res.queryTemplate({})).toBe("test");
         });
+      });
+    });
+    describe("with embedded directive", () => {
+      const res = getTestResource("assets/with-embedded.graphql", "Publisher");
+
+      it("should not have a SPARQL client", () => {
+        return expect(res.sparqlClient).toBeUndefined();
+      });
+
+      it("should not have a query template", () => {
+        return expect(res.queryTemplate).toBeNull();
       });
     });
   });
