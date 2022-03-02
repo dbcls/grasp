@@ -532,3 +532,15 @@ Load resources from the specified directory.
 (default: `services.json`)
 
 Load sparql endpoints from the specified config file.
+
+### `PRETTY_PRINT_LOGS`
+
+(default: `false`)
+
+Pretty print the server logs
+
+### `QUERY_CACHE_TTL`
+
+(default: `100`)
+
+Set the standard time to live in seconds for SPARQL results.

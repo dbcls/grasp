@@ -1,5 +1,5 @@
 import pino from "pino";
 
 export default pino({
-    prettyPrint: true
+    prettyPrint: !!process.env.PRETTY_PRINT_LOGS
 })
