@@ -1,4 +1,4 @@
-import Handlebars from "./handlebars-template";
+import Handlebars from "handlebars";
 import type { Quad } from "@rdfjs/types";
 import { getTermRaw } from "rdf-literal";
 import groupBy from "lodash/groupBy";
@@ -13,17 +13,30 @@ import {
   hasDirective,
   getDirective,
   getDirectiveArgumentValue,
+  join,
+  ntriplesIri,
+  ntriplesLiteral
 } from "./utils";
 import SparqlClient from "sparql-http-client";
 import NodeCache from "node-cache";
+import logger from "./logger";
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
+const DEFAULT_TTL = 100;
 
-const handlebars = Handlebars();
-const cache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
+// Create handlebars compiler
+const handlebars = Handlebars.create();
+handlebars.registerHelper("join", join);
+handlebars.registerHelper("as-iriref", ntriplesIri);
+handlebars.registerHelper("as-string", ntriplesLiteral);
+
+// Create data cache
+let ttl: number = process.env.QUERY_CACHE_TTL ? parseInt(process.env.QUERY_CACHE_TTL, 10) : DEFAULT_TTL;
+ttl = isNaN(ttl) ? ttl : DEFAULT_TTL;
+const cache = new NodeCache({ stdTTL: ttl, checkperiod: 2 * ttl });
 
 function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
@@ -76,6 +89,7 @@ function buildEntry(
 }
 
 export default class Resource {
+  static cache = new NodeCache({ stdTTL: DEFAULT_TTL, checkperiod: 2 * DEFAULT_TTL })
   resources: Resources;
   definition: ObjectTypeDefinitionNode;
   sparqlClient?: SparqlClient;
@@ -186,14 +200,14 @@ export default class Resource {
       if (template) {
         sparql = template;
       } else {
-        console.log(
+        logger.info(
           `query for type ${def.name.value} is not in template definitions; interpreting as SPARQL query.`
         );
       }
     }
 
     if (!serviceIndex || !serviceIndex.has(endpoint)) {
-      console.log(
+      logger.info(
         `Endpoint '${endpoint}' for type ${def.name.value} is not in service definitions; trying as url.`
       );
       const sparqlClient = new SparqlClient({ endpointUrl: endpoint });
@@ -278,12 +292,10 @@ export default class Resource {
     const sparqlQuery = this.queryTemplate(args);
 
     const quads: Quad[] | undefined = cache.get(sparqlQuery);
+    logger.info({cache: quads != undefined, query: sparqlQuery, endpoint: this.sparqlClient.store.endpoint}, "SPARQL query sent to endpoint.");
     if (quads != undefined) {
-      console.log("--- SPARQL QUERY (from cache) ---\n", sparqlQuery);
       return quads;
     }
-
-    console.log("--- SPARQL QUERY ---\n", sparqlQuery);
 
     const stream = await this.sparqlClient.query.construct(sparqlQuery, {
       operation: "postUrlencoded",
@@ -293,8 +305,8 @@ export default class Resource {
       const quads: Quad[] = [];
       stream.on("data", (q: Quad) => quads.push(q));
       stream.on("end", () => {
-        // TODO: cache
         const success = cache.set(sparqlQuery, quads);
+        logger.info({cached: success, triples: quads.length}, "SPARQL query successfully answered.");
         resolve(quads);
       });
       stream.on("error", (err: any) => {
