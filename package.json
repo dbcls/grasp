@@ -2,8 +2,8 @@
   "scripts": {
     "start": "node --loader ts-node/esm --es-module-specifier-resolution=node main.ts",
     "watch": "nodemon -e ts,graphql",
-    "test": "jest ${1}",
-    "test-watch": "jest ${1} --watch"
+    "test": "jest ${1} --detectOpenHandles",
+    "test-watch": "jest ${1} --watch --detectOpenHandles"
   },
   "pre-commit": [
     "build",
@@ -60,6 +60,9 @@
     "collectCoverage": true,
     "setupFilesAfterEnv": [
       "jest-rdf"
+    ],
+    "testPathIgnorePatterns" : [
+      "<rootDir>/test/test-helpers.ts" 
     ],
     "testEnvironment": "node"
   },
