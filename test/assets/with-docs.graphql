@@ -8,6 +8,7 @@ PREFIX dcterms: <http://purl.org/dc/terms/>
 
 CONSTRUCT {
   ?iri :iri ?iri .
+  ?iri :id ?id .
 }
 WHERE
 {
@@ -16,11 +17,5 @@ WHERE
 """
 type Test {
   iri: String!
-  id: String!
-  title_ja: String!
-  title_en: String
-  description_ja: String!
-  description_en: String
-  references: [Pubmed!]!
-  publisher: Publisher
+  id: String
 }

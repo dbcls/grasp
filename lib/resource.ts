@@ -40,7 +40,7 @@ let ttl: number = process.env.QUERY_CACHE_TTL
 ttl = isNaN(ttl) ? ttl : DEFAULT_TTL;
 const cache = new NodeCache({ stdTTL: ttl, checkperiod: 2 * ttl });
 
-function buildEntry(
+export function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
   subject: string,
   resource: Resource,
