@@ -1,0 +1,4 @@
+type Test {
+  iri: String!
+  id: String
+}

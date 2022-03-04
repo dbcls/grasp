@@ -1,8 +1,4 @@
-import {
-  buildEntry,
-  default as Resource,
-  ResourceEntry,
-} from "../lib/resource";
+import { buildEntry, default as Resource } from "../lib/resource";
 import SparqlClient from "sparql-http-client";
 import { Parser } from "sparqljs";
 import Handlebars from "handlebars";
@@ -41,6 +37,14 @@ describe("resource", () => {
       });
     });
 
+    describe("with missing docs", () => {
+      it("should throw error", async () => {
+        return expect(() =>
+          getTestResource("assets/with-no-docs.graphql")
+        ).toThrowError();
+      });
+    });
+
     describe("with docs", () => {
       const res = getTestResource("assets/with-docs.graphql");
 
@@ -67,6 +71,20 @@ describe("resource", () => {
         `;
         return expectTemplatesToMatch(sparql, res);
       });
+
+      describe("and missing values", () => {
+        it("should throw error if no endpoint", async () => {
+          return expect(() =>
+            getTestResource("assets/with-docs-no-endpoint.graphql")
+          ).toThrowError();
+        });
+
+        it("should throw error if no sparql", async () => {
+          return expect(() =>
+            getTestResource("assets/with-docs-no-sparql.graphql")
+          ).toThrowError();
+        });
+      });
     });
     describe("with grasp directives", () => {
       const res = getTestResource("assets/with-directives.graphql");
@@ -78,9 +96,21 @@ describe("resource", () => {
         return expect(res.sparqlClient).toEqual(expected);
       });
 
-      describe("and no index", () => {
-        it("should return sparql value", () => {
-          return expect(res.queryTemplate({})).toBe("test");
+      it("should return sparql value if no index", () => {
+        return expect(res.queryTemplate({})).toBe("test");
+      });
+
+      describe("and missing values", () => {
+        it("should throw error if no endpoint", async () => {
+          return expect(() =>
+            getTestResource("assets/with-directives-no-endpoint.graphql")
+          ).toThrowError();
+        });
+
+        it("should throw error if no sparql", async () => {
+          return expect(() =>
+            getTestResource("assets/with-directives-no-sparql.graphql")
+          ).toThrowError();
         });
       });
     });
@@ -95,7 +125,93 @@ describe("resource", () => {
         return expect(res.queryTemplate).toBeNull();
       });
     });
+    describe("with template index", () => {
+      it("should return entry if entry found in index", () => {
+        const res = getTestResource(
+          "assets/with-directives.graphql",
+          "Test",
+          undefined,
+          new Map([["test", "sparql query"]])
+        );
+        return expect(res.queryTemplate({})).toBe("sparql query");
+      });
+
+      it("should return value if entry not found", () => {
+        const res = getTestResource(
+          "assets/with-directives.graphql",
+          "Test",
+          undefined,
+          new Map([["not test", "sparql query"]])
+        );
+        return expect(res.queryTemplate({})).toBe("test");
+      });
+    });
+
+    describe("with service index", () => {
+      const expected = new SparqlClient({
+        endpointUrl: "https://integbio.jp/rdf/sparql",
+      });
+      it("should return sparql client if entry found in index", () => {
+        const res = getTestResource(
+          "assets/with-directives.graphql",
+          "Test",
+          new Map([["https://integbio.jp/rdf/sparql", expected]])
+        );
+        return expect(res.sparqlClient).toEqual(expected);
+      });
+
+      it("should create sparql client if entry not found", () => {
+        const res = getTestResource(
+          "assets/with-directives.graphql",
+          "Test",
+          new Map([
+            [
+              "not entry",
+              new SparqlClient({
+                endpointUrl: "https://example.org/sparql",
+              }),
+            ],
+          ])
+        );
+        return expect(res.sparqlClient).toEqual(expected);
+      });
+
+      it("should throw if sparql client is invalid", () => {
+        return expect(() =>
+          getTestResource(
+            "assets/with-directives.graphql",
+            "Test",
+            new Map([["https://integbio.jp/rdf/sparql", undefined]])
+          )
+        ).toThrow();
+      });
+    });
   });
+
+  // describe("fetch", () => {
+  //   const res = new Resource(undefined, undefined);
+  //   res.query = async (args: object) => {
+  //     return [
+  //       quad(
+  //         "http://example.org/subject",
+  //         "http://example.org/predicate",
+  //         "http://example.org/object"
+  //       ),
+  //     ];
+  //   };
+
+  //   it("should not throw error", async () => {
+  //     return expect(() => res.fetch({})).toThrow();
+  //   });
+  // });
+
+  // describe("query", () => {
+  //   const res = new Resource(undefined, undefined);
+
+  //   it("should not throw error", async () => {
+  //     return expect(() => res.query({})).not.toThrow();
+  //   });
+  // });
 
   describe("buildEntry", () => {
     describe("called with nulls", () => {

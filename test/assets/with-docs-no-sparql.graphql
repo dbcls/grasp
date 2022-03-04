@@ -1,0 +1,9 @@
+"""
+--- endpoint ---
+https://integbio.jp/rdf/sparql
+
+"""
+type Test {
+  iri: String!
+  id: String
+}
