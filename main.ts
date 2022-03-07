@@ -1,6 +1,9 @@
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
-import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
+import {
+  ApolloServerPluginLandingPageGraphQLPlayground,
+  ApolloServerPluginLandingPageDisabled,
+} from "apollo-server-core";
 
 import DataLoader from "dataloader";
 import transform from "lodash/transform";
@@ -172,7 +175,11 @@ const server = new ApolloServer({
       ),
     };
   },
-  plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
+  plugins: [
+    process.env.NODE_ENV === "production"
+      ? ApolloServerPluginLandingPageDisabled()
+      : ApolloServerPluginLandingPageGraphQLPlayground(),
+  ],
 });
 
 server.start().then(() => {
@@ -184,7 +191,7 @@ server.start().then(() => {
         "Resources directory": resourcesDir,
         "Services file": servicesFile || "none",
         "Dataloader max. batch size": maxBatchSize,
-        "SPARQL cache TTL":  process.env.QUERY_CACHE_TTL
+        "SPARQL cache TTL": process.env.QUERY_CACHE_TTL,
       },
       `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
     );
