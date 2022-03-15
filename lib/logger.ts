@@ -1,5 +1,5 @@
 import pino from "pino";
 
 export default pino({
-    prettyPrint: !!process.env.PRETTY_PRINT_LOGS
+    level: process.env.LOG_LEVEL || 'info'
 })

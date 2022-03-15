@@ -313,25 +313,31 @@ export default class Resource {
       return quads;
     }
 
-    const stream = await this.sparqlClient.query.construct(sparqlQuery, {
-      operation: "postUrlencoded",
-    });
+    try {
+      const stream = await this.sparqlClient.query.construct(sparqlQuery, {
+        operation: "postUrlencoded",
+      });
 
-    return new Promise((resolve) => {
-      const quads: Quad[] = [];
-      stream.on("data", (q: Quad) => quads.push(q));
-      stream.on("end", () => {
-        const success = cache.set(sparqlQuery, quads);
-        logger.info(
-          { cached: success, triples: quads.length },
-          "SPARQL query successfully answered."
-        );
-        resolve(quads);
+      return new Promise((resolve) => {
+        const quads: Quad[] = [];
+        stream.on("data", (q: Quad) => quads.push(q));
+        stream.on("end", () => {
+          const success = cache.set(sparqlQuery, quads);
+          logger.info(
+            { cached: success, triples: quads.length },
+            "SPARQL query successfully answered."
+          );
+          resolve(quads);
+        });
+        stream.on("error", (err: any) => {
+          logger.error(err, sparqlQuery)
+          throw new Error(`SPARQL endpoint returns: ${err}`);
+        });
       });
-      stream.on("error", (err: any) => {
-        throw new Error(`SPARQL endpoint returns: ${err}`);
-      });
-    });
+    } catch (err) {
+      logger.error(err, sparqlQuery)
+      throw new Error(`SPARQL endpoint returns: ${err}`);
+    }
   }
 
   get isRootType(): boolean {
