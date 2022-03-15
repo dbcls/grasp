@@ -15,7 +15,7 @@ import {
   getDirectiveArgumentValue,
   join,
   ntriplesIri,
-  ntriplesLiteral
+  ntriplesLiteral,
 } from "./utils";
 import SparqlClient from "sparql-http-client";
 import NodeCache from "node-cache";
@@ -34,7 +34,9 @@ handlebars.registerHelper("as-iriref", ntriplesIri);
 handlebars.registerHelper("as-string", ntriplesLiteral);
 
 // Create data cache
-let ttl: number = process.env.QUERY_CACHE_TTL ? parseInt(process.env.QUERY_CACHE_TTL, 10) : DEFAULT_TTL;
+let ttl: number = process.env.QUERY_CACHE_TTL
+  ? parseInt(process.env.QUERY_CACHE_TTL, 10)
+  : DEFAULT_TTL;
 ttl = isNaN(ttl) ? ttl : DEFAULT_TTL;
 const cache = new NodeCache({ stdTTL: ttl, checkperiod: 2 * ttl });
 
@@ -52,7 +54,7 @@ function buildEntry(
     (acc, { predicate, object }: Quad) => {
       // Extract property name from URI
       const k = predicate.value.replace(NS_REGEX, "");
-      
+
       // Converts any RDF term to a JavaScript primitive.
       const v: any = getTermRaw(object);
 
@@ -89,7 +91,10 @@ function buildEntry(
 }
 
 export default class Resource {
-  static cache = new NodeCache({ stdTTL: DEFAULT_TTL, checkperiod: 2 * DEFAULT_TTL })
+  static cache = new NodeCache({
+    stdTTL: DEFAULT_TTL,
+    checkperiod: 2 * DEFAULT_TTL,
+  });
   resources: Resources;
   definition: ObjectTypeDefinitionNode;
   sparqlClient?: SparqlClient;
@@ -130,8 +135,7 @@ export default class Resource {
 
     // Check wether type has a grasp directive
     // Find grasp directive
-    let endpoint: string | undefined,
-      sparql: string | undefined;
+    let endpoint: string | undefined, sparql: string | undefined;
 
     const graspDirective = getDirective(def, "grasp");
     if (graspDirective) {
@@ -174,7 +178,7 @@ export default class Resource {
             return;
           case "--- sparql ---":
             state = State.Sparql;
-            sparql = ""
+            sparql = "";
             return;
         }
 
@@ -293,31 +297,47 @@ export default class Resource {
     const sparqlQuery = this.queryTemplate(args);
 
     const quads: Quad[] | undefined = cache.get(sparqlQuery);
-    logger.info({cache: quads != undefined, query: sparqlQuery, endpoint: this.sparqlClient.store.endpoint}, "SPARQL query sent to endpoint.");
+    logger.info(
+      {
+        cache: quads != undefined,
+        query: sparqlQuery,
+        endpoint: this.sparqlClient.store.endpoint,
+      },
+      "SPARQL query sent to endpoint."
+    );
     if (quads != undefined) {
       return quads;
     }
 
-    const stream = await this.sparqlClient.query.construct(sparqlQuery, {
-      operation: "postUrlencoded",
-    });
+    try {
+      const stream = await this.sparqlClient.query.construct(sparqlQuery, {
+        operation: "postUrlencoded",
+      });
 
-    return new Promise((resolve) => {
-      const quads: Quad[] = [];
-      stream.on("data", (q: Quad) => quads.push(q));
-      stream.on("end", () => {
-        const success = cache.set(sparqlQuery, quads);
-        logger.info({cached: success, triples: quads.length}, "SPARQL query successfully answered.");
-        resolve(quads);
+      return new Promise((resolve) => {
+        const quads: Quad[] = [];
+        stream.on("data", (q: Quad) => quads.push(q));
+        stream.on("end", () => {
+          const success = cache.set(sparqlQuery, quads);
+          logger.info(
+            { cached: success, triples: quads.length },
+            "SPARQL query successfully answered."
+          );
+          resolve(quads);
+        });
+        stream.on("error", (err: any) => {
+          logger.error(err, sparqlQuery)
+          throw new Error(`SPARQL endpoint returns: ${err}`);
+        });
       });
-      stream.on("error", (err: any) => {
-        throw new Error(`SPARQL endpoint returns: ${err}`);
-      });
-    });
+    } catch (err) {
+      logger.error(err, sparqlQuery)
+      throw new Error(`SPARQL endpoint returns: ${err}`);
+    }
   }
 
   get isRootType(): boolean {
-    return !hasDirective(this.definition, "embedded")
+    return !hasDirective(this.definition, "embedded");
   }
 
   get isEmbeddedType(): boolean {
