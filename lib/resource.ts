@@ -273,6 +273,7 @@ export default class Resource {
     iris: ReadonlyArray<string>
   ): Promise<Array<ResourceEntry | null>> {
     const entries = await this.fetch({ iri: iris });
+    // join entries
     return iris.map(
       (iri) => entries.find((entry) => entry.iri === iri) || null
     );
