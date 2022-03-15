@@ -35,9 +35,9 @@ handlebars.registerHelper("as-string", ntriplesLiteral);
 
 // Create data cache
 const options = {
-    max: parseInt(process.env.CACHE_SIZE || '20', 10),
-    ttl: parseInt(process.env.CACHE_SIZE || `${DEFAULT_TTL}`, 10)
-  }
+  max: parseInt(process.env.CACHE_SIZE || "20", 10),
+  ttl: parseInt(process.env.CACHE_TTL || `${DEFAULT_TTL}`, 10),
+};
 
 const cache = new LRU<string, Quad[]>(options);
 
@@ -296,13 +296,13 @@ export default class Resource {
     const quads: Quad[] | undefined = cache.get(sparqlQuery);
     logger.info(
       {
-        cache: quads != undefined,
+        cache: quads !== undefined,
         query: sparqlQuery,
-        endpoint: this.sparqlClient.store.endpoint,
+        endpointUrl: this.sparqlClient.store.endpoint.endpointUrl,
       },
       "SPARQL query sent to endpoint."
     );
-    if (quads != undefined) {
+    if (quads !== undefined) {
       return quads;
     }
 
@@ -315,20 +315,20 @@ export default class Resource {
         const quads: Quad[] = [];
         stream.on("data", (q: Quad) => quads.push(q));
         stream.on("end", () => {
-          const success = cache.set(sparqlQuery, quads);
+          cache.set(sparqlQuery, quads);
           logger.info(
-            { cached: success, triples: quads.length },
+            { cached: true, triples: quads.length },
             "SPARQL query successfully answered."
           );
           resolve(quads);
         });
         stream.on("error", (err: any) => {
-          logger.error(err, sparqlQuery)
+          logger.error(err, sparqlQuery);
           throw new Error(`SPARQL endpoint returns: ${err}`);
         });
       });
     } catch (err) {
-      logger.error(err, sparqlQuery)
+      logger.error(err, sparqlQuery);
       throw new Error(`SPARQL endpoint returns: ${err}`);
     }
   }
