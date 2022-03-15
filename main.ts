@@ -1,6 +1,9 @@
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
-import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
+import {
+  ApolloServerPluginLandingPageGraphQLPlayground,
+  ApolloServerPluginLandingPageDisabled,
+} from "apollo-server-core";
 
 import DataLoader from "dataloader";
 import transform from "lodash/transform";
@@ -53,13 +56,14 @@ const resources = new Resources(
   templateIndex
 );
 
+// Setup query resolvers
 const queryResolvers: Record<string, ResourceResolver> = {};
 
 (loader.queryDef.fields || []).forEach((field) => {
   queryResolvers[field.name.value] = async (
-    _parent,
+    _parent: ResourceEntry,
     args: { iri: string | Array<string> },
-    context
+    context: Context
   ) => {
     const resourceName = unwrapCompositeType(field.type).name.value;
     const resource = resources.lookup(resourceName);
@@ -99,10 +103,14 @@ resources.all.forEach((resource) => {
     const name = field.name.value;
 
     // Create field resolver for field
-    fieldResolvers[name] = async (parent, args, context) => {
+    fieldResolvers[name] = async (
+      _parent: ResourceEntry,
+      args: { iri: string | Array<string> },
+      context: Context
+    ) => {
       // get the parent of this field
-      const value = parent[name];
-
+      const value = _parent[name];
+      
       // If the parent exists, make sure it's an array
       if (!value) {
         return isListType(type) ? [] : value;
@@ -116,7 +124,7 @@ resources.all.forEach((resource) => {
       if (!resource || resource.isEmbeddedType) {
         return value;
       }
-
+      // Are there any arguments?
       if (Object.keys(args).length === 0) {
         const loader = context.loaders.get(resource);
         if (!loader) {
@@ -125,11 +133,13 @@ resources.all.forEach((resource) => {
           );
         }
         const entry = await loader.loadMany(ensureArray(value));
-        // TODO: if multiple values are returned when the schema defines single value, value is no array. Pick first element of array in case.
+        // If multiple values are returned when the schema defines single value, value is no array. Pick first element of array in case.
         return oneOrMany(entry, !isListType(type));
       } else {
+        // Get all IRIs
         const argIRIs = ensureArray(args.iri);
-        const allIRIs = Array.from(new Set([...value, ...argIRIs]));
+        const values = ensureArray(value);
+        const allIRIs = Array.from(new Set([...values, ...argIRIs]));
 
         return oneOrMany(
           await resource.fetch({ ...args, ...{ iri: allIRIs } }),
@@ -172,7 +182,11 @@ const server = new ApolloServer({
       ),
     };
   },
-  plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
+  plugins: [
+    process.env.NODE_ENV === "production"
+      ? ApolloServerPluginLandingPageDisabled()
+      : ApolloServerPluginLandingPageGraphQLPlayground(),
+  ],
 });
 
 server.start().then(() => {
@@ -184,7 +198,7 @@ server.start().then(() => {
         "Resources directory": resourcesDir,
         "Services file": servicesFile || "none",
         "Dataloader max. batch size": maxBatchSize,
-        "SPARQL cache TTL":  process.env.QUERY_CACHE_TTL
+        "SPARQL cache TTL": process.env.QUERY_CACHE_TTL,
       },
       `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
     );
