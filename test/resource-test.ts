@@ -1,4 +1,8 @@
-import { buildEntry, default as Resource } from "../lib/resource";
+import {
+  buildEntry,
+  default as Resource,
+  ResourceEntry,
+} from "../lib/resource";
 import SparqlClient from "sparql-http-client";
 import { Parser } from "sparqljs";
 import Handlebars from "handlebars";
@@ -188,28 +192,105 @@ describe("resource", () => {
     });
   });
 
-  // describe("fetch", () => {
-  //   const res = new Resource(undefined, undefined);
-  //   res.query = async (args: object) => {
-  //     return [
-  //       quad(
-  //         "http://example.org/subject",
-  //         "http://example.org/predicate",
-  //         "http://example.org/object"
-  //       ),
-  //     ];
-  //   };
+  describe("fetch", () => {
+    it("should throw when Resource initialized with undefined", async () => {
+      const res = new Resource(undefined, undefined);
+      await expect(res.fetch({})).rejects.toThrow();
+    });
 
-  //   it("should not throw error", async () => {
-  //     return expect(() => res.fetch({})).toThrow();
-  //   });
-  // });
+    const res = getTestResource("assets/with-docs.graphql");
+    const subject = "http://example.org/subject";
+    res.query = async (args: object) => {
+      return [
+        quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
+        quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject"'),
+        quad("_:b1", "https://github.com/dbcls/grasp/ns/iri", subject),
+        quad("_:b1", "https://github.com/dbcls/grasp/ns/id", '"subject"'),
+      ];
+    };
+
+    res.resources = {
+      all: [res],
+      root: [res],
+      isUserDefined: () => true,
+      lookup: (name: string) => null,
+    };
+
+    it("should not throw", async () => {
+      await expect(res.fetch({})).resolves.not.toThrow();
+    });
+
+    it("should return ResourceEntry", async () => {
+      const expected: ResourceEntry = {
+        id: "subject",
+        iri: "http://example.org/subject",
+      };
+
+      return expect(await res.fetch({})).toContainEqual(expected);
+    });
+
+    it("should return ResourceEntry when blanknode", async () => {
+      const expected: ResourceEntry = {
+        id: "b1",
+        iri: "http://example.org/subject",
+      };
+      return expect(await res.fetch({})).not.toContainEqual([expected]);
+    });
+  });
+
+  describe("fetchByIRIs", () => {
+    const res = getTestResource("assets/with-docs.graphql");
+    res.fetch = async (args) => [
+      {
+        id: "subject1",
+        iri: "http://example.org/subject1",
+      },
+      {
+        id: "subject2",
+        iri: "http://example.org/subject2",
+      },
+    ];
+
+    it("should return empty array when iris are empty", async () => {
+      return expect(await res.fetchByIRIs([])).toStrictEqual([]);
+    });
+
+    it("should return null when iri is not found", async () => {
+      return expect(
+        await res.fetchByIRIs(["http://example.org/subject3"])
+      ).toStrictEqual([null]);
+    });
+
+    it("should return matching entry when iri is given", async () => {
+      return expect(
+        await res.fetchByIRIs(["http://example.org/subject1"])
+      ).toStrictEqual([
+        {
+          id: "subject1",
+          iri: "http://example.org/subject1",
+        },
+      ]);
+    });
+
+    it("should not throw error", async () => {
+      return expect(() => res.fetchByIRIs([])).not.toThrow();
+    });
+  });
 
   // describe("query", () => {
-  //   const res = new Resource(undefined, undefined);
+  //   it("should throw when client is undefined", async () => {
+  //     const res = new Resource(undefined, undefined);
+  //     await expect(res.query({})).rejects.toThrow();
+  //   });
 
-  //   it("should not throw error", async () => {
-  //     return expect(() => res.query({})).not.toThrow();
+  //   const res = getTestResource("assets/with-docs.graphql");
+  //   res.sparqlClient = {
+  //     query: (): any => null,
+  //     store: () => null
+  //   }
+
+  //   it("should return empty array", async () => {
+  //     return expect(await res.query({})).toStrictEqual([]);
   //   });
   // });
 
