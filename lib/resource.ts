@@ -18,14 +18,14 @@ import {
   ntriplesLiteral,
 } from "./utils";
 import SparqlClient from "sparql-http-client";
-import NodeCache from "node-cache";
+import LRU from "lru-cache";
 import logger from "./logger";
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
-const DEFAULT_TTL = 100;
+const DEFAULT_TTL = 1000 * 60 * 1;
 
 // Create handlebars compiler
 const handlebars = Handlebars.create();
@@ -34,11 +34,12 @@ handlebars.registerHelper("as-iriref", ntriplesIri);
 handlebars.registerHelper("as-string", ntriplesLiteral);
 
 // Create data cache
-let ttl: number = process.env.QUERY_CACHE_TTL
-  ? parseInt(process.env.QUERY_CACHE_TTL, 10)
-  : DEFAULT_TTL;
-ttl = isNaN(ttl) ? ttl : DEFAULT_TTL;
-const cache = new NodeCache({ stdTTL: ttl, checkperiod: 2 * ttl });
+const options = {
+  max: parseInt(process.env.CACHE_SIZE || "20", 10),
+  ttl: parseInt(process.env.CACHE_TTL || `${DEFAULT_TTL}`, 10),
+};
+
+const cache = new LRU<string, Quad[]>(options);
 
 export function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
@@ -91,10 +92,6 @@ export function buildEntry(
 }
 
 export default class Resource {
-  static cache = new NodeCache({
-    stdTTL: DEFAULT_TTL,
-    checkperiod: 2 * DEFAULT_TTL,
-  });
   resources: Resources;
   definition: ObjectTypeDefinitionNode;
   sparqlClient?: SparqlClient;
@@ -303,13 +300,13 @@ export default class Resource {
     const quads: Quad[] | undefined = cache.get(sparqlQuery);
     logger.info(
       {
-        cache: quads != undefined,
+        cache: quads !== undefined,
         query: sparqlQuery,
-        endpoint: this.sparqlClient.store.endpoint,
+        endpointUrl: this.sparqlClient.store.endpoint.endpointUrl,
       },
       "SPARQL query sent to endpoint."
     );
-    if (quads != undefined) {
+    if (quads !== undefined) {
       return quads;
     }
 
@@ -322,20 +319,20 @@ export default class Resource {
         const quads: Quad[] = [];
         stream.on("data", (q: Quad) => quads.push(q));
         stream.on("end", () => {
-          const success = cache.set(sparqlQuery, quads);
+          cache.set(sparqlQuery, quads);
           logger.info(
-            { cached: success, triples: quads.length },
+            { cached: true, triples: quads.length },
             "SPARQL query successfully answered."
           );
           resolve(quads);
         });
         stream.on("error", (err: any) => {
-          logger.error(err, sparqlQuery)
+          logger.error(err, sparqlQuery);
           throw new Error(`SPARQL endpoint returns: ${err}`);
         });
       });
     } catch (err) {
-      logger.error(err, sparqlQuery)
+      logger.error(err, sparqlQuery);
       throw new Error(`SPARQL endpoint returns: ${err}`);
     }
   }

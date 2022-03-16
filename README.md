@@ -533,14 +533,15 @@ Load resources from the specified directory.
 
 Load sparql endpoints from the specified config file.
 
-### `PRETTY_PRINT_LOGS`
+### `CACHE_TTL`
 
-(default: `false`)
+(default: `60000`)
 
-Pretty print the server logs
+Set the time in milliseconds that SPARQL queries live in the cache.
 
-### `QUERY_CACHE_TTL`
+### `CACHE_SIZE`
 
-(default: `100`)
+(default: `20`)
 
-Set the standard time to live in seconds for SPARQL results.
+Set the max number of SPARQL queries that are stored in the cache.
+You can disable the cache by setting this to 0.
