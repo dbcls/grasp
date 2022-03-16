@@ -2,8 +2,8 @@
   "scripts": {
     "start": "node --loader ts-node/esm --es-module-specifier-resolution=node main.ts",
     "watch": "nodemon -e ts,graphql",
-    "test": "jest ${1}",
-    "test-watch": "jest ${1} --watch"
+    "test": "jest ${1} --detectOpenHandles",
+    "test-watch": "jest ${1} --watch --detectOpenHandles"
   },
   "pre-commit": [
     "build",
@@ -37,6 +37,7 @@
     "@types/sparqljs": "^3.1.3",
     "jest": "^27.4.4",
     "jest-rdf": "^1.7.0",
+    "rdf-quad": "^1.5.0",
     "sparqljs": "^3.5.1",
     "ts-jest": "^27.1.1"
   },
@@ -60,6 +61,12 @@
     "collectCoverage": true,
     "setupFilesAfterEnv": [
       "jest-rdf"
+    ],
+    "testPathIgnorePatterns": [
+      "<rootDir>/test/test-helpers.ts"
+    ],
+    "coveragePathIgnorePatterns": [
+      "<rootDir>/test/test-helpers.ts"
     ],
     "testEnvironment": "node"
   },

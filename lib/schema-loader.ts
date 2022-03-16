@@ -17,11 +17,14 @@ export default class SchemaLoader {
       return def.kind === 'ObjectTypeDefinition';
     });
 
-    const queryDef = typeDefinitionNodes.find(def => def.name.value === 'Query');
-    if (!queryDef) {
+    const queryDef = typeDefinitionNodes.filter(def => def.name.value === 'Query');
+    if (!queryDef || queryDef.length < 1) {
       throw new Error('Query is not defined');
     }
-    this.queryDef = queryDef;
+    if (queryDef.length > 1) {
+      throw new Error('Multiple definitions of Query found');
+    }
+    this.queryDef = queryDef[0];
 
     this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== 'Query');
   }
@@ -35,7 +38,9 @@ export default class SchemaLoader {
   static async loadFromDirectory(baseDir: string): Promise<SchemaLoader> {
     let schema = '';
 
-    for (const path of await readdir(baseDir)) {
+    const files = await readdir(baseDir)
+
+    for (const path of files) {
       if (!/^[0-9a-zA-Z].*\.graphql$/.test(path)) { continue; }
 
       schema += await readFile(join(baseDir, path), {encoding: 'utf-8'});

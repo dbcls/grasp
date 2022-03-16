@@ -41,7 +41,7 @@ const options = {
 
 const cache = new LRU<string, Quad[]>(options);
 
-function buildEntry(
+export function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
   subject: string,
   resource: Resource,
@@ -193,6 +193,10 @@ export default class Resource {
       if (!endpoint) {
         throw new Error(`endpoint is not defined for type ${def.name.value}`);
       }
+
+      if (!sparql) {
+        throw new Error(`sparql query is not defined for type ${def.name.value}`);
+      }
     }
 
     // If the sparql key is in the template index, use that template
@@ -219,7 +223,7 @@ export default class Resource {
 
     if (!sparqlClient) {
       throw new Error(
-        `invalid endpoint ${endpoint} for type ${def.name.value}`
+        `Invalid endpoint ${endpoint} for type ${def.name.value}`
       );
     }
     return new Resource(resources, def, sparqlClient, sparql);

@@ -1,0 +1,85 @@
+"""
+`SequenceStatisticsReport` represents a sequence statistics report (sos:SequenceStatisticsReport)
+
+--- endpoint ---
+https://integbio.jp/rdf/sparql
+
+--- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX sos: <http://purl.jp/bio/01/quanto/ontology/sos#>
+PREFIX quanto: <http://purl.jp/bio/01/quanto/resource/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX pav: <http://purl.org/pav/>
+
+CONSTRUCT {
+  ?iri :iri ?iri .
+  ?iri :id ?id .
+  ?iri :encoding ?encoding .
+  ?iri :file_type ?file_type .
+  ?iri :version ?version .
+  ?iri :contributor ?contributor .
+  ?iri :fastqc_version ?fastqc_version .
+  ?iri :filtered_seq ?filtered_seq .
+  ?iri :min_seq_len ?min_seq_len .
+  ?iri :median_seq_len ?median_seq_len .
+  ?iri :max_seq_len ?max_seq_len .
+  ?iri :mean_bc_quality ?mean_bc_quality .
+  ?iri :median_bc_quality ?median_bc_quality .
+  ?iri :n_content ?n_content .
+  ?iri :gc_content ?gc_content .
+  ?iri :total_seq ?total_seq .
+}
+FROM <http://quanto.dbcls.jp>
+WHERE {
+  ?iri a sos:SequenceStatisticsReport .
+  ?iri dct:identifier ?id .
+  ?iri rdfs:seeAlso <http://identifiers.org/insdc.sra/ERR026579> .
+  ?iri sos:fastqcVersion ?fastqc_version .
+  ?iri sos:encoding ?encoding .
+  ?iri sos:fileType ?file_type .
+  ?iri pav:version ?version .
+  ?iri dcterms:contributor ?contributor .
+  ?iri sos:maxSequenceLength/rdf:value ?max_seq_len .
+  ?iri sos:medianSequenceLength/rdf:value ?median_seq_len .
+  ?iri sos:minSequenceLength/rdf:value ?min_seq_len .
+  ?iri sos:overallMeanBaseCallQuality/rdf:value ?mean_bc_quality .
+  ?iri sos:overallMedianBaseCallQuality/rdf:value ?median_bc_quality .
+  ?iri sos:overallNContent/rdf:value ?n_content .
+  ?iri sos:percentGC/rdf:value ?gc_content .
+  ?iri sos:totalSequences/rdf:value ?total_seq .
+  ?iri sos:filteredSequences/rdf:value ?filtered_seq .
+
+  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
+}
+"""
+type SequenceStatisticsReport {
+  iri: String!
+
+  """
+  Ideintifier. `dcterms:identifier`
+  """
+  id: String!
+
+  """
+  An encoding format. `sos:encoding`
+  """
+  encoding: String!
+
+  """
+  A file type. `sos:fileType`
+  """
+  file_type: String!
+  version: String!
+  fastqc_version: String!
+  contributor: [String!]!
+  min_seq_len: Float!
+  median_seq_len: Float!
+  max_seq_len: Float!
+  mean_bc_quality: Float!
+  median_bc_quality: Float!
+  n_content: Float!
+  gc_content: Float!
+  total_seq: Int!
+  filtered_seq: Int!
+}

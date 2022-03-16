@@ -1,0 +1,6 @@
+directive @grasp(endpoint: String, sparql: String) on OBJECT
+type Test @grasp(sparql: "test") {
+  name_ja: String
+  name_en: String
+  page: String
+}

@@ -1,7 +1,4 @@
 """
---- endpoint ---
-https://integbio.jp/rdf/sparql
-
 --- sparql ---
 PREFIX : <https://github.com/dbcls/grasp/ns/>
 PREFIX dcterms: <http://purl.org/dc/terms/>
