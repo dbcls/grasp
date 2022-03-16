@@ -64,6 +64,9 @@
     "testPathIgnorePatterns": [
       "<rootDir>/test/test-helpers.ts"
     ],
+    "coveragePathIgnorePatterns": [
+      "<rootDir>/test/test-helpers.ts"
+    ],
     "testEnvironment": "node"
   },
   "engines": {
