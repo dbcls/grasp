@@ -3,3 +3,12 @@
 
 /resources/*
 !/resources/.keep
+**/lib/**/*.js
+**/lib/**/*.js.map
+**/lib/**/*.d.ts
+**/test/**/*.js
+**/test/**/*.js.map
+**/test/**/*.d.ts
+**/main.js
+**/main.js.map
+**/main.d.ts
