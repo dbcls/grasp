@@ -41,7 +41,26 @@ describe("config-loader", () => {
     describe("with empty directory", () => {
       const dirPath = join(__dirname, "assets/resources-empty");
       it("should return empty index", async () => {
-        return expect(ConfigLoader.loadTemplateIndexFromDirectory(dirPath)).resolves.toEqual(new Map<string, SparqlClient>());
+        return expect(ConfigLoader.loadTemplateIndexFromDirectory(dirPath)).resolves.toEqual(new Map<string, string>());
+      });
+    });
+    describe("with non empty directory", () => {
+      const dirPath = join(__dirname, "assets/resources-template");
+      it("should return index", async () => {
+        const expected = new Map<string, string>([
+          ["test.sparql", `PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+CONSTRUCT {
+  ?iri :iri ?iri .
+  ?iri :id ?id .
+}
+WHERE
+{
+  { ?iri dcterms:identifier ?id }
+}`]
+        ])
+        return expect(ConfigLoader.loadTemplateIndexFromDirectory(dirPath)).resolves.toEqual(expected);
       });
     });
   });

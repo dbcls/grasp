@@ -1,9 +1,12 @@
 {
   "scripts": {
-    "start": "node --loader ts-node/esm --es-module-specifier-resolution=node main.ts",
+    "start": "npm run build && node --es-module-specifier-resolution=node main.js",
+    "dev": "node --loader ts-node/esm --es-module-specifier-resolution=node main.ts",
     "watch": "nodemon -e ts,graphql",
     "test": "jest ${1} --detectOpenHandles",
-    "test-watch": "jest ${1} --watch --detectOpenHandles"
+    "test-watch": "jest ${1} --watch --detectOpenHandles",
+    "build": "tsc",
+    "docs": "typedoc"
   },
   "pre-commit": [
     "build",
@@ -45,7 +48,7 @@
   "jest": {
     "globals": {
       "ts-jest": {
-        "tsConfig": "test/tsconfig.json"
+        "tsconfig": "test/tsconfig.json"
       }
     },
     "transform": {

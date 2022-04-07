@@ -1,0 +1,5 @@
+directive @grasp(endpoint: String, sparql: String) on OBJECT
+type Test  @grasp(endpoint: "https://integbio.jp/rdf/sparql", sparql: "test.sparql") {{
+  iri: String!
+  id: String
+}

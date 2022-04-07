@@ -6,7 +6,11 @@ import {
 import SparqlClient from "sparql-http-client";
 import { Parser } from "sparqljs";
 import Handlebars from "handlebars";
-import { getTestResource } from "./test-helpers";
+import {
+  getTestResource,
+  getTestResources,
+  compileEmptyTemplate,
+} from "./test-helpers";
 import type { Quad } from "@rdfjs/types";
 import quad from "rdf-quad";
 
@@ -16,7 +20,7 @@ const parser = new Parser();
 function expectTemplatesToMatch(expected: string, actual: Resource) {
   return expectQueriesToMatch(
     handlebars.compile(expected, { noEscape: true })({}),
-    actual.queryTemplate({})
+    compileEmptyTemplate(actual)
   );
 }
 
@@ -26,21 +30,22 @@ function expectQueriesToMatch(expected: string, actual: string) {
 
 describe("resource", () => {
   describe("constructed", () => {
-    describe("with undefined", () => {
+    describe("with valid arguments", () => {
       it("should not throw error", async () => {
-        return expect(() => new Resource(undefined, undefined)).not.toThrow();
+        return expect(
+          () =>
+            new Resource(getTestResources(), {
+              kind: "ObjectTypeDefinition",
+              name: {
+                kind: "Name",
+                value: "test",
+              },
+            })
+        ).not.toThrow();
       });
     });
   });
   describe("buildFromTypeDefinition", () => {
-    describe("with undefined resource type definitions", () => {
-      it("should throw error", async () => {
-        return expect(() =>
-          Resource.buildFromTypeDefinition(undefined, undefined)
-        ).toThrowError();
-      });
-    });
-
     describe("with missing docs", () => {
       it("should throw error", async () => {
         return expect(() =>
@@ -101,7 +106,7 @@ describe("resource", () => {
       });
 
       it("should return sparql value if no index", () => {
-        return expect(res.queryTemplate({})).toBe("test");
+        return expect(compileEmptyTemplate(res)).toBe("test");
       });
 
       describe("and missing values", () => {
@@ -137,7 +142,7 @@ describe("resource", () => {
           undefined,
           new Map([["test", "sparql query"]])
         );
-        return expect(res.queryTemplate({})).toBe("sparql query");
+        return expect(compileEmptyTemplate(res)).toBe("sparql query");
       });
 
       it("should return value if entry not found", () => {
@@ -147,7 +152,7 @@ describe("resource", () => {
           undefined,
           new Map([["not test", "sparql query"]])
         );
-        return expect(res.queryTemplate({})).toBe("test");
+        return expect(compileEmptyTemplate(res)).toBe("test");
       });
     });
 
@@ -179,25 +184,10 @@ describe("resource", () => {
         );
         return expect(res.sparqlClient).toEqual(expected);
       });
-
-      it("should throw if sparql client is invalid", () => {
-        return expect(() =>
-          getTestResource(
-            "assets/with-directives.graphql",
-            "Test",
-            new Map([["https://integbio.jp/rdf/sparql", undefined]])
-          )
-        ).toThrow();
-      });
     });
   });
 
   describe("fetch", () => {
-    it("should throw when Resource initialized with undefined", async () => {
-      const res = new Resource(undefined, undefined);
-      await expect(res.fetch({})).rejects.toThrow();
-    });
-
     const res = getTestResource("assets/with-docs.graphql");
     const subject = "http://example.org/subject";
     res.query = async (args: object) => {
@@ -209,12 +199,7 @@ describe("resource", () => {
       ];
     };
 
-    res.resources = {
-      all: [res],
-      root: [res],
-      isUserDefined: () => true,
-      lookup: (name: string) => null,
-    };
+    res.resources = getTestResources(res);
 
     it("should not throw", async () => {
       await expect(res.fetch({})).resolves.not.toThrow();
@@ -295,12 +280,6 @@ describe("resource", () => {
   // });
 
   describe("buildEntry", () => {
-    describe("called with nulls", () => {
-      it("should throw", () => {
-        return expect(() => buildEntry(null, null, null, null)).toThrow();
-      });
-    });
-
     describe("called with values", () => {
       const subject = "http://example.org/subject";
       const bindingGroupedBySubject: Record<string, Quad[]> = {
@@ -310,12 +289,7 @@ describe("resource", () => {
         ],
       };
       const res = getTestResource("assets/with-docs.graphql");
-      const resources = {
-        all: [res],
-        root: [res],
-        isUserDefined: () => true,
-        lookup: (name: string) => null,
-      };
+      const resources = getTestResources(res);
 
       it("should return ResourceEntry", () => {
         return expect(
@@ -371,6 +345,7 @@ describe("resource", () => {
             case "Publisher":
               return emRes;
             case "Test":
+            default:
               return res;
           }
         },

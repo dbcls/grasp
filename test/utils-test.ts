@@ -238,8 +238,8 @@ describe("utils", () => {
       return expect(hasDirective(def, "test2")).toEqual(false);
     });
 
-    it("should return undefined if directive name is null", () => {
-      return expect(hasDirective(def, null)).toEqual(false);
+    it("should return false if directive name is empty", () => {
+      return expect(hasDirective(def, "")).toEqual(false);
     });
   });
 
@@ -275,8 +275,8 @@ describe("utils", () => {
       return expect(getDirective(def, "test2")).toBeUndefined();
     });
 
-    it("should return undefined if directive name is null", () => {
-      return expect(getDirective(def, null)).toBeUndefined();
+    it("should return undefined if directive name is empty", () => {
+      return expect(getDirective(def, "")).toBeUndefined();
     });
   });
 
@@ -310,8 +310,8 @@ describe("utils", () => {
       return expect(getDirectiveArgumentValue(def, "name2")).toBeUndefined();
     });
 
-    it("should return undefined if argument name is null", () => {
-      return expect(getDirectiveArgumentValue(def, null)).toBeUndefined();
+    it("should return undefined if argument name is empty", () => {
+      return expect(getDirectiveArgumentValue(def, "")).toBeUndefined();
     });
   });
 
@@ -333,10 +333,6 @@ describe("utils", () => {
         })
       ).toBeUndefined();
     });
-
-    it("should return undefined if argument name is null", () => {
-      return expect(valueToString(null)).toBeUndefined();
-    });
   });
 
   describe("ntriplesLiteral", () => {
@@ -349,10 +345,6 @@ describe("utils", () => {
         '"test1"',
         '"test2"',
       ]);
-    });
-
-    it("should return empty array if value is null", () => {
-      return expect(ntriplesLiteral(null)).toStrictEqual([]);
     });
 
     it("should return empty array if array is empty", () => {
@@ -386,10 +378,6 @@ describe("utils", () => {
     //   ).toThrow()
     // });
 
-    it("should return empty array if value is null", () => {
-      return expect(ntriplesIri(null)).toStrictEqual([]);
-    });
-
     it("should return empty array if array is empty", () => {
       return expect(ntriplesIri([])).toStrictEqual([]);
     });
@@ -408,13 +396,13 @@ describe("utils", () => {
       return expect(join(",", ["test1", "test2"])).toBe("test1,test2");
     });
 
-    it("should throw if separator is null", () => {
-      return expect(() => join(null, null)).toThrow();
-    });
+    // it("should throw if separator is null", () => {
+    //   return expect(() => join(null, null)).toThrow();
+    // });
 
-    it("should return empty string if value is null", () => {
-      return expect(join(",", null)).toBe("");
-    });
+    // it("should return empty string if value is null", () => {
+    //   return expect(join(",", null)).toBe("");
+    // });
 
     it("should return empty string if array is empty", () => {
       return expect(join(",", [])).toBe("");

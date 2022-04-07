@@ -1,4 +1,5 @@
 {
+  "extends": "@tsconfig/node14/tsconfig.json",
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
@@ -6,7 +7,7 @@
     "esModuleInterop": true,
     "noImplicitAny": false,
     "lib": [
-      "es6",
+      "esnext",
       "dom"
     ]
   }

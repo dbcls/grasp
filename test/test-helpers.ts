@@ -4,6 +4,7 @@ import { ObjectTypeDefinitionNode } from "graphql";
 import { join } from "path";
 import Resource from "../lib/resource";
 import SparqlClient from "sparql-http-client";
+import Resources from "../lib/resources";
 
 export function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
   const schema = fs.readFileSync(join(__dirname, path), { encoding: "utf-8" });
@@ -12,6 +13,14 @@ export function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
       return def.kind === "ObjectTypeDefinition";
     }
   );
+}
+export function getTestResources(res?: Resource): Resources {
+  return {
+    all: res ? [res] : [],
+    root: res ? [res] : [],
+    isUserDefined: () => true,
+    lookup: (name: string) => null,
+  };
 }
 export function getTestResource(
   path: string,
@@ -24,9 +33,13 @@ export function getTestResource(
     (def) => def.name.value === name
   )[0];
   return Resource.buildFromTypeDefinition(
-    undefined,
+    getTestResources(),
     testResourceTypeDef,
     serviceIndex,
     templateIndex
   );
+}
+
+export function compileEmptyTemplate(res: Resource) {
+  return res.queryTemplate != null ? res.queryTemplate({}) : "";
 }
