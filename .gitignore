@@ -1,6 +1,10 @@
 /node_modules
 /yarn.lock
 
+.DS_Store
+.clinic/
+coverage/
+
 /resources/*
 !/resources/.keep
 **/lib/**/*.js
