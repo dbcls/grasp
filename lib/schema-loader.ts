@@ -11,8 +11,12 @@ export default class SchemaLoader {
   resourceTypeDefs: ObjectTypeDefinitionNode[];
 
   constructor(schema: string) {
-    this.originalTypeDefs = parse(schema);
-
+    try {
+      this.originalTypeDefs = parse(schema);
+    } catch (error) {
+      throw new Error('GraphQL schema is invalid or not found');
+    }
+    
     const typeDefinitionNodes = this.originalTypeDefs.definitions.filter((def): def is ObjectTypeDefinitionNode => {
       return def.kind === 'ObjectTypeDefinition';
     });
