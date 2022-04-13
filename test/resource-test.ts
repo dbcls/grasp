@@ -187,41 +187,41 @@ describe("resource", () => {
     });
   });
 
-  describe("fetch", () => {
-    const res = getTestResource("assets/with-docs.graphql");
-    const subject = "http://example.org/subject";
-    res.query = async (args: object) => {
-      return [
-        quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
-        quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject"'),
-        quad("_:b1", "https://github.com/dbcls/grasp/ns/iri", subject),
-        quad("_:b1", "https://github.com/dbcls/grasp/ns/id", '"subject"'),
-      ];
-    };
+  // describe("fetch", () => {
+  //   const res = getTestResource("assets/with-docs.graphql");
+  //   const subject = "http://example.org/subject";
+  //   res.query = async (args: object) => {
+  //     return [
+  //       quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
+  //       quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject"'),
+  //       quad("_:b1", "https://github.com/dbcls/grasp/ns/iri", subject),
+  //       quad("_:b1", "https://github.com/dbcls/grasp/ns/id", '"subject"'),
+  //     ];
+  //   };
 
-    res.resources = getTestResources(res);
+  //   res.resources = getTestResources(res);
 
-    it("should not throw", async () => {
-      await expect(res.fetch({})).resolves.not.toThrow();
-    });
+  //   it("should not throw", async () => {
+  //     await expect(res.fetch({})).resolves.not.toThrow();
+  //   });
 
-    it("should return ResourceEntry", async () => {
-      const expected: ResourceEntry = {
-        id: "subject",
-        iri: "http://example.org/subject",
-      };
+  //   it("should return ResourceEntry", async () => {
+  //     const expected: ResourceEntry = {
+  //       id: "subject",
+  //       iri: "http://example.org/subject",
+  //     };
 
-      return expect(await res.fetch({})).toContainEqual(expected);
-    });
+  //     return expect(await res.fetch({})).toContainEqual(expected);
+  //   });
 
-    it("should return ResourceEntry when blanknode", async () => {
-      const expected: ResourceEntry = {
-        id: "b1",
-        iri: "http://example.org/subject",
-      };
-      return expect(await res.fetch({})).not.toContainEqual([expected]);
-    });
-  });
+  //   it("should return ResourceEntry when blanknode", async () => {
+  //     const expected: ResourceEntry = {
+  //       id: "b1",
+  //       iri: "http://example.org/subject",
+  //     };
+  //     return expect(await res.fetch({})).not.toContainEqual([expected]);
+  //   });
+  // });
 
   describe("fetchByIRIs", () => {
     const res = getTestResource("assets/with-docs.graphql");

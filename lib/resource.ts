@@ -1,5 +1,5 @@
 import Handlebars from "handlebars";
-import type { Quad } from "@rdfjs/types";
+import type { Quad, Stream } from "@rdfjs/types";
 import { getTermRaw } from "rdf-literal";
 import groupBy from "lodash/groupBy";
 import transform from "lodash/transform";
@@ -20,6 +20,7 @@ import {
 import SparqlClient from "sparql-http-client";
 import LRU from "lru-cache";
 import logger from "./logger";
+import { Dictionary } from "lodash";
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
@@ -39,7 +40,7 @@ const options = {
   ttl: parseInt(process.env.CACHE_TTL || `${DEFAULT_TTL}`, 10),
 };
 
-const cache = new LRU<string, Quad[]>(options);
+const cache = new LRU<string, ResourceEntry[]>(options);
 
 export function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
@@ -89,6 +90,39 @@ export function buildEntry(
   });
 
   return entry;
+}
+
+export async function groupBindingsStream(stream: Stream<Quad>): Promise<{
+  bindingsGroupedBySubject: Dictionary<Quad[]>;
+  primaryBindingsGroupedBySubject: Dictionary<Quad[]>;
+}> {
+  return new Promise((resolve) => {
+    const bindingsGroupedBySubject: Dictionary<Quad[]> = {};
+    const primaryBindingsGroupedBySubject: Dictionary<Quad[]> = {};
+
+    stream.on("data", (binding: Quad) => {
+      // Group all bindings by subject
+      bindingsGroupedBySubject[binding.subject.value] =
+        bindingsGroupedBySubject[binding.subject.value] || [];
+      bindingsGroupedBySubject[binding.subject.value].push(binding);
+      // Remove BlankNodes from bindings
+      if (binding.subject.termType !== "BlankNode") {
+        // Group the primaryBindings by subject value
+        primaryBindingsGroupedBySubject[binding.subject.value] =
+          primaryBindingsGroupedBySubject[binding.subject.value] || [];
+        primaryBindingsGroupedBySubject[binding.subject.value].push(binding);
+      }
+    });
+    stream.on("end", () => {
+      resolve({
+        bindingsGroupedBySubject,
+        primaryBindingsGroupedBySubject,
+      });
+    });
+    stream.on("error", (err: any) => {
+      throw new Error(`Cannot process SPARQL endpoint results: ${err}`);
+    });
+  });
 }
 
 export default class Resource {
@@ -195,7 +229,9 @@ export default class Resource {
       }
 
       if (!sparql) {
-        throw new Error(`sparql query is not defined for type ${def.name.value}`);
+        throw new Error(
+          `sparql query is not defined for type ${def.name.value}`
+        );
       }
     }
 
@@ -235,38 +271,60 @@ export default class Resource {
    * @returns
    */
   async fetch(args: object): Promise<ResourceEntry[]> {
-    const bindings = await this.query(args);
+    if (!this.queryTemplate || !this.sparqlClient) {
+      throw new Error(
+        "query template and endpoint should be specified in order to query"
+      );
+    }
+    const sparqlQuery = this.queryTemplate(args);
 
-    // Group all bindings by subject
-    const bindingGroupedBySubject = groupBy(
-      bindings,
-      (binding) => binding.subject.value
+    let entries: ResourceEntry[] | undefined = cache.get(sparqlQuery);
+    logger.info(
+      {
+        cache: entries !== undefined,
+        query: sparqlQuery,
+        endpointUrl: this.sparqlClient.store.endpoint.endpointUrl,
+      },
+      "SPARQL query sent to endpoint."
     );
+    if (entries !== undefined) {
+      return entries;
+    }
 
-    // Remove BlankNodes from primary bindings
-    // TODO: check whether this simply removes all results with blanknodes
-    const primaryBindings = bindings.filter(
-      (binding) => binding.subject.termType !== "BlankNode"
-    );
+    try {
+      const bindingsStream = await this.sparqlClient.query.construct(
+        sparqlQuery,
+        {
+          operation: "postUrlencoded",
+        }
+      );
 
-    // Group the primaryBindings by subject value
-    const primaryBindingsGroupedBySubject = groupBy(
-      primaryBindings,
-      (binding) => binding.subject.value
-    );
-    // Collect the final list of entries from primaryBindings
-    const entries = Object.entries(primaryBindingsGroupedBySubject).map(
-      ([subject, _sBindings]) => {
-        return buildEntry(
-          bindingGroupedBySubject,
-          subject,
-          this,
-          this.resources
-        );
-      }
-    );
+      const { bindingsGroupedBySubject, primaryBindingsGroupedBySubject } =
+        await groupBindingsStream(bindingsStream);
 
-    return entries;
+      // Collect the final list of entries from primaryBindings
+      entries = Object.entries(primaryBindingsGroupedBySubject).map(
+        ([subject, _sBindings]) => {
+          return buildEntry(
+            bindingsGroupedBySubject,
+            subject,
+            this,
+            this.resources
+          );
+        }
+      );
+      cache.set(sparqlQuery, entries);
+          logger.info(
+            { cached: true, triples: Object.entries(primaryBindingsGroupedBySubject).length },
+            "SPARQL query successfully answered."
+          );
+      
+      return entries;
+
+    } catch (err) {
+      logger.error(err, sparqlQuery);
+      throw new Error(`SPARQL endpoint returns: ${err}`);
+    }
   }
 
   /**
@@ -282,59 +340,6 @@ export default class Resource {
     return iris.map(
       (iri) => entries.find((entry) => entry.iri === iri) || null
     );
-  }
-
-  /**
-   * Execute SPARQL query from query handlebars template
-   * @param args Arguments for handlebars templa
-   * @returns
-   */
-  async query(args: object): Promise<Quad[]> {
-    if (!this.queryTemplate || !this.sparqlClient) {
-      throw new Error(
-        "query template and endpoint should be specified in order to query"
-      );
-    }
-    const sparqlQuery = this.queryTemplate(args);
-
-    const quads: Quad[] | undefined = cache.get(sparqlQuery);
-    logger.info(
-      {
-        cache: quads !== undefined,
-        query: sparqlQuery,
-        endpointUrl: this.sparqlClient.store.endpoint.endpointUrl,
-      },
-      "SPARQL query sent to endpoint."
-    );
-    if (quads !== undefined) {
-      return quads;
-    }
-
-    try {
-      const stream = await this.sparqlClient.query.construct(sparqlQuery, {
-        operation: "postUrlencoded",
-      });
-
-      return new Promise((resolve) => {
-        const quads: Quad[] = [];
-        stream.on("data", (q: Quad) => quads.push(q));
-        stream.on("end", () => {
-          cache.set(sparqlQuery, quads);
-          logger.info(
-            { cached: true, triples: quads.length },
-            "SPARQL query successfully answered."
-          );
-          resolve(quads);
-        });
-        stream.on("error", (err: any) => {
-          logger.error(err, sparqlQuery);
-          throw new Error(`SPARQL endpoint returns: ${err}`);
-        });
-      });
-    } catch (err) {
-      logger.error(err, sparqlQuery);
-      throw new Error(`SPARQL endpoint returns: ${err}`);
-    }
   }
 
   get isRootType(): boolean {

@@ -5,6 +5,10 @@ import { join } from "path";
 import Resource from "../lib/resource";
 import SparqlClient from "sparql-http-client";
 import Resources from "../lib/resources";
+import { Quad } from "@rdfjs/types";
+import StreamStore from "sparql-http-client/StreamStore";
+import Endpoint from "sparql-http-client/Endpoint";
+import StreamQuery from "sparql-http-client/StreamQuery";
 
 export function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
   const schema = fs.readFileSync(join(__dirname, path), { encoding: "utf-8" });
