@@ -7,9 +7,9 @@
     "test-watch": "jest ${1} --watch --detectOpenHandles",
     "build": "tsc",
     "docs": "typedoc",
-    "doctor": "npm run build && clinic doctor -- node --es-module-specifier-resolution=node main.js",
+    "doctor": "npm run build && clinic doctor --on-port 'autocannon -i query.graphql localhost:$PORT' -- node --es-module-specifier-resolution=node main.js",
     "bubbleprof": "npm run build && clinic bubbleprof -- node --es-module-specifier-resolution=node main.js",
-    "flame": "npm run build && clinic flame -- node --es-module-specifier-resolution=node main.js"
+    "flame": "npm run build && clinic flame --on-port 'autocannon -i query.graphql localhost:$PORT' -- node --es-module-specifier-resolution=node main.js"
   },
   "pre-commit": [
     "build",
