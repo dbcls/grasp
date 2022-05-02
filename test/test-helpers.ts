@@ -9,6 +9,8 @@ import { Quad } from "@rdfjs/types";
 import StreamStore from "sparql-http-client/StreamStore";
 import Endpoint from "sparql-http-client/Endpoint";
 import StreamQuery from "sparql-http-client/StreamQuery";
+import { update } from "lodash";
+import { Readable } from "stream";
 
 export function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
   const schema = fs.readFileSync(join(__dirname, path), { encoding: "utf-8" });
@@ -42,6 +44,20 @@ export function getTestResource(
     serviceIndex,
     templateIndex
   );
+}
+
+export function getTestSparqlClient(quads: Quad[]):SparqlClient {
+  const endpoint = new Endpoint({endpointUrl: "http://example.org"})
+  return {
+    query: { 
+      endpoint, 
+      ask: async (query) => true, 
+      construct: async (query) => Readable.from(quads), 
+      select: async (query) => new Readable(), 
+      update: async (query) => {}, 
+    },
+    store: new StreamStore({endpoint})
+  }
 }
 
 export function compileEmptyTemplate(res: Resource) {
