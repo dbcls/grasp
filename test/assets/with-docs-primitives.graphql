@@ -1,0 +1,25 @@
+"""
+--- endpoint ---
+https://integbio.jp/rdf/sparql
+
+--- sparql ---
+PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+CONSTRUCT {
+  ?iri :iri ?iri .
+  ?iri :id ?id .
+  ?iri :count ?count .
+  ?iri :test ?test .
+}
+WHERE
+{
+  { ?iri dcterms:identifier ?id }
+}
+"""
+type Test {
+  iri: String!
+  id: String
+  count: Number
+  test: Boolean
+}
