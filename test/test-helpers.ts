@@ -8,8 +8,6 @@ import Resources from "../lib/resources";
 import { Quad } from "@rdfjs/types";
 import StreamStore from "sparql-http-client/StreamStore";
 import Endpoint from "sparql-http-client/Endpoint";
-import StreamQuery from "sparql-http-client/StreamQuery";
-import { update } from "lodash";
 import { Readable } from "stream";
 
 export function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
