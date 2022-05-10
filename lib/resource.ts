@@ -1,7 +1,6 @@
 import Handlebars from "handlebars";
 import type { Quad, Stream } from "@rdfjs/types";
 import { getTermRaw } from "rdf-literal";
-import groupBy from "lodash/groupBy";
 import transform from "lodash/transform";
 import { ObjectTypeDefinitionNode } from "graphql";
 
