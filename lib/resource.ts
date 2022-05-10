@@ -218,14 +218,8 @@ export default class Resource {
       const sparqlClient = new SparqlClient({ endpointUrl: endpoint });
       return new Resource(resources, def, sparqlClient, sparql);
     }
-
+    // sparql client cannot be undefined now
     const sparqlClient = serviceIndex.get(endpoint);
-
-    if (!sparqlClient) {
-      throw new Error(
-        `Invalid endpoint ${endpoint} for type ${def.name.value}`
-      );
-    }
     return new Resource(resources, def, sparqlClient, sparql);
   }
 
