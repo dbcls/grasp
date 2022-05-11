@@ -7,9 +7,9 @@
     "test-watch": "jest ${1} --watch --detectOpenHandles",
     "build": "tsc",
     "docs": "typedoc",
-    "doctor": "npm run build && clinic doctor -- node --es-module-specifier-resolution=node main.js",
+    "doctor": "npm run build && clinic doctor --on-port 'autocannon -i query.graphql localhost:$PORT' -- node --es-module-specifier-resolution=node main.js",
     "bubbleprof": "npm run build && clinic bubbleprof -- node --es-module-specifier-resolution=node main.js",
-    "flame": "npm run build && clinic flame -- node --es-module-specifier-resolution=node main.js"
+    "flame": "npm run build && clinic flame --on-port 'autocannon -i query.graphql localhost:$PORT' -- node --es-module-specifier-resolution=node main.js"
   },
   "pre-commit": [
     "build",
@@ -37,16 +37,16 @@
     "typescript": "^4.1.3"
   },
   "devDependencies": {
-    "nodemon": "^2.0.6",
-    "ts-node": "^10.2.1",
     "@types/jest": "^26.0.0",
     "@types/sparqljs": "^3.1.3",
     "clinic": "^11.1.0",
     "jest": "^27.4.4",
     "jest-rdf": "^1.7.0",
+    "nodemon": "^2.0.6",
     "rdf-quad": "^1.5.0",
     "sparqljs": "^3.5.1",
     "ts-jest": "^27.1.1",
+    "ts-node": "^10.2.1",
     "typedoc": "^0.22.13"
   },
   "jest": {

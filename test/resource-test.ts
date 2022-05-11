@@ -10,6 +10,7 @@ import {
   getTestResource,
   getTestResources,
   compileEmptyTemplate,
+  getTestSparqlClient,
 } from "./test-helpers";
 import type { Quad } from "@rdfjs/types";
 import quad from "rdf-quad";
@@ -188,25 +189,24 @@ describe("resource", () => {
   });
 
   describe("fetch", () => {
-    const res = getTestResource("assets/with-docs-primitives.graphql");
 
+    const res = getTestResource("assets/with-docs-primitives.graphql");
     const subject = "http://example.org/subject1";
     const subject2 = "http://example.org/subject2";
-    res.query = async (args: object) => {
-      return [
-        quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
-        quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject1"'),
-        quad(subject, "https://github.com/dbcls/grasp/ns/count", 5),
-        quad(subject, "https://github.com/dbcls/grasp/ns/test", true),
-        quad(subject, "https://github.com/dbcls/grasp/ns/obsolete", "obsolete"),
-        quad(subject2, "https://github.com/dbcls/grasp/ns/iri", subject2),
-        quad(subject2, "https://github.com/dbcls/grasp/ns/id", '"subject2"'),
-        quad(subject2, "https://github.com/dbcls/grasp/ns/count", 4),
-        quad(subject2, "https://github.com/dbcls/grasp/ns/test", false),
-        quad("_:b1", "https://github.com/dbcls/grasp/ns/iri", subject),
-        quad("_:b1", "https://github.com/dbcls/grasp/ns/id", '"subject"'),
-      ];
-    };
+    
+    res.sparqlClient = getTestSparqlClient([
+      quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
+      quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject1"'),
+      quad(subject, "https://github.com/dbcls/grasp/ns/count", 5),
+      quad(subject, "https://github.com/dbcls/grasp/ns/test", true),
+      quad(subject, "https://github.com/dbcls/grasp/ns/obsolete", "obsolete"),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/iri", subject2),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/id", '"subject2"'),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/count", 4),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/test", false),
+      quad("_:b1", "https://github.com/dbcls/grasp/ns/iri", subject),
+      quad("_:b1", "https://github.com/dbcls/grasp/ns/id", '"subject"'),
+    ]);
 
     res.resources = getTestResources(res);
 
