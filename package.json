@@ -1,4 +1,23 @@
 {
+  "license" : "MIT",
+  "version": "1.0.0",
+  "keywords": ["graphql","RDF", "SPARQL"],
+  "contributors": [
+    {
+      "name" : "Yoji Shidara",
+      "email" : "dara@shidara.net",
+      "url" : "https://darashi.net"
+    },
+    {
+      "name" : "Keita Urashima",
+      "email" : "ursm@ursm.jp"
+    },
+    {
+      "name" : "Miel Vander Sande",
+      "email" : "miel.vandersande@meemoo.be",
+      "url" : "https://meemoo.be"
+    }
+  ],
   "scripts": {
     "start": "npm run build && node --es-module-specifier-resolution=node main.js",
     "dev": "node --loader ts-node/esm --es-module-specifier-resolution=node main.ts",
