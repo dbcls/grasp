@@ -1,4 +1,5 @@
 {
+  "name": "@meemoo/grasp",
   "license": "MIT",
   "version": "1.0.0",
   "keywords": [
@@ -73,6 +74,14 @@
     "ts-jest": "^27.1.1",
     "ts-node": "^10.2.1",
     "typedoc": "^0.22.13"
+  },
+  "release-it": {
+    "npm": {
+      "publish": false
+    },
+    "github": {
+      "release": true
+    }
   },
   "jest": {
     "globals": {
