@@ -125,15 +125,6 @@ pipeline {
                     tagNewImage('prd')
                 }
             }
-            post {
-                always {
-                    script {
-                        previous_tag = sh(script: 'git describe --abbrev=0 --tags `git rev-list --tags --skip=1 --max-count=1`', returnStdout: true).trim()
-                        echo getAllCommitsBetweenTags(previous_tag, env.TAG_NAME)
-                    }
-                    jiraSendDeploymentInfo site: "${JIRA_URL}", environmentId: 'prd', environmentName: 'prd', environmentType: 'production'
-                }
-            }
         }
     }
     post {
@@ -184,11 +175,6 @@ void setGitHubBuildStatus(String message, String state) {
     ])
 }
 
-void getAllCommitsBetweenTags(String from, String to) {
-    commit_messages = sh(script: "git log ${from}...${to} --merges --format=%b", returnStdout: true)
-
-    return commit_messages
-}
 
 void tagNewImage(String environment) {
     echo "Deploying to ${environment}"
