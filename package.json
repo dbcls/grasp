@@ -1,21 +1,25 @@
 {
-  "license" : "MIT",
+  "license": "MIT",
   "version": "1.0.0",
-  "keywords": ["graphql","RDF", "SPARQL"],
+  "keywords": [
+    "graphql",
+    "RDF",
+    "SPARQL"
+  ],
   "contributors": [
     {
-      "name" : "Yoji Shidara",
-      "email" : "dara@shidara.net",
-      "url" : "https://darashi.net"
+      "name": "Yoji Shidara",
+      "email": "dara@shidara.net",
+      "url": "https://darashi.net"
     },
     {
-      "name" : "Keita Urashima",
-      "email" : "ursm@ursm.jp"
+      "name": "Keita Urashima",
+      "email": "ursm@ursm.jp"
     },
     {
-      "name" : "Miel Vander Sande",
-      "email" : "miel.vandersande@meemoo.be",
-      "url" : "https://meemoo.be"
+      "name": "Miel Vander Sande",
+      "email": "miel.vandersande@meemoo.be",
+      "url": "https://meemoo.be"
     }
   ],
   "scripts": {
@@ -28,7 +32,8 @@
     "docs": "typedoc",
     "doctor": "npm run build && clinic doctor --on-port 'autocannon -i query.graphql localhost:$PORT' -- node --es-module-specifier-resolution=node main.js",
     "bubbleprof": "npm run build && clinic bubbleprof -- node --es-module-specifier-resolution=node main.js",
-    "flame": "npm run build && clinic flame --on-port 'autocannon -i query.graphql localhost:$PORT' -- node --es-module-specifier-resolution=node main.js"
+    "flame": "npm run build && clinic flame --on-port 'autocannon -i query.graphql localhost:$PORT' -- node --es-module-specifier-resolution=node main.js",
+    "release": "release-it"
   },
   "pre-commit": [
     "build",
@@ -63,6 +68,7 @@
     "jest-rdf": "^1.7.0",
     "nodemon": "^2.0.6",
     "rdf-quad": "^1.5.0",
+    "release-it": "^15.0.0",
     "sparqljs": "^3.5.1",
     "ts-jest": "^27.1.1",
     "ts-node": "^10.2.1",
