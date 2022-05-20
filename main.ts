@@ -160,6 +160,7 @@ const rootResolvers = {
 const app = express();
 
 const server = new ApolloServer({
+  introspection: true,
   typeDefs: loader.originalTypeDefs,
   resolvers: rootResolvers,
   context: () => {
