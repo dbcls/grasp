@@ -2,7 +2,7 @@ import express from "express";
 import { ApolloServer } from "apollo-server-express";
 import {
   ApolloServerPluginLandingPageGraphQLPlayground,
-  ApolloServerPluginLandingPageDisabled,
+  ApolloServerPluginLandingPageProductionDefault,
 } from "apollo-server-core";
 
 import DataLoader from "dataloader";
@@ -184,7 +184,7 @@ const server = new ApolloServer({
   },
   plugins: [
     process.env.NODE_ENV === "production"
-      ? ApolloServerPluginLandingPageDisabled()
+      ? ApolloServerPluginLandingPageProductionDefault({ footer: false })
       : ApolloServerPluginLandingPageGraphQLPlayground(),
   ],
 });
