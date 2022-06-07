@@ -205,3 +205,16 @@ server.start().then(() => {
     );
   });
 });
+
+// Log application crashes
+process
+  .on('unhandledRejection', (reason, p) => {
+    logger.error(reason, `Unhandled Rejection at Promise ${p}`);
+  })
+  .on('uncaughtException', err => {
+    logger.error(err, `Uncaught Exception thrown`);
+
+    // Ensure process will stop after this
+    //process.exit(1);
+  });
+
