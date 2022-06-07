@@ -215,6 +215,6 @@ process
     logger.error(err, `Uncaught Exception thrown`);
 
     // Ensure process will stop after this
-    //process.exit(1);
+    process.exit(1);
   });
 
