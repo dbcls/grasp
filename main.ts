@@ -213,6 +213,7 @@ process
   })
   .on('uncaughtException', err => {
     logger.error(err, `Uncaught Exception thrown`);
+    logger.flush();
 
     // Ensure process will stop after this
     process.exit(1);
