@@ -212,7 +212,7 @@ process
     logger.error(reason, `Unhandled Rejection at Promise ${p}`);
   })
   .on('uncaughtException', err => {
-    logger.error(err, `Uncaught Exception thrown`);
+    logger.error(err, `Uncaught Exception thrown; exiting process.`);
     logger.flush();
 
     // Ensure process will stop after this
