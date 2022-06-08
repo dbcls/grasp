@@ -207,17 +207,17 @@ server.start().then(() => {
 });
 
 // Log application crashes
-process.on('unhandledRejection', (reason, p) => {
-  console.error(reason, `Unhandled Rejection at Promise ${p}`)
-  //logger.error(reason, `Unhandled Rejection at Promise ${p}`);
-});
+// process.on('unhandledRejection', (reason, p) => {
+//   console.error(reason, `Unhandled Rejection at Promise ${p}`)
+//   //logger.error(reason, `Unhandled Rejection at Promise ${p}`);
+// });
 
-process.on('uncaughtException', err => {
-  console.error(err, `Uncaught Exception thrown; exiting process.`);
-  //logger.error(err, `Uncaught Exception thrown; exiting process.`);
-  //logger.flush();
+// process.on('uncaughtException', err => {
+//   console.error(err, `Uncaught Exception thrown; exiting process.`);
+//   //logger.error(err, `Uncaught Exception thrown; exiting process.`);
+//   //logger.flush();
 
-  // Ensure process will stop after this
-  //process.exit(1);
-});
+//   // Ensure process will stop after this
+//   process.exit(1);
+// });
 
