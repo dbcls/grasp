@@ -20,7 +20,7 @@ import {
 } from "./lib/utils";
 import ConfigLoader from "./lib/config-loader";
 import logger from "./lib/logger";
-import process from 'node:process';
+//import process from 'node:process';
 
 type ResourceResolver = (
   parent: ResourceEntry,
