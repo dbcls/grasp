@@ -110,7 +110,7 @@ resources.all.forEach((resource) => {
     ) => {
       // get the parent of this field
       const value = _parent[name];
-      
+
       // If the parent exists, make sure it's an array
       if (!value) {
         return isListType(type) ? [] : value;
@@ -207,15 +207,17 @@ server.start().then(() => {
 });
 
 // Log application crashes
-process
-  .on('unhandledRejection', (reason, p) => {
-    logger.error(reason, `Unhandled Rejection at Promise ${p}`);
-  })
-  .on('uncaughtException', err => {
-    logger.error(err, `Uncaught Exception thrown; exiting process.`);
-    logger.flush();
+process.on('unhandledRejection', (reason, p) => {
+  console.error(reason, `Unhandled Rejection at Promise ${p}`)
+  //logger.error(reason, `Unhandled Rejection at Promise ${p}`);
+});
 
-    // Ensure process will stop after this
-    process.exit(1);
-  });
+process.on('uncaughtException', err => {
+  console.error(err, `Uncaught Exception thrown; exiting process.`);
+  //logger.error(err, `Uncaught Exception thrown; exiting process.`);
+  //logger.flush();
+
+  // Ensure process will stop after this
+  //process.exit(1);
+});
 
