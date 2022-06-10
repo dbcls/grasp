@@ -20,7 +20,6 @@ import {
 } from "./lib/utils";
 import ConfigLoader from "./lib/config-loader";
 import logger from "./lib/logger";
-//import process from 'node:process';
 
 type ResourceResolver = (
   parent: ResourceEntry,
@@ -208,15 +207,15 @@ server.start().then(() => {
 });
 
 // Log application crashes
-// process.on('unhandledRejection', (reason, p) => {
-//   logger.error(reason, `Unhandled Rejection at Promise ${p}`);
-// });
+process.on('unhandledRejection', (reason, p) => {
+  logger.error(reason, `Unhandled Rejection at Promise ${p}`);
+});
 
-// process.on('uncaughtException', err => {
-//   logger.error(err, `Uncaught Exception thrown; exiting process.`);
-//   logger.flush();
+process.on('uncaughtException', err => {
+  logger.error(err, `Uncaught Exception thrown; exiting process.`);
+  logger.flush();
 
-//   // Ensure process will stop after this
-//   process.exit(1);
-// });
+  // Ensure process will stop after this
+  process.exit(1);
+});
 
