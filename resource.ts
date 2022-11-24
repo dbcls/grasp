@@ -6,13 +6,13 @@ import transform from "lodash.transform";
 import { ObjectTypeDefinitionNode } from "graphql";
 import { URLSearchParams } from "url";
 
-import Resources from "./resources";
+import Resources from "./resources.js";
 import {
   oneOrMany,
   isListType,
   unwrapCompositeType,
   ensureArray,
-} from "./utils";
+} from "./utils.js";
 
 interface Triple {
   s: string;

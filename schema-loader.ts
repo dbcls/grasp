@@ -1,9 +1,9 @@
-import fs from 'fs';
-import { ObjectTypeDefinitionNode, TypeNode, DocumentNode } from 'graphql';
-import { join } from 'path';
-import { parse } from 'graphql/language/parser';
+import fs from "fs";
+import { ObjectTypeDefinitionNode, TypeNode, DocumentNode } from "graphql";
+import { join } from "path";
+import { parse } from "graphql/language/parser.js";
 
-const {readdir, readFile} = fs.promises;
+const { readdir, readFile } = fs.promises;
 
 export default class SchemaLoader {
   originalTypeDefs: DocumentNode;
@@ -13,24 +13,32 @@ export default class SchemaLoader {
   constructor(graphql: string) {
     this.originalTypeDefs = parse(graphql);
 
-    const typeDefinitionNodes = this.originalTypeDefs.definitions.filter((def): def is ObjectTypeDefinitionNode => {
-      return def.kind === 'ObjectTypeDefinition';
-    });
+    const typeDefinitionNodes = this.originalTypeDefs.definitions.filter(
+      (def): def is ObjectTypeDefinitionNode => {
+        return def.kind === "ObjectTypeDefinition";
+      }
+    );
 
-    const queryDef = typeDefinitionNodes.find(def => def.name.value === 'Query');
+    const queryDef = typeDefinitionNodes.find(
+      (def) => def.name.value === "Query"
+    );
     if (!queryDef) {
-      throw new Error('Query is not defined');
+      throw new Error("Query is not defined");
     }
     this.queryDef = queryDef;
 
-    this.resourceTypeDefs = typeDefinitionNodes.filter(def => def.name.value !== 'Query');
+    this.resourceTypeDefs = typeDefinitionNodes.filter(
+      (def) => def.name.value !== "Query"
+    );
   }
 
   static async loadFrom(baseDir: string): Promise<SchemaLoader> {
-    let schema = '';
+    let schema = "";
 
     for (const path of await readdir(baseDir)) {
-      if (!/^[0-9a-zA-Z].*\.graphql$/.test(path)) { continue; }
+      if (!/^[0-9a-zA-Z].*\.graphql$/.test(path)) {
+        continue;
+      }
 
       schema += await readFile(join(baseDir, path));
     }
