@@ -7,9 +7,9 @@ interface Service {
   type: string;
   url: string;
   graph: string;
-  user: string | undefined;
-  password: string | undefined;
-  token: string;
+  user?: string;
+  password?: string;
+  token?: string;
 }
 
 export default class ConfigLoader {
