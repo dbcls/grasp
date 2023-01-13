@@ -56,7 +56,7 @@ export default class ConfigLoader {
             user: s.user,
             password: s.password,
             headers: {
-              ...(s.token && { Authorization: s.token })
+              ...(s.token && { Authorization: `Bearer ${s.token}` })
             }
           }),
         ];
