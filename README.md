@@ -160,7 +160,8 @@ Set the `SERVICES_FILE` environment variable, so Grasp can locate the configurat
         "url": "http://dbpedia.org/sparql/",
         "graph": "http://dbpedia.org",
         "user": "",
-        "password": ""
+        "password": "",
+        "token":""
     },
 }
 ```
@@ -169,6 +170,7 @@ Possible parameters:
 - `graph`: the named graph to query
 - `user`: username in case authentication is needed
 - `password`: password in case authentication is needed
+- `token`: bearer token in case authentication is needed
   
 Currently, only basic auth is supported.
 

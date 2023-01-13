@@ -9,6 +9,7 @@ interface Service {
   graph: string;
   user: string | undefined;
   password: string | undefined;
+  token: string;
 }
 
 export default class ConfigLoader {
@@ -54,6 +55,9 @@ export default class ConfigLoader {
             endpointUrl: s.url,
             user: s.user,
             password: s.password,
+            headers: {
+              ...(s.token && { Authorization: s.token })
+            }
           }),
         ];
       })
