@@ -1,60 +1,60 @@
-import express from "express";
-import { ApolloServer } from "apollo-server-express";
+import express from "express"
+import { ApolloServer } from "apollo-server-express"
 import {
   ApolloServerPluginLandingPageGraphQLPlayground,
   ApolloServerPluginLandingPageProductionDefault,
-} from "apollo-server-core";
+} from "apollo-server-core"
 
-import DataLoader from "dataloader";
-import transform from "lodash/transform";
-import isEqual from "lodash/isEqual";
+import DataLoader from "dataloader"
+import transform from "lodash/transform"
+import isEqual from "lodash/isEqual"
 
-import Resource, { ResourceEntry } from "./lib/resource";
-import Resources from "./lib/resources";
-import SchemaLoader from "./lib/schema-loader";
+import Resource, { ResourceEntry } from "./lib/resource"
+import Resources from "./lib/resources"
+import SchemaLoader from "./lib/schema-loader"
 import {
   isListType,
   oneOrMany,
   unwrapCompositeType,
   ensureArray,
-} from "./lib/utils";
-import ConfigLoader from "./lib/config-loader";
-import logger from "./lib/logger";
+} from "./lib/utils"
+import ConfigLoader from "./lib/config-loader"
+import logger from "./lib/logger"
 
 type ResourceResolver = (
   parent: ResourceEntry,
   args: { iri: string | Array<string> },
   context: Context
-) => Promise<ResourceEntry | ResourceEntry[] | null>;
+) => Promise<ResourceEntry | ResourceEntry[] | null>
 
 interface Context {
-  loaders: Map<Resource, DataLoader<string, ResourceEntry | null>>;
+  loaders: Map<Resource, DataLoader<string, ResourceEntry | null>>
 }
 
 // Load config
-const port = process.env.PORT || 4000;
-const path = process.env.ROOT_PATH || "/";
-const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity);
-const resourcesDir = process.env.RESOURCES_DIR || "./resources";
-const servicesFile = process.env.SERVICES_FILE;
+const port = process.env.PORT || 4000
+const path = process.env.ROOT_PATH || "/"
+const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity)
+const resourcesDir = process.env.RESOURCES_DIR || "./resources"
+const servicesFile = process.env.SERVICES_FILE
 
 // Load services and query templates from file
 const templateIndex = await ConfigLoader.loadTemplateIndexFromDirectory(
   resourcesDir
-);
+)
 const serviceIndex = servicesFile
   ? await ConfigLoader.loadServiceIndexFromFile(servicesFile)
-  : undefined;
+  : undefined
 
 // Load schema from folder
-const loader = await SchemaLoader.loadFromDirectory(resourcesDir);
+const loader = await SchemaLoader.loadFromDirectory(resourcesDir)
 
 // Load all resource definitions
 const resources = new Resources(
   loader.resourceTypeDefs,
   serviceIndex,
   templateIndex
-);
+)
 
 // Setup query resolvers
 const queryResolvers: Record<string, ResourceResolver> = {};
@@ -65,30 +65,30 @@ const queryResolvers: Record<string, ResourceResolver> = {};
     args: { iri: string | Array<string> },
     context: Context
   ) => {
-    const resourceName = unwrapCompositeType(field.type).name.value;
-    const resource = resources.lookup(resourceName);
+    const resourceName = unwrapCompositeType(field.type).name.value
+    const resource = resources.lookup(resourceName)
 
     if (!resource) {
-      throw new Error(`resource ${resourceName} is not found`);
+      throw new Error(`resource ${resourceName} is not found`)
     }
 
     if (isEqual(Object.keys(args), ["iri"])) {
-      const loader = context.loaders.get(resource);
+      const loader = context.loaders.get(resource)
 
       if (!loader) {
         throw new Error(
           `missing resource loader for ${resource.definition.name.value}`
-        );
+        )
       }
 
-      const iris = ensureArray(args.iri);
-      return oneOrMany(await loader.loadMany(iris), !isListType(field.type));
+      const iris = ensureArray(args.iri)
+      return oneOrMany(await loader.loadMany(iris), !isListType(field.type))
     }
-    return oneOrMany(await resource.fetch(args), !isListType(field.type));
-  };
-});
+    return oneOrMany(await resource.fetch(args), !isListType(field.type))
+  }
+})
 
-const resourceResolvers: Record<string, Record<string, ResourceResolver>> = {};
+const resourceResolvers: Record<string, Record<string, ResourceResolver>> = {}
 
 // Iterate over all resources
 resources.all.forEach((resource) => {
@@ -99,8 +99,8 @@ resources.all.forEach((resource) => {
 
   //Iterate over every field definition
   (resource.definition.fields || []).forEach((field) => {
-    const type = field.type;
-    const name = field.name.value;
+    const type = field.type
+    const name = field.name.value
 
     // Create field resolver for field
     fieldResolvers[name] = async (
@@ -109,55 +109,55 @@ resources.all.forEach((resource) => {
       context: Context
     ) => {
       // get the parent of this field
-      const value = _parent[name];
+      const value = _parent[name]
 
       // If the parent exists, make sure it's an array
       if (!value) {
-        return isListType(type) ? [] : value;
+        return isListType(type) ? [] : value
       }
 
       // Get the underlying type
-      const resourceName = unwrapCompositeType(type).name.value;
+      const resourceName = unwrapCompositeType(type).name.value
       // Check whether we can find a resource connected to this type
-      const resource = resources.lookup(resourceName);
+      const resource = resources.lookup(resourceName)
 
       if (!resource || resource.isEmbeddedType) {
-        return value;
+        return value
       }
       // Are there any arguments?
       if (Object.keys(args).length === 0) {
-        const loader = context.loaders.get(resource);
+        const loader = context.loaders.get(resource)
         if (!loader) {
           throw new Error(
             `missing resource loader for ${resource.definition.name.value}`
-          );
+          )
         }
-        const entry = await loader.loadMany(ensureArray(value));
+        const entry = await loader.loadMany(ensureArray(value))
         // If multiple values are returned when the schema defines single value, value is no array. Pick first element of array in case.
-        return oneOrMany(entry, !isListType(type));
+        return oneOrMany(entry, !isListType(type))
       } else {
         // Get all IRIs
-        const argIRIs = ensureArray(args.iri);
-        const values = ensureArray(value);
-        const allIRIs = Array.from(new Set([...values, ...argIRIs]));
+        const argIRIs = ensureArray(args.iri)
+        const values = ensureArray(value)
+        const allIRIs = Array.from(new Set([...values, ...argIRIs]))
 
         return oneOrMany(
           await resource.fetch({ ...args, ...{ iri: allIRIs } }),
           !isListType(type)
-        );
+        )
       }
-    };
-  });
-});
+    }
+  })
+})
 
 const rootResolvers = {
   Query: queryResolvers,
   ...resourceResolvers,
-};
+}
 
 // Initiate server
 
-const app = express();
+const app = express()
 
 const server = new ApolloServer({
   introspection: true,
@@ -173,25 +173,31 @@ const server = new ApolloServer({
             // Use DataLoader to pre-load and cache data from sparql endpoint
             new DataLoader(
               async (iris: ReadonlyArray<string>) => {
-                return resource.fetchByIRIs(iris);
+                return resource.fetchByIRIs(iris)
               },
               { maxBatchSize }
             )
-          );
+          )
         },
         new Map<Resource, DataLoader<string, ResourceEntry | null>>()
       ),
-    };
+    }
   },
   plugins: [
+    {
+      // Fires whenever a GraphQL request is received from a client.
+      async requestDidStart(requestContext) {
+        logger.info({ query: requestContext.request.query }, 'GraphQL query received.')
+      },
+    },
     process.env.NODE_ENV === "production"
       ? ApolloServerPluginLandingPageProductionDefault({ footer: false })
       : ApolloServerPluginLandingPageGraphQLPlayground(),
   ],
-});
+})
 
 server.start().then(() => {
-  server.applyMiddleware({ app, path });
+  server.applyMiddleware({ app, path })
 
   app.listen(port, () => {
     logger.info(
@@ -202,20 +208,20 @@ server.start().then(() => {
         "SPARQL cache TTL": process.env.QUERY_CACHE_TTL,
       },
       `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
-    );
-  });
-});
+    )
+  })
+})
 
 // Log application crashes
 process.on('unhandledRejection', (reason, p) => {
-  logger.error(reason, `Unhandled Rejection at Promise ${p}`);
-});
+  logger.error(reason, `Unhandled Rejection at Promise ${p}`)
+})
 
 process.on('uncaughtException', err => {
-  logger.error(err, `Uncaught Exception thrown; exiting process.`);
-  logger.flush();
+  logger.error(err, `Uncaught Exception thrown; exiting process.`)
+  logger.flush()
 
   // Ensure process will stop after this
-  process.exit(1);
+  process.exit(1)
 });
 
