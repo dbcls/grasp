@@ -43,7 +43,7 @@
   "dependencies": {
     "@apollo/server": "^4.7.0",
     "@rdfjs/types": "^1.0.1",
-    "@tsconfig/node14": "^1.0.0",
+    "@tsconfig/node16": "^1.0.3",
     "@types/lodash": "^4.14.178",
     "@types/lru-cache": "^7.4.0",
     "@types/node": "^16.11.10",
@@ -116,7 +116,7 @@
     "testEnvironment": "node"
   },
   "engines": {
-    "node": ">=14.16"
+    "node": ">=16"
   },
   "type": "module"
 }

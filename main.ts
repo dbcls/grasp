@@ -4,7 +4,7 @@ import { expressMiddleware } from '@apollo/server/express4'
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default'
 import { ApolloServerPluginLandingPageProductionDefault } from '@apollo/server/plugin/landingPage/default'
 import cors from 'cors'
-import { json } from 'body-parser'
+import parser from 'body-parser';
 
 import DataLoader from "dataloader"
 import transform from "lodash/transform"
@@ -196,7 +196,7 @@ await server.start()
 app.use(
   path,
   cors<cors.CorsRequest>(),
-  json(),
+  parser.json(),
   expressMiddleware(server, {
     context: async () => {
       return {
