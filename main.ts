@@ -229,7 +229,7 @@ app.listen(port, () => {
       "Dataloader max. batch size": maxBatchSize,
       "SPARQL cache TTL": process.env.QUERY_CACHE_TTL,
     },
-    `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
+    `🚀 Server ready at http://localhost:${port}${path}`
   )
 })
 
