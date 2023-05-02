@@ -4,17 +4,13 @@ import {
   ValueNode,
   ObjectTypeDefinitionNode,
   DirectiveNode,
+  Kind
 } from "graphql";
 
 export function isListType(type: TypeNode): boolean {
-  switch (type.kind) {
-    case "NamedType":
-      return false;
-    case "ListType":
-      return true;
-    case "NonNullType":
-      return isListType(type.type);
-  }
+  if (type.kind == Kind.NON_NULL_TYPE)
+    return isListType(type.type);
+  return type.kind == Kind.LIST_TYPE
 }
 
 export function oneOrMany<T>(xs: T[], one: boolean): T | T[] {
@@ -22,13 +18,7 @@ export function oneOrMany<T>(xs: T[], one: boolean): T | T[] {
 }
 
 export function unwrapCompositeType(type: TypeNode): NamedTypeNode {
-  switch (type.kind) {
-    case "NamedType":
-      return type;
-    case "ListType":
-    case "NonNullType":
-      return unwrapCompositeType(type.type);
-  }
+  return type.kind == Kind.NAMED_TYPE ? type : unwrapCompositeType(type.type);
 }
 
 export function hasDirective(
@@ -62,17 +52,14 @@ export function getDirectiveArgumentValue(
 }
 
 export function valueToString(value: ValueNode): string | undefined {
-  if (!value || value.kind !== "StringValue") return undefined;
-
-  return value.value;
+  return (!value || value.kind !== Kind.STRING) ? undefined : value.value;
 }
 
 export function ensureArray<T>(obj: T | Array<T>): Array<T> {
   if (Array.isArray(obj)) {
     return obj;
-  } else {
-    return obj ? [obj] : [];
   }
+  return obj ? [obj] : [];
 }
 
 export function ntriplesLiteral(strs: string | string[]): string[] {
@@ -85,6 +72,5 @@ export function ntriplesIri(strs: string | string[]): string[] {
 
 export function join(separator: string, strs: string | string[]): string {
   if (!separator) throw new Error(`Join separator cannot be ${separator}`);
-
   return ensureArray(strs).join(separator);
 }
