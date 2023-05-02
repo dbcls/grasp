@@ -1,9 +1,10 @@
 import express from "express"
-import { ApolloServer } from "apollo-server-express"
-import {
-  ApolloServerPluginLandingPageGraphQLPlayground,
-  ApolloServerPluginLandingPageProductionDefault,
-} from "apollo-server-core"
+import { ApolloServer } from "@apollo/server"
+import { expressMiddleware } from '@apollo/server/express4'
+import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default'
+import { ApolloServerPluginLandingPageProductionDefault } from '@apollo/server/plugin/landingPage/default'
+import cors from 'cors'
+import { json } from 'body-parser'
 
 import DataLoader from "dataloader"
 import transform from "lodash/transform"
@@ -155,63 +156,6 @@ const rootResolvers = {
   ...resourceResolvers,
 }
 
-// Initiate server
-
-const app = express()
-
-const server = new ApolloServer({
-  introspection: true,
-  typeDefs: loader.originalTypeDefs,
-  resolvers: rootResolvers,
-  context: () => {
-    return {
-      loaders: transform(
-        resources.root,
-        (acc, resource) => {
-          acc.set(
-            resource,
-            // Use DataLoader to pre-load and cache data from sparql endpoint
-            new DataLoader(
-              async (iris: ReadonlyArray<string>) => {
-                return resource.fetchByIRIs(iris)
-              },
-              { maxBatchSize }
-            )
-          )
-        },
-        new Map<Resource, DataLoader<string, ResourceEntry | null>>()
-      ),
-    }
-  },
-  plugins: [
-    {
-      // Fires whenever a GraphQL request is received from a client.
-      async requestDidStart(requestContext) {
-        logger.info({ query: requestContext.request.query }, 'GraphQL query received.')
-      },
-    },
-    process.env.NODE_ENV === "production"
-      ? ApolloServerPluginLandingPageProductionDefault({ footer: false })
-      : ApolloServerPluginLandingPageGraphQLPlayground(),
-  ],
-})
-
-server.start().then(() => {
-  server.applyMiddleware({ app, path })
-
-  app.listen(port, () => {
-    logger.info(
-      {
-        "Resources directory": resourcesDir,
-        "Services file": servicesFile || "none",
-        "Dataloader max. batch size": maxBatchSize,
-        "SPARQL cache TTL": process.env.QUERY_CACHE_TTL,
-      },
-      `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
-    )
-  })
-})
-
 // Log application crashes
 process.on('unhandledRejection', (reason, p) => {
   logger.error(reason, `Unhandled Rejection at Promise ${p}`)
@@ -223,5 +167,69 @@ process.on('uncaughtException', err => {
 
   // Ensure process will stop after this
   process.exit(1)
-});
+})
+
+// Initiate server
+
+const app = express()
+
+const server = new ApolloServer<Context>({
+  introspection: true,
+  typeDefs: loader.originalTypeDefs,
+  resolvers: rootResolvers,
+  status400ForVariableCoercionErrors: true,
+  plugins: [
+    {
+      // Fires whenever a GraphQL request is received from a client.
+      async requestDidStart(requestContext) {
+        logger.info({ query: requestContext.request.query }, 'GraphQL query received.')
+      },
+    },
+    process.env.NODE_ENV === "production"
+      ? ApolloServerPluginLandingPageProductionDefault({ footer: false })
+      : ApolloServerPluginLandingPageLocalDefault(),
+  ],
+})
+
+await server.start()
+
+app.use(
+  path,
+  cors<cors.CorsRequest>(),
+  json(),
+  expressMiddleware(server, {
+    context: async () => {
+      return {
+        loaders: transform(
+          resources.root,
+          (acc, resource) => {
+            acc.set(
+              resource,
+              // Use DataLoader to pre-load and cache data from sparql endpoint
+              new DataLoader(
+                async (iris: ReadonlyArray<string>) => {
+                  return resource.fetchByIRIs(iris)
+                },
+                { maxBatchSize }
+              )
+            )
+          },
+          new Map<Resource, DataLoader<string, ResourceEntry | null>>()
+        ),
+      }
+    },
+  }),
+)
+
+app.listen(port, () => {
+  logger.info(
+    {
+      "Resources directory": resourcesDir,
+      "Services file": servicesFile || "none",
+      "Dataloader max. batch size": maxBatchSize,
+      "SPARQL cache TTL": process.env.QUERY_CACHE_TTL,
+    },
+    `🚀 Server ready at http://localhost:${port}${server.graphqlPath}`
+  )
+})
 
