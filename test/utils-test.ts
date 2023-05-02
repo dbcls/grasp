@@ -15,6 +15,7 @@ import {
   ObjectTypeDefinitionNode,
   TypeNode,
   DirectiveNode,
+  Kind
 } from "graphql";
 
 describe("utils", () => {
@@ -22,11 +23,11 @@ describe("utils", () => {
     describe("with list object", () => {
       it("should return true", () => {
         const def: TypeNode = {
-          kind: "ListType",
+          kind: Kind.LIST_TYPE,
           type: {
-            kind: "NamedType",
+            kind: Kind.NAMED_TYPE,
             name: {
-              kind: "Name",
+              kind: Kind.NAME,
               value: "test",
             },
           },
@@ -35,13 +36,13 @@ describe("utils", () => {
       });
       it("should return true when nested", () => {
         const def: TypeNode = {
-          kind: "NonNullType",
+          kind: Kind.NON_NULL_TYPE,
           type: {
-            kind: "ListType",
+            kind: Kind.LIST_TYPE,
             type: {
-              kind: "NamedType",
+              kind: Kind.NAMED_TYPE,
               name: {
-                kind: "Name",
+                kind: Kind.NAME,
                 value: "test",
               },
             },
@@ -53,9 +54,9 @@ describe("utils", () => {
     describe("with not list type", () => {
       it("should return false if not list", () => {
         const def: TypeNode = {
-          kind: "NamedType",
+          kind: Kind.NAMED_TYPE,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "test",
           },
         };
@@ -63,11 +64,11 @@ describe("utils", () => {
       });
       it("should return false when nested with no list", () => {
         const def: TypeNode = {
-          kind: "NonNullType",
+          kind: Kind.NON_NULL_TYPE,
           type: {
-            kind: "NamedType",
+            kind: Kind.NAMED_TYPE,
             name: {
-              kind: "Name",
+              kind: Kind.NAME,
               value: "test",
             },
           },
@@ -80,60 +81,60 @@ describe("utils", () => {
     describe("with nested NamedType", () => {
       it("should return NamedType", () => {
         const def: TypeNode = {
-          kind: "ListType",
+          kind: Kind.LIST_TYPE,
           type: {
-            kind: "NamedType",
+            kind: Kind.NAMED_TYPE,
             name: {
-              kind: "Name",
+              kind: Kind.NAME,
               value: "test",
             },
           },
         };
         return expect(unwrapCompositeType(def)).toEqual({
-          kind: "NamedType",
+          kind: Kind.NAMED_TYPE,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "test",
           },
         });
       });
       it("should return NamedType when double nested", () => {
         const def: TypeNode = {
-          kind: "NonNullType",
+          kind: Kind.NON_NULL_TYPE,
           type: {
-            kind: "ListType",
+            kind: Kind.LIST_TYPE,
             type: {
-              kind: "NamedType",
+              kind: Kind.NAMED_TYPE,
               name: {
-                kind: "Name",
+                kind: Kind.NAME,
                 value: "test",
               },
             },
           },
         };
         return expect(unwrapCompositeType(def)).toEqual({
-          kind: "NamedType",
+          kind: Kind.NAMED_TYPE,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "test",
           },
         });
       });
       it("should return NamedType when nested in NonNullType", () => {
         const def: TypeNode = {
-          kind: "NonNullType",
+          kind: Kind.NON_NULL_TYPE,
           type: {
-            kind: "NamedType",
+            kind: Kind.NAMED_TYPE,
             name: {
-              kind: "Name",
+              kind: Kind.NAME,
               value: "test",
             },
           },
         };
         return expect(unwrapCompositeType(def)).toEqual({
-          kind: "NamedType",
+          kind: Kind.NAMED_TYPE,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "test",
           },
         });
@@ -142,9 +143,9 @@ describe("utils", () => {
     describe("with not nested NamedType", () => {
       it("should return itself", () => {
         const def: TypeNode = {
-          kind: "NamedType",
+          kind: Kind.NAMED_TYPE,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "test",
           },
         };
@@ -214,16 +215,16 @@ describe("utils", () => {
 
   describe("hasDirective", () => {
     const def: ObjectTypeDefinitionNode = {
-      kind: "ObjectTypeDefinition",
+      kind: Kind.OBJECT_TYPE_DEFINITION,
       name: {
-        kind: "Name",
+        kind: Kind.NAME,
         value: "definition",
       },
       directives: [
         {
-          kind: "Directive",
+          kind: Kind.DIRECTIVE,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "test",
           },
         },
@@ -245,16 +246,16 @@ describe("utils", () => {
 
   describe("getDirective", () => {
     const def: ObjectTypeDefinitionNode = {
-      kind: "ObjectTypeDefinition",
+      kind: Kind.OBJECT_TYPE_DEFINITION,
       name: {
-        kind: "Name",
+        kind: Kind.NAME,
         value: "definition",
       },
       directives: [
         {
-          kind: "Directive",
+          kind: Kind.DIRECTIVE,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "test",
           },
         },
@@ -282,20 +283,20 @@ describe("utils", () => {
 
   describe("getDirectiveArgumentValue", () => {
     const def: DirectiveNode = {
-      kind: "Directive",
+      kind: Kind.DIRECTIVE,
       name: {
-        kind: "Name",
+        kind: Kind.NAME,
         value: "name",
       },
       arguments: [
         {
-          kind: "Argument",
+          kind: Kind.ARGUMENT,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "name",
           },
           value: {
-            kind: "StringValue",
+            kind: Kind.STRING,
             value: "test",
           },
         },
@@ -319,7 +320,7 @@ describe("utils", () => {
     it("should return value if of type StringValue", () => {
       return expect(
         valueToString({
-          kind: "StringValue",
+          kind: Kind.STRING,
           value: "test",
         })
       ).toBe("test");
@@ -328,7 +329,7 @@ describe("utils", () => {
     it("should return undefined if not of type StringValue ", () => {
       return expect(
         valueToString({
-          kind: "BooleanValue",
+          kind: Kind.BOOLEAN,
           value: true,
         })
       ).toBeUndefined();

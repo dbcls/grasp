@@ -2,6 +2,7 @@ import Resources from "../lib/resources";
 import { getResourceTypeDefs } from "./test-helpers";
 import { TypeNode } from 'graphql';
 import Resource from "../lib/resource";
+import { Kind } from "graphql";
 
 
 describe("resources", () => {
@@ -18,11 +19,11 @@ describe("resources", () => {
 
     it("should return false at isUserDefined", () => {
       const def: TypeNode = {
-        kind: "ListType",
+        kind: Kind.LIST_TYPE,
         type: {
-          kind: "NamedType",
+          kind: Kind.NAMED_TYPE,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "test",
           },
         },
@@ -53,11 +54,11 @@ describe("resources", () => {
 
     it("should return true at isUserDefined", () => {
       const def: TypeNode = {
-        kind: "ListType",
+        kind: Kind.LIST_TYPE,
         type: {
-          kind: "NamedType",
+          kind: Kind.NAMED_TYPE,
           name: {
-            kind: "Name",
+            kind: Kind.NAME,
             value: "Test",
           },
         },
