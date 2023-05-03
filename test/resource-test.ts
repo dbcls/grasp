@@ -14,6 +14,7 @@ import {
 } from "./test-helpers";
 import type { Quad } from "@rdfjs/types";
 import quad from "rdf-quad";
+import { Kind } from "graphql";
 
 const handlebars = Handlebars.create();
 const parser = new Parser();
@@ -36,9 +37,9 @@ describe("resource", () => {
         return expect(
           () =>
             new Resource(getTestResources(), {
-              kind: "ObjectTypeDefinition",
+              kind: Kind.OBJECT_TYPE_DEFINITION,
               name: {
-                kind: "Name",
+                kind: Kind.NAME,
                 value: "test",
               },
             })
