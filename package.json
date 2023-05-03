@@ -73,7 +73,7 @@
     "sparqljs": "^3.5.1",
     "ts-jest": "^28.0.4",
     "ts-node": "^10.2.1",
-    "typedoc": "^0.22.13"
+    "typedoc": "^0.24.6"
   },
   "release-it": {
     "npm": {
