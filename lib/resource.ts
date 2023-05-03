@@ -17,7 +17,7 @@ import {
   ntriplesLiteral,
 } from "./utils";
 import SparqlClient from "sparql-http-client";
-import LRU from "lru-cache";
+import { LRUCache } from "lru-cache";
 import logger from "./logger";
 import { Dictionary } from "lodash";
 
@@ -39,7 +39,7 @@ const options = {
   ttl: parseInt(process.env.CACHE_TTL || `${DEFAULT_TTL}`, 10),
 };
 
-const cache = new LRU<string, ResourceEntry[]>(options);
+const cache = new LRUCache<string, ResourceEntry[]>(options);
 
 export function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
