@@ -4,7 +4,7 @@ import { expressMiddleware } from '@apollo/server/express4'
 import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin/landingPage/default'
 import { ApolloServerPluginLandingPageProductionDefault } from '@apollo/server/plugin/landingPage/default'
 import cors from 'cors'
-import parser from 'body-parser';
+import parser from 'body-parser'
 
 import DataLoader from "dataloader"
 import transform from "lodash/transform"
@@ -187,7 +187,7 @@ const server = new ApolloServer<Context>({
     },
     process.env.NODE_ENV === "production"
       ? ApolloServerPluginLandingPageProductionDefault({ footer: false })
-      : ApolloServerPluginLandingPageLocalDefault(),
+      : ApolloServerPluginLandingPageLocalDefault({ embed: { endpointIsEditable: true }, footer: false }),
   ],
 })
 
