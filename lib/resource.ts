@@ -88,6 +88,9 @@ export function buildEntry(
     }
   });
 
+  // Make sure entries always have an iri
+  if (!entry.iri)
+    entry.iri = subject
   return entry;
 }
 
