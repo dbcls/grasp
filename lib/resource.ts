@@ -1,10 +1,10 @@
 import Handlebars from "handlebars";
 import type { Quad, Stream } from "@rdfjs/types";
 import { getTermRaw } from "rdf-literal";
-import transform from "lodash/transform";
+import transform from "lodash/transform.js";
 import { ObjectTypeDefinitionNode } from "graphql";
 
-import Resources from "./resources";
+import Resources from "./resources.js";
 import {
   oneOrMany,
   isListType,
@@ -15,10 +15,10 @@ import {
   join,
   ntriplesIri,
   ntriplesLiteral,
-} from "./utils";
+} from "./utils.js";
 import SparqlClient from "sparql-http-client";
 import { LRUCache } from "lru-cache";
-import logger from "./logger";
+import logger from "./logger.js";
 import { Dictionary } from "lodash";
 
 type CompiledTemplate = (args: object) => string;
@@ -266,7 +266,7 @@ export default class Resource {
    * @param args
    * @returns
    */
-  async fetch(args: object): Promise<ResourceEntry[]> {
+  async fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<ResourceEntry[]> {
     if (!this.queryTemplate || !this.sparqlClient) {
       throw new Error(
         "query template and endpoint should be specified in order to query"
@@ -292,6 +292,7 @@ export default class Resource {
         sparqlQuery,
         {
           operation: "postUrlencoded",
+          headers: opts?.proxyHeaders
         }
       );
 
@@ -329,9 +330,10 @@ export default class Resource {
    * @returns
    */
   async fetchByIRIs(
-    iris: ReadonlyArray<string>
+    iris: ReadonlyArray<string>,
+    opts?:{proxyHeaders?:{[key:string]:string}}
   ): Promise<Array<ResourceEntry | null>> {
-    const entries = await this.fetch({ iri: iris });
+    const entries = await this.fetch({ iri: iris }, opts);
     // join entries
     return iris.map(
       (iri) => entries.find((entry) => entry.iri === iri) || null

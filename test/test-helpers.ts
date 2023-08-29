@@ -1,17 +1,18 @@
 import fs from "fs";
-import { parse } from "graphql/language/parser";
+import { parse } from "graphql/language/parser.js";
 import { ObjectTypeDefinitionNode } from "graphql";
 import { join } from "path";
-import Resource from "../lib/resource";
+import Resource from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
-import Resources from "../lib/resources";
+import Resources from "../lib/resources.js";
 import { Quad } from "@rdfjs/types";
-import StreamStore from "sparql-http-client/StreamStore";
-import Endpoint from "sparql-http-client/Endpoint";
+import StreamStore from "sparql-http-client/StreamStore.js";
+import Endpoint from "sparql-http-client/Endpoint.js";
 import { Readable } from "stream";
-
+import * as url from 'url';
+const dirname = url.fileURLToPath(new URL('.', import.meta.url));
 export function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
-  const schema = fs.readFileSync(join(__dirname, path), { encoding: "utf-8" });
+  const schema = fs.readFileSync(join(dirname, path), { encoding: "utf-8" });
   return parse(schema).definitions.filter(
     (def): def is ObjectTypeDefinitionNode => {
       return def.kind === "ObjectTypeDefinition";

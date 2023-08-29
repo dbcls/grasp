@@ -1,8 +1,8 @@
 import { ObjectTypeDefinitionNode, TypeNode } from 'graphql';
 import SparqlClient from "sparql-http-client";
 
-import Resource from './resource';
-import { unwrapCompositeType } from './utils';
+import Resource from './resource.js';
+import { unwrapCompositeType } from './utils.js';
 
 
 export default class Resources {

@@ -71,6 +71,5 @@ export function ntriplesIri(strs: string | string[]): string[] {
 }
 
 export function join(separator: string, strs: string | string[]): string {
-  if (!separator) throw new Error(`Join separator cannot be ${separator}`);
   return ensureArray(strs).join(separator);
 }

@@ -33,7 +33,7 @@ Let's look at a simple example.
 
 ### Run
 
-    $ RESOURCES_DIR=./examples npm run watch
+    $ RESOURCES_DIR=./examples npm run dev
 
 This loads the example resource definitions from `./example`.
 
@@ -547,3 +547,19 @@ Set the time in milliseconds that SPARQL queries live in the cache.
 
 Set the max number of SPARQL queries that are stored in the cache.
 You can disable the cache by setting this to 0.
+
+## Releasing
+
+### Pipelines
+
+The Gitlab CI is responsible for building and updating the grasp deployments.
+
+- A push to a feature branch with a merge request will trigger a build and deployment of `int`
+- A push to the `main` branch will trigger a build and deployment of `qas`
+- A git-tag will trigger a build and deployment of `prd`
+
+### Creating a new version
+
+- `npm version patch|minor|major`
+- `git push --tags`
+- The pipeline will now build the correct `prd` version

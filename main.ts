@@ -7,20 +7,20 @@ import cors from 'cors'
 import parser from 'body-parser'
 
 import DataLoader from "dataloader"
-import transform from "lodash/transform"
-import isEqual from "lodash/isEqual"
+import {transform,isEqual} from "lodash-es"
 
-import Resource, { ResourceEntry } from "./lib/resource"
-import Resources from "./lib/resources"
-import SchemaLoader from "./lib/schema-loader"
+
+import Resource, { ResourceEntry } from "./lib/resource.js"
+import Resources from "./lib/resources.js"
+import SchemaLoader from "./lib/schema-loader.js"
 import {
   isListType,
   oneOrMany,
   unwrapCompositeType,
   ensureArray,
-} from "./lib/utils"
-import ConfigLoader from "./lib/config-loader"
-import logger from "./lib/logger"
+} from "./lib/utils.js"
+import ConfigLoader from "./lib/config-loader.js"
+import logger from "./lib/logger.js"
 
 type ResourceResolver = (
   parent: ResourceEntry,
@@ -29,6 +29,7 @@ type ResourceResolver = (
 ) => Promise<ResourceEntry | ResourceEntry[] | null>
 
 interface Context {
+  proxyHeaders: {[key:string]:string},
   loaders: Map<Resource, DataLoader<string, ResourceEntry | null>>
 }
 
@@ -66,6 +67,7 @@ const queryResolvers: Record<string, ResourceResolver> = {};
     args: { iri: string | Array<string> },
     context: Context
   ) => {
+    
     const resourceName = unwrapCompositeType(field.type).name.value
     const resource = resources.lookup(resourceName)
 
@@ -85,7 +87,7 @@ const queryResolvers: Record<string, ResourceResolver> = {};
       const iris = ensureArray(args.iri)
       return oneOrMany(await loader.loadMany(iris), !isListType(field.type))
     }
-    return oneOrMany(await resource.fetch(args), !isListType(field.type))
+    return oneOrMany(await resource.fetch(args, {proxyHeaders:context.proxyHeaders}), !isListType(field.type))
   }
 })
 
@@ -141,9 +143,8 @@ resources.all.forEach((resource) => {
         const argIRIs = ensureArray(args.iri)
         const values = ensureArray(value)
         const allIRIs = Array.from(new Set([...values, ...argIRIs]))
-
         return oneOrMany(
-          await resource.fetch({ ...args, ...{ iri: allIRIs } }),
+          await resource.fetch({ ...args, ...{ iri: allIRIs } },{proxyHeaders:context.proxyHeaders}),
           !isListType(type)
         )
       }
@@ -198,8 +199,10 @@ app.use(
   cors<cors.CorsRequest>(),
   parser.json(),
   expressMiddleware(server, {
-    context: async () => {
+    context: async (ctx) => {
+      const proxyHeaders = {"Authorization":ctx.req.get("Authorization") || ""}
       return {
+        proxyHeaders ,
         loaders: transform(
           resources.root,
           (acc, resource) => {
@@ -208,7 +211,7 @@ app.use(
               // Use DataLoader to pre-load and cache data from sparql endpoint
               new DataLoader(
                 async (iris: ReadonlyArray<string>) => {
-                  return resource.fetchByIRIs(iris)
+                  return resource.fetchByIRIs(iris, {proxyHeaders})
                 },
                 { maxBatchSize }
               )

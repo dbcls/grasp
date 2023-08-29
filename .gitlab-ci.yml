@@ -1,0 +1,83 @@
+
+stages:
+  - test
+  - fetchConfig
+  - build
+
+image: node:20-bookworm-slim
+
+
+.rules:
+  # If any target is set, run this job
+  # runFor
+  #   if: $TARGET_SET != null
+  runForMain:
+    if: $CI_COMMIT_REF_NAME == "main"
+  runForMergeRequest:
+    if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  runForTags:
+    if: $CI_COMMIT_TAG
+  
+# The workflow property decides whether this pipeline should run at all
+workflow:
+  rules:
+    - !reference [.rules, runForMain]
+    - !reference [.rules, runForMergeRequest]
+    - !reference [.rules, runForTags]
+    # In all other cases, do not run
+
+
+test:
+  stage: test
+  script:
+    - npm ci
+    - npm run build
+    - npm run test
+
+fetchConfig:
+  image:
+    name:  alpine/git:2.40.1
+    entrypoint: [""]
+  script:
+    - git clone --depth 1 https://gitlab-ci-token:${CI_JOB_TOKEN}@git.triply.cc/customers/meemoo/grasp-config.git
+  artifacts:
+    paths:
+    - grasp-config
+    expire_in: 1 week
+
+
+.build:
+  stage: build
+  image: docker:20.10.18-cli
+  script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} registry.triply.cc
+    - docker build --build-arg "ENDPOINT=${ENDPOINT}" --build-arg "GRASP_CONFIG=${GRASP_CONFIG}" -t registry.triply.cc/customers/meemoo/grasp:${DOCKER_TAG} .
+    - docker push registry.triply.cc/customers/meemoo/grasp:${DOCKER_TAG}
+
+
+build-org-int:
+  extends: .build
+  variables: 
+    GRASP_CONFIG: "org"
+    DOCKER_TAG: "org-int"
+    ENDPOINT: "https://api.meemoo-int.triply.cc/datasets/meemoo/knowledge-graph/services/knowledge-graph/sparql"
+  rules:
+    - !reference [.rules, runForMergeRequest]
+
+build-org-qas:
+  extends: .build
+  variables: 
+    GRASP_CONFIG: "org"
+    DOCKER_TAG: "org-qas"
+    ENDPOINT: "https://api.meemoo-qas.triply.cc/datasets/meemoo/knowledge-graph/services/knowledge-graph/sparql"
+  rules:
+    - !reference [.rules, runForMain]
+
+build-org-prod:
+  extends: .build
+  variables: 
+    GRASP_CONFIG: "org"
+    DOCKER_TAG: "org-prd"
+    ENDPOINT: "https://api.meemoo.triply.cc/datasets/meemoo/knowledge-graph/services/knowledge-graph/sparql"
+  rules:
+    - !reference [.rules, runForTags]

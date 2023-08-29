@@ -2,7 +2,7 @@ import {
   buildEntry,
   default as Resource,
   ResourceEntry,
-} from "../lib/resource";
+} from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
 import { Parser } from "sparqljs";
 import Handlebars from "handlebars";
@@ -11,8 +11,9 @@ import {
   getTestResources,
   compileEmptyTemplate,
   getTestSparqlClient,
-} from "./test-helpers";
+} from "./test-helpers.js";
 import type { Quad } from "@rdfjs/types";
+// @ts-ignore
 import quad from "rdf-quad";
 import { Kind } from "graphql";
 
@@ -212,7 +213,7 @@ describe("resource", () => {
     res.resources = getTestResources(res);
 
     it("should not throw", async () => {
-      await expect(res.fetch({})).resolves.not.toThrow();
+      await expect(res.fetch({}, {proxyHeaders:{}})).resolves.not.toThrow();
     });
 
     it("should return all ResourceEntries", async () => {
@@ -231,12 +232,12 @@ describe("resource", () => {
         },
       ];
 
-        expect(await res.fetch({})).toStrictEqual(expected)
+        expect(await res.fetch({},{proxyHeaders:{}})).toStrictEqual(expected)
   
     });
 
     it("should not return properties not in graphql schema", async () => {
-      return expect((await res.fetch({}))[0]).not.toHaveProperty("obsolete");
+      return expect((await res.fetch({},{proxyHeaders:{}}))[0]).not.toHaveProperty("obsolete");
     });
 
     it("should not return RDF literal", async () => {
@@ -247,7 +248,7 @@ describe("resource", () => {
         test: "\"true\"^^<http://www.w3.org/2001/XMLSchema#boolean>",
       };
 
-      return expect(await res.fetch({})).not.toContainEqual(expected);
+      return expect(await res.fetch({},{proxyHeaders:{}})).not.toContainEqual(expected);
     });
 
     it("should not return ResourceEntry when blanknode", async () => {
@@ -255,7 +256,7 @@ describe("resource", () => {
         id: "b1",
         iri: "http://example.org/subject",
       };
-      return expect(await res.fetch({})).not.toContainEqual(expected);
+      return expect(await res.fetch({},{proxyHeaders:{}})).not.toContainEqual(expected);
     });
   });
 
@@ -273,18 +274,18 @@ describe("resource", () => {
     ];
 
     it("should return empty array when iris are empty", async () => {
-      return expect(await res.fetchByIRIs([])).toStrictEqual([]);
+      return expect(await res.fetchByIRIs([],{proxyHeaders:{}})).toStrictEqual([]);
     });
 
     it("should return null when iri is not found", async () => {
       return expect(
-        await res.fetchByIRIs(["http://example.org/subject3"])
+        await res.fetchByIRIs(["http://example.org/subject3"],{proxyHeaders:{}})
       ).toStrictEqual([null]);
     });
 
     it("should return matching entry when iri is given", async () => {
       return expect(
-        await res.fetchByIRIs(["http://example.org/subject1"])
+        await res.fetchByIRIs(["http://example.org/subject1"],{proxyHeaders:{}})
       ).toStrictEqual([
         {
           id: "subject1",
@@ -294,7 +295,7 @@ describe("resource", () => {
     });
 
     it("should not throw error", async () => {
-      return expect(() => res.fetchByIRIs([])).not.toThrow();
+      return expect(() => res.fetchByIRIs([],{proxyHeaders:{}})).not.toThrow();
     });
   });
 

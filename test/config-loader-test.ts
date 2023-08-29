@@ -1,7 +1,8 @@
-import ConfigLoader from "../lib/config-loader";
+import ConfigLoader from "../lib/config-loader.js";
 import SparqlClient from "sparql-http-client";
 import { join } from "path";
-
+import * as url from 'url';
+const dirname = url.fileURLToPath(new URL('.', import.meta.url));
 describe("config-loader", () => {
   describe("loadServiceIndexFromFile", () => {
 
@@ -11,13 +12,13 @@ describe("config-loader", () => {
       });
     });
     describe("with empty json file", () => {
-      const filePath = join(__dirname, "assets/services-empty.json");
+      const filePath = join(dirname, "assets/services-empty.json");
       it("should return empty index", async () => {
         return expect(ConfigLoader.loadServiceIndexFromFile(filePath)).resolves.toEqual(new Map<string, SparqlClient>());
       });
     });
     describe("with a single service file", () => {
-      const filePath = join(__dirname, "assets/services.json");
+      const filePath = join(dirname, "assets/services.json");
 
       const expected = new Map<string, SparqlClient>([
         ["test", new SparqlClient({
@@ -39,13 +40,13 @@ describe("config-loader", () => {
       });
     });
     describe("with empty directory", () => {
-      const dirPath = join(__dirname, "assets/resources-empty");
+      const dirPath = join(dirname, "assets/resources-empty");
       it("should return empty index", async () => {
         return expect(ConfigLoader.loadTemplateIndexFromDirectory(dirPath)).resolves.toEqual(new Map<string, string>());
       });
     });
     describe("with non empty directory", () => {
-      const dirPath = join(__dirname, "assets/resources-template");
+      const dirPath = join(dirname, "assets/resources-template");
       it("should return index", async () => {
         const expected = new Map<string, string>([
           ["test.sparql", `PREFIX : <https://github.com/dbcls/grasp/ns/>

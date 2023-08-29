@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { ObjectTypeDefinitionNode, DocumentNode } from 'graphql';
 import { join } from 'path';
-import { parse } from 'graphql/language/parser';
+import { parse } from 'graphql/language/parser.js';
 
 const {readdir, readFile} = fs.promises;
 

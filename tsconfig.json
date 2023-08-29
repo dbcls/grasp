@@ -3,15 +3,19 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "esModuleInterop": true
   },
+  "lib": [
+    "esnext",
+    "dom"
+  ],
   "include": [
     "main.ts",
-    "lib/**/*"
+    "lib/**/**/*.ts",
+    "test/**/**/*.ts"
   ],
   "exclude": [
-    "**/node_modules",
-    "**/test/*"
+    "**/node_modules"
   ]
 }

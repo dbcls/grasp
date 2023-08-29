@@ -10,7 +10,7 @@ import {
   ntriplesLiteral,
   ntriplesIri,
   join,
-} from "../lib/utils";
+} from "../lib/utils.js";
 import {
   ObjectTypeDefinitionNode,
   TypeNode,
@@ -396,14 +396,6 @@ describe("utils", () => {
     it("should return joined string from array of strings", () => {
       return expect(join(",", ["test1", "test2"])).toBe("test1,test2");
     });
-
-    // it("should throw if separator is null", () => {
-    //   return expect(() => join(null, null)).toThrow();
-    // });
-
-    // it("should return empty string if value is null", () => {
-    //   return expect(join(",", null)).toBe("");
-    // });
 
     it("should return empty string if array is empty", () => {
       return expect(join(",", [])).toBe("");

@@ -1,7 +1,7 @@
-import Resources from "../lib/resources";
-import { getResourceTypeDefs } from "./test-helpers";
+import Resources from "../lib/resources.js";
+import { getResourceTypeDefs } from "./test-helpers.js";
 import { TypeNode } from 'graphql';
-import Resource from "../lib/resource";
+import Resource from "../lib/resource.js";
 import { Kind } from "graphql";
 
 
