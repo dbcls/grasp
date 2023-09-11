@@ -51,6 +51,7 @@ fetchConfig:
   script:
     - echo "Fetching configuration from config branch ${BRANCH}"
     - git clone --depth 1 -b ${BRANCH} https://gitlab-ci-token:${CI_JOB_TOKEN}@git.triply.cc/customers/meemoo/grasp-config.git
+    - rm -r ./grasp-config/.git ./grasp-config/Dockerfile ./grasp-config/README.md ./grasp-config/.gitlab-ci.yml
   artifacts:
     paths:
     - grasp-config
