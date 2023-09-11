@@ -38,8 +38,19 @@ fetchConfig:
   image:
     name:  alpine/git:2.40.1
     entrypoint: [""]
+  rules:
+    - if: !reference [.rules, runForMergeRequest, if]
+      variables:
+        BRANCH: "int"
+    - if: !reference [.rules, runForMain, if]
+      variables:
+        BRANCH: "qas"
+    - if: !reference [.rules, runForTags, if]
+      variables:
+        BRANCH: "prd"
   script:
-    - git clone --depth 1 https://gitlab-ci-token:${CI_JOB_TOKEN}@git.triply.cc/customers/meemoo/grasp-config.git
+    - echo "Fetching configuration from config branch ${BRANCH}"
+    - git clone --depth 1 -b ${BRANCH} https://gitlab-ci-token:${CI_JOB_TOKEN}@git.triply.cc/customers/meemoo/grasp-config.git
   artifacts:
     paths:
     - grasp-config
