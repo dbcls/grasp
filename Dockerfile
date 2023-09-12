@@ -21,7 +21,7 @@ RUN jq --null-input \
         --arg endpoint "${ENDPOINT}" \
         --arg type "SPARQLEndpointService" \
         --arg graph "https://data.meemoo.be/graphs/organization" \
-         '{"endpoint": $endpoint, "type": $type, "graph": $graph}' \
+         '{"meemoo": {"url": $endpoint, "type": $type, "graph": $graph}}' \
         > /services.json
 
 
