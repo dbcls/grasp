@@ -20,6 +20,7 @@ import SparqlClient from "sparql-http-client";
 import { LRUCache } from "lru-cache";
 import logger from "./logger.js";
 import { Dictionary } from "lodash";
+import internal, { Readable } from "stream"
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
@@ -125,6 +126,55 @@ export async function groupBindingsStream(stream: Stream<Quad>): Promise<{
       throw new Error(`Cannot process SPARQL endpoint results: ${err}`);
     });
   });
+}
+
+export async function fetchResultsUntilThreshold(
+  sparqlClient: SparqlClient,
+  sparqlQuery: string,
+  threshold: number, options?: SparqlClient.QueryOptions
+): Promise<Stream<Quad> & internal.Readable> {
+  return new Readable({
+      objectMode: true,
+      async read() {
+          const self = this
+          async function fetchBindings(sparqlClient: SparqlClient,
+              sparqlQuery: string,
+              offset: number) {
+              // Fetch all bindings
+              const bindingsStream = await sparqlClient.query.construct(
+                  `${sparqlQuery} 
+                  OFFSET ${offset}
+                  LIMIT ${offset + threshold}`,
+                  options
+              )
+
+              let count = 0
+              bindingsStream.emit('data', (q: Quad) => {
+                  self.push(q)
+                  count++
+              })
+              bindingsStream.emit('end', () => {
+                  if (count === 0 || count < threshold) {
+                      // If fewer than threshold results are returned, end the stream
+                      self.push(null)
+                  } else {
+                      // Emit new results
+                      offset += threshold
+                      // Repeat the process
+                      fetchBindings(sparqlClient, sparqlQuery, offset)
+                  }
+              })
+
+          }
+
+          // Implement the logic to fetch and emit results here
+          try {
+              fetchBindings(sparqlClient, sparqlQuery, 0)
+          } catch (error) {
+              this.emit("error", error)
+          }
+      },
+  })
 }
 
 export default class Resource {
@@ -288,13 +338,15 @@ export default class Resource {
     }
 
     try {
-      const bindingsStream = await this.sparqlClient.query.construct(
-        sparqlQuery,
+      const bindingsStream = await fetchResultsUntilThreshold(
+        this.sparqlClient,
+        sparqlQuery, 
+        10000,
         {
           operation: "postUrlencoded",
           headers: opts?.proxyHeaders
         }
-      );
+      )
 
       const { bindingsGroupedBySubject, primaryBindingsGroupedBySubject } =
         await groupBindingsStream(bindingsStream);
