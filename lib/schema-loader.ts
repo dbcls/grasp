@@ -14,7 +14,7 @@ export default class SchemaLoader {
     try {
       this.originalTypeDefs = parse(schema);
     } catch (error) {
-      throw new Error('GraphQL schema is either invalid or not found. Make sure you have a correct RESOURCES_DIR environment variable set');
+      throw new Error('GraphQL schema is invalid or not found. Make sure you have a correct RESOURCE_DIR environment variable set');
     }
     
     const typeDefinitionNodes = this.originalTypeDefs.definitions.filter((def): def is ObjectTypeDefinitionNode => {

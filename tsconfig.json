@@ -12,7 +12,6 @@
   ],
   "include": [
     "main.ts",
-    "validateConfig.ts",
     "lib/**/**/*.ts",
     "test/**/**/*.ts"
   ],
