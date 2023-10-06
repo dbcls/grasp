@@ -16,3 +16,6 @@ coverage/
 **/main.js
 **/main.js.map
 **/main.d.ts
+**/validateConfig.js
+**/validateConfig.js.map
+**/validateConfig.d.ts

@@ -41,3 +41,5 @@ COPY --chown=node:node --from=build /build /app
 RUN chown node:node /app
 USER node
 RUN cd /app && npm ci omit=dev
+# Validate the configuration file
+RUN node ./validateConfig.js
