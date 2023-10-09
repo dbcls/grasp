@@ -21,6 +21,7 @@ import { LRUCache } from "lru-cache";
 import logger from "./logger.js";
 import { Dictionary } from "lodash";
 import internal, { Readable } from "stream"
+import { query } from 'express'
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
@@ -133,35 +134,46 @@ export async function fetchResultsUntilThreshold(
   sparqlQuery: string,
   threshold: number, options?: SparqlClient.QueryOptions
 ): Promise<Stream<Quad> & internal.Readable> {
+  // If the threshold is 0 or lower, just execute the query without paging
+  if (threshold <= 0) {
+    return sparqlClient.query.construct(
+      sparqlQuery,
+        options
+    )
+  }
   return new Readable({
       objectMode: true,
       async read() {
           const self = this
           async function fetchBindings(sparqlClient: SparqlClient,
-              sparqlQuery: string,
-              offset: number) {
+              pagedQuery: string,
+              offset: number = 0) {
+
               // Fetch all bindings
               const bindingsStream = await sparqlClient.query.construct(
-                  `${sparqlQuery} 
-                  OFFSET ${offset}
-                  LIMIT ${offset + threshold}`,
+                pagedQuery,
                   options
               )
 
               let count = 0
-              bindingsStream.emit('data', (q: Quad) => {
+              bindingsStream.on('data', (q: Quad) => {
                   self.push(q)
                   count++
               })
-              bindingsStream.emit('end', () => {
-                  if (count === 0 || count < threshold) {
-                      // If fewer than threshold results are returned, end the stream
-                      self.push(null)
-                  } else {
+              bindingsStream.on('end', () => {
+                  if (count === threshold) {
                       // Emit new results
                       offset += threshold
+                      // Alter query
+                      const alteredQuery = `${sparqlQuery} 
+                      OFFSET ${offset}
+                      LIMIT ${threshold}`
+                      
                       // Repeat the process
-                      fetchBindings(sparqlClient, sparqlQuery, offset)
+                      fetchBindings(sparqlClient, alteredQuery, offset)
+                  } else {
+                    // If fewer than threshold results are returned, end the stream
+                    self.push(null)
                   }
               })
 
@@ -169,7 +181,7 @@ export async function fetchResultsUntilThreshold(
 
           // Implement the logic to fetch and emit results here
           try {
-              fetchBindings(sparqlClient, sparqlQuery, 0)
+              fetchBindings(sparqlClient, sparqlQuery)
           } catch (error) {
               this.emit("error", error)
           }
@@ -341,7 +353,7 @@ export default class Resource {
       const bindingsStream = await fetchResultsUntilThreshold(
         this.sparqlClient,
         sparqlQuery, 
-        10000,
+        5,
         {
           operation: "postUrlencoded",
           headers: opts?.proxyHeaders

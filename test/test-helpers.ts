@@ -45,13 +45,31 @@ export function getTestResource(
   );
 }
 
-export function getTestSparqlClient(quads: Quad[]):SparqlClient {
+export function getTestSparqlClient(quads: Quad[], threshold: number = 0):SparqlClient {
   const endpoint = new Endpoint({endpointUrl: "http://example.org"})
   return {
     query: { 
       endpoint, 
       ask: async (query) => true, 
-      construct: async (query) => Readable.from(quads), 
+      construct: async (query) => { 
+        const regex = /OFFSET\s+(\d+)\s+LIMIT\s+(\d+)$/;
+
+        const match = query.match(regex);
+
+        if (match) {
+          const offsetValue = parseInt(match[1], 10); // Convert the captured string to an integer
+          const limitValue = parseInt(match[2], 10); // Convert the captured string to an integer
+          
+          if (offsetValue >= quads.length) {
+            return Readable.from([])
+          }
+
+          return Readable.from(quads.slice(offsetValue,offsetValue + limitValue))
+        } else if (threshold > 0) {
+          return Readable.from(quads.slice(0, threshold))
+        }
+        return Readable.from(quads)
+      }, 
       select: async (query) => new Readable(), 
       update: async (query) => {}, 
     },

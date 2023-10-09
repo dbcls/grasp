@@ -2,6 +2,7 @@ import {
   buildEntry,
   default as Resource,
   ResourceEntry,
+  fetchResultsUntilThreshold
 } from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
 import { Parser } from "sparqljs";
@@ -315,6 +316,44 @@ describe("resource", () => {
   //     return expect(await res.query({})).toStrictEqual([]);
   //   });
   // });
+
+  describe("fetchResultsUntilThreshold", () => {
+
+    const subject = "http://example.org/subject1";
+    const subject2 = "http://example.org/subject2";
+
+    const triples = [
+      quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
+      quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject1"'),
+      quad(subject, "https://github.com/dbcls/grasp/ns/count", 5),
+      quad(subject, "https://github.com/dbcls/grasp/ns/test", true),
+      quad(subject, "https://github.com/dbcls/grasp/ns/obsolete", "obsolete"),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/iri", subject2),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/id", '"subject2"'),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/count", 4),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/test", false),
+      quad("_:b1", "https://github.com/dbcls/grasp/ns/iri", subject),
+      quad("_:b1", "https://github.com/dbcls/grasp/ns/id", '"subject"'),
+    ]
+    const threshold = 5;
+    const sparqlClient = getTestSparqlClient(triples, threshold);
+
+    it("should not throw", async () => {
+      expect(await fetchResultsUntilThreshold(sparqlClient,"SELECT * WHERE { ?s ?p ?o }", threshold)).not.toThrow();
+    });
+
+    it("should return stream", async () => {
+      const bindingsStream = await fetchResultsUntilThreshold(sparqlClient,"SELECT * WHERE { ?s ?p ?o }", threshold)
+
+      const actual: Array<Quad> = []
+      bindingsStream.on('data', (q: Quad) => {
+        actual.push(q)
+      })
+      bindingsStream.on('end', () => {
+        expect(actual.length).toEqual(triples.length)
+      })
+    })
+  })
 
   describe("buildEntry", () => {
     describe("called with values", () => {
