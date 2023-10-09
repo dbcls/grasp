@@ -335,9 +335,15 @@ export default class Resource {
   ): Promise<Array<ResourceEntry | null>> {
     const entries = await this.fetch({ iri: iris }, opts);
     // join entries
-    return iris.map(
-      (iri) => entries.find((entry) => entry.iri === iri) || null
-    );
+    const entryMap = new Map(); // Create an object to store entries by their IRIs
+  
+    // Populate entryMap with entries
+    entries.forEach((entry) => {
+      entryMap.set(entry.iri, entry);
+    });
+
+    // Map IRIs to entries from entryMap or return null if not found
+    return iris.map((iri) => entryMap.get(iri) || null);
   }
 
   get isRootType(): boolean {
