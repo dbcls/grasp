@@ -11,8 +11,12 @@ import Endpoint from "sparql-http-client/Endpoint.js";
 import { Readable } from "stream";
 import * as url from 'url';
 const dirname = url.fileURLToPath(new URL('.', import.meta.url));
+
+export function getTestFile(path: string): string {
+  return fs.readFileSync(join(dirname, path), { encoding: "utf-8" });
+}
 export function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
-  const schema = fs.readFileSync(join(dirname, path), { encoding: "utf-8" });
+  const schema = getTestFile(path);
   return parse(schema).definitions.filter(
     (def): def is ObjectTypeDefinitionNode => {
       return def.kind === "ObjectTypeDefinition";

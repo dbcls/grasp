@@ -2,22 +2,22 @@ import {
   buildEntry,
   default as Resource,
   ResourceEntry,
+  handlebars
 } from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
 import { Parser } from "sparqljs";
-import Handlebars from "handlebars";
 import {
   getTestResource,
   getTestResources,
   compileEmptyTemplate,
   getTestSparqlClient,
+  getTestFile,
 } from "./test-helpers.js";
 import type { Quad } from "@rdfjs/types";
 // @ts-ignore
 import quad from "rdf-quad";
 import { Kind } from "graphql";
 
-const handlebars = Handlebars.create();
 const parser = new Parser();
 
 function expectTemplatesToMatch(expected: string, actual: Resource) {
@@ -48,6 +48,17 @@ describe("resource", () => {
       });
     });
   });
+
+  describe("creates correct templates", () => {
+    const template = getTestFile("assets/queries/template.sparql")
+
+    it("should compile correct template", async () => {
+      const actual = handlebars.compile(template, { noEscape: true })({iri: 'http://example.org/test'})
+      const expected = getTestFile("assets/queries/expected-iri.sparql")
+      return expectQueriesToMatch(expected, actual);
+    });
+  });
+
   describe("buildFromTypeDefinition", () => {
     describe("with missing docs", () => {
       it("should throw error", async () => {

@@ -26,9 +26,8 @@ export type ResourceEntry = Record<string, any>;
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
 const DEFAULT_TTL = 1000 * 60 * 1;
-
 // Create handlebars compiler
-const handlebars = Handlebars.create();
+export const handlebars = Handlebars.create();
 // Register handlebars helpers
 helpers(['comparison', 'string', 'object'], {handlebars})
 handlebars.registerHelper("as-iriref", ntriplesIri);
