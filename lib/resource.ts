@@ -12,7 +12,6 @@ import {
   hasDirective,
   getDirective,
   getDirectiveArgumentValue,
-  join,
   ntriplesIri,
   ntriplesLiteral,
 } from "./utils.js";
@@ -20,6 +19,7 @@ import SparqlClient from "sparql-http-client";
 import { LRUCache } from "lru-cache";
 import logger from "./logger.js";
 import { Dictionary } from "lodash";
+import helpers from "helpers-for-handlebars";
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
@@ -29,7 +29,8 @@ const DEFAULT_TTL = 1000 * 60 * 1;
 
 // Create handlebars compiler
 const handlebars = Handlebars.create();
-handlebars.registerHelper("join", join);
+// Register handlebars helpers
+helpers(['comparison', 'string', 'object'], {handlebars})
 handlebars.registerHelper("as-iriref", ntriplesIri);
 handlebars.registerHelper("as-string", ntriplesLiteral);
 
