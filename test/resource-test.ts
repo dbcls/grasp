@@ -49,13 +49,23 @@ describe("resource", () => {
     });
   });
 
-  describe("creates correct templates", () => {
+  describe("with valid templates", () => {
     const template = getTestFile("assets/queries/template.sparql")
 
     it("should compile correct template", async () => {
       const actual = handlebars.compile(template, { noEscape: true })({iri: 'http://example.org/test'})
       const expected = getTestFile("assets/queries/expected-iri.sparql")
       return expectQueriesToMatch(expected, actual);
+    });
+  });
+
+  describe("with invalid template", () => {
+    const template = getTestFile("assets/queries/template-invalid.sparql")
+
+    it("should throw", () => {
+      expect(
+        handlebars.compile(template, { noEscape: true })
+      ).toThrow()
     });
   });
 

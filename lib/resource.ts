@@ -29,7 +29,7 @@ const DEFAULT_TTL = 1000 * 60 * 1;
 // Create handlebars compiler
 export const handlebars = Handlebars.create();
 // Register handlebars helpers
-helpers(['comparison', 'string', 'object'], {handlebars})
+helpers(['array', 'comparison', 'string', 'object'], {handlebars})
 handlebars.registerHelper("as-iriref", ntriplesIri);
 handlebars.registerHelper("as-string", ntriplesLiteral);
 
