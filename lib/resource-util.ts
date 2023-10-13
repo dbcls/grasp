@@ -148,16 +148,15 @@ export async function fetchBindingsUntilThreshold(
     })
     bindingsStream.on('end', async () => {
       if (count === threshold) {
-        // Emit new results
-        offset += threshold
+        const newOffset = offset + threshold
         // Alter query
         const alteredQuery = `${sparqlQuery} 
-                    OFFSET ${offset}
+                    OFFSET ${newOffset}
                     LIMIT ${threshold}`
         // Repeat the process
-        fetchBindings(alteredQuery, offset)
+        fetchBindings(alteredQuery, newOffset)
       } else {
-        // If fewer than threshold results are returned, end the stream
+        // If fewer or more than threshold results are returned, end the stream
         reader.push(null)
       }
     })
