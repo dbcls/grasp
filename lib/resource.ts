@@ -13,12 +13,13 @@ import {
 import SparqlClient from "sparql-http-client";
 import { LRUCache } from "lru-cache";
 import logger from "./logger.js";
-import { buildEntry, fetchResultsUntilThreshold, groupBindingsStream } from './resource-util.js'
+import { buildEntry, fetchBindingsUntilThreshold, groupBindingsStream } from './resource-util.js'
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
 
 const DEFAULT_TTL = 1000 * 60 * 1;
+const RESULT_LIMIT = Number(process.env.ENDPOINT_RESULT_LIMIT) || 10000;
 
 // Create handlebars compiler
 const handlebars = Handlebars.create();
@@ -195,10 +196,10 @@ export default class Resource {
     }
 
     try {
-      const bindingsStream = await fetchResultsUntilThreshold(
+      const bindingsStream = await fetchBindingsUntilThreshold(
         this.sparqlClient,
         sparqlQuery, 
-        5,
+        RESULT_LIMIT,
         {
           operation: "postUrlencoded",
           headers: opts?.proxyHeaders

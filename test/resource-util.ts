@@ -35,18 +35,21 @@ describe("fetchResultsUntilThreshold", () => {
     const sparqlClient = getTestSparqlClient(triples, threshold)
 
     it("should not throw", async () => {
-        expect(await fetchResultsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)).not.toThrow()
+        await expect(await fetchResultsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)).resolves.not.toThrow()
     })
 
-    it("should return stream", async () => {
-        const bindingsStream = await fetchResultsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
-
+    it("should return stream", done => {
         const actual: Array<Quad> = []
-        bindingsStream.on('data', (q: Quad) => {
-            actual.push(q)
-        })
-        bindingsStream.on('end', () => {
-            expect(actual.length).toEqual(triples.length)
+        fetchResultsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
+        .then(bindingsStream => {
+            bindingsStream.on('data', (q: Quad) => {
+                actual.push(q)
+            })
+            bindingsStream.on('end', () => {
+                console.log(triples)
+                expect(actual.length).toEqual(triples.length)
+                done()
+            })
         })
     })
 })

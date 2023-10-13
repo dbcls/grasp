@@ -63,10 +63,13 @@ export function getTestSparqlClient(quads: Quad[], threshold: number = 0):Sparql
           if (offsetValue >= quads.length) {
             return Readable.from([])
           }
-
-          return Readable.from(quads.slice(offsetValue,offsetValue + limitValue))
+          const results = quads.slice(offsetValue,offsetValue + limitValue)
+          console.log('returning %s to %s: %s triples',offsetValue,offsetValue + limitValue,results.length )
+          return Readable.from(results)
         } else if (threshold > 0) {
-          return Readable.from(quads.slice(0, threshold))
+          const results = quads.slice(0, threshold)
+          console.log('returning %s to %s: %s triples',0,threshold,results.length )
+          return Readable.from(results)
         }
         return Readable.from(quads)
       }, 
