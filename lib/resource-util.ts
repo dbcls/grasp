@@ -164,9 +164,9 @@ export async function fetchBindingsUntilThreshold(
   // Implement the logic to fetch and emit results here
   try {
     fetchBindings(sparqlQuery)
-
   } catch (error) {
     reader.emit("error", error)
+    throw error
   }
   return reader
 }
