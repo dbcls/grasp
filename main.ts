@@ -5,7 +5,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
 import { ApolloServerPluginLandingPageProductionDefault } from '@apollo/server/plugin/landingPage/default'
 import cors from 'cors'
 import parser from 'body-parser'
-
+import fetch from 'node-fetch'
 import DataLoader from "dataloader"
 import {transform,isEqual} from "lodash-es"
 
@@ -21,6 +21,7 @@ import {
 } from "./lib/utils.js"
 import ConfigLoader from "./lib/config-loader.js"
 import logger from "./lib/logger.js"
+import { GraphQLError } from "graphql"
 
 type ResourceResolver = (
   parent: ResourceEntry,
@@ -38,15 +39,12 @@ const port = process.env.PORT || 4000
 const path = process.env.ROOT_PATH || "/"
 const maxBatchSize = Number(process.env.MAX_BATCH_SIZE || Infinity)
 const resourcesDir = process.env.RESOURCES_DIR || "./resources"
-const servicesFile = process.env.SERVICES_FILE
 
 // Load services and query templates from file
 const templateIndex = await ConfigLoader.loadTemplateIndexFromDirectory(
   resourcesDir
 )
-const serviceIndex = servicesFile
-  ? await ConfigLoader.loadServiceIndexFromFile(servicesFile)
-  : undefined
+const serviceIndex = ConfigLoader.loadServiceIndexFromEnv()
 
 // Load schema from folder
 const loader = await SchemaLoader.loadFromDirectory(resourcesDir)
@@ -193,7 +191,7 @@ const server = new ApolloServer<Context>({
 })
 
 await server.start()
-
+const authResponseCode = process.env['AUTH_RESPONSE_CODE'] ? Number(process.env['AUTH_RESPONSE_CODE']) : 401
 app.use(
   path,
   cors<cors.CorsRequest>(),
@@ -201,6 +199,17 @@ app.use(
   expressMiddleware(server, {
     context: async (ctx) => {
       const proxyHeaders = {"Authorization":ctx.req.get("Authorization") || ""}
+      if (process.env['AUTH_URL']) {
+        const response = await fetch(process.env["AUTH_URL"], {method: "HEAD", headers: proxyHeaders});
+        if (response.status === authResponseCode) {
+          throw new GraphQLError('User is not authenticated', {
+            extensions: {
+              code: 'UNAUTHENTICATED',
+              http: { status: 401 },
+            },
+          });
+        }
+      }
       return {
         proxyHeaders ,
         loaders: transform(
@@ -228,7 +237,6 @@ app.listen(port, () => {
   logger.info(
     {
       "Resources directory": resourcesDir,
-      "Services file": servicesFile || "none",
       "Dataloader max. batch size": maxBatchSize,
       "SPARQL cache TTL": process.env.QUERY_CACHE_TTL,
     },
