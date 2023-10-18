@@ -304,16 +304,16 @@ export class UnionResource implements IResource {
     return false
   }
 
-  static buildFromTypeDefinition(resourceIndex: ResourceIndex,
+  static buildFromTypeDefinition(resources: Resource[],
     def: UnionTypeDefinitionNode): UnionResource {
-    const resources = (def.types || []).map(type => {
-      const resource = resourceIndex.lookup(type.name.value)
+    const unionResources = (def.types || []).map(type => {
+      const resource = resources.find(resource => resource.name === type.name.value)
       if (!resource) {
         throw new Error(`Union type ${def.name.value} refers to unknown resource ${type.name.value}.`)
       }
       return resource
     })
-    return new UnionResource(resources, def)
+    return new UnionResource(unionResources, def)
   }
 
   async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<(ResourceEntry | null)[]> {

@@ -3,15 +3,16 @@ import SparqlClient from "sparql-http-client";
 
 import Resource, { IResource, UnionResource } from './resource.js';
 import { unwrapCompositeType } from './utils.js';
-
+import logger from "./logger.js"
 
 export default class ResourceIndex {
   //TODO: split into root array and rest array for quicker lookup
   all: IResource[];
 
   constructor(resourceTypeDefs: ReadonlyArray<ObjectTypeDefinitionNode>, unionTypeDefs: ReadonlyArray<UnionTypeDefinitionNode> = [], serviceIndex?: Map<string, SparqlClient>, templateIndex?:Map<string, string>) {
-    this.all = resourceTypeDefs.map(def => Resource.buildFromTypeDefinition(this, def, serviceIndex, templateIndex));
-    this.all.push.apply(unionTypeDefs.map(def => UnionResource.buildFromTypeDefinition(this,def)))
+    const resources: Resource[] =  resourceTypeDefs.map(def => Resource.buildFromTypeDefinition(this, def, serviceIndex, templateIndex));
+    const unionResources: UnionResource[] = unionTypeDefs.map(def => UnionResource.buildFromTypeDefinition(resources,def))
+    this.all = [...resources, ...unionResources ]
   }
   
   /**

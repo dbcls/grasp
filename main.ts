@@ -10,7 +10,7 @@ import DataLoader from "dataloader"
 import {transform,isEqual} from "lodash-es"
 
 
-import { IResource, ResourceEntry } from "./lib/resource.js"
+import { IResource, ResourceEntry, UnionResource } from "./lib/resource.js"
 import ResourceIndex from "./lib/resource-index.js"
 import SchemaLoader from "./lib/schema-loader.js"
 import {
@@ -56,6 +56,7 @@ const resources = new ResourceIndex(
   serviceIndex,
   templateIndex
 )
+logger.debug(`Resource index has entries for ${resources.all.map(r => r.name)}`)
 
 // Setup query resolvers
 const queryResolvers: Record<string, ResourceResolver> = {};
@@ -126,6 +127,10 @@ resources.all.forEach((resource) => {
       logger.debug(`Looking up resource for ${resourceName} (field resolver): ${field.kind}`)
       const resource = resources.lookup(resourceName)
 
+      if (resource instanceof UnionResource){
+        logger.debug('hello!')
+      }
+
       if (!resource || resource.isEmbeddedType) {
         return value
       }
@@ -158,6 +163,7 @@ const rootResolvers = {
   Query: queryResolvers,
   ...resourceResolvers,
 }
+logger.debug(resourceResolvers)
 
 // Log application crashes
 process.on('unhandledRejection', (reason, p) => {
