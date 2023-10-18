@@ -2,22 +2,22 @@ import {
   buildEntry,
   default as Resource,
   ResourceEntry,
+  handlebars
 } from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
 import { Parser } from "sparqljs";
-import Handlebars from "handlebars";
 import {
   getTestResource,
   getTestResources,
   compileEmptyTemplate,
   getTestSparqlClient,
+  getTestFile,
 } from "./test-helpers.js";
 import type { Quad } from "@rdfjs/types";
 // @ts-ignore
 import quad from "rdf-quad";
 import { Kind } from "graphql";
 
-const handlebars = Handlebars.create();
 const parser = new Parser();
 
 function expectTemplatesToMatch(expected: string, actual: Resource) {
@@ -32,6 +32,50 @@ function expectQueriesToMatch(expected: string, actual: string) {
 }
 
 describe("resource", () => {
+  describe("'s handlebars", () => {
+    describe("with valid template", () => {
+      const template = getTestFile("assets/queries/template.sparql")
+
+      it("should compile correct template with no arguments", async () => {
+        const actual = handlebars.compile(template, { noEscape: true })({})
+        const expected = getTestFile("assets/queries/expected.sparql")
+        return expectQueriesToMatch(expected, actual);
+      });
+      
+      it("should compile correct template with iri argument", async () => {
+        const actual = handlebars.compile(template, { noEscape: true })({iri: 'http://example.org/test'})
+        const expected = getTestFile("assets/queries/expected-iri.sparql")
+        return expectQueriesToMatch(expected, actual);
+      });
+
+      it("should compile correct template with id argument", async () => {
+        const actual = handlebars.compile(template, { noEscape: true })({id: 'test'})
+        const expected = getTestFile("assets/queries/expected-id.sparql")
+        return expectQueriesToMatch(expected, actual);
+      });
+    });
+    describe("with template containing eq helper", () => {
+      const template = getTestFile("assets/queries/template-eq.sparql")
+      const actual = handlebars.compile(template, { noEscape: true })({iri: 'http://example.org/test'})
+      const expected = getTestFile("assets/queries/expected-iri.sparql")
+      
+      it("should compile correct template", async () => {
+        return expectQueriesToMatch(expected, actual);
+      });
+    });
+
+    describe("with invalid template", () => {
+      const template = getTestFile("assets/queries/template-invalid.sparql")
+  
+      it("should throw", () => {
+        expect(
+          handlebars.compile(template, { noEscape: true })
+        ).toThrow()
+      });
+    });
+  })
+
+
   describe("constructed", () => {
     describe("with valid arguments", () => {
       it("should not throw error", async () => {
@@ -48,6 +92,7 @@ describe("resource", () => {
       });
     });
   });
+
   describe("buildFromTypeDefinition", () => {
     describe("with missing docs", () => {
       it("should throw error", async () => {

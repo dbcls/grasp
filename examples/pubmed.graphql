@@ -24,7 +24,7 @@ WHERE
   { ?iri prism:publicationName ?publicationName . }
   OPTIONAL { ?iri dcterms:identifier ?id . }
 
-  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
+  {{#if iri}}VALUES ?iri { {{join (as-iriref iri) " "}} }{{/if}}
 
   {{#if id}}
     VALUES ?iri {

@@ -9,7 +9,6 @@ import {
   valueToString,
   ntriplesLiteral,
   ntriplesIri,
-  join,
 } from "../lib/utils.js";
 import {
   ObjectTypeDefinitionNode,
@@ -381,24 +380,6 @@ describe("utils", () => {
 
     it("should return empty array if array is empty", () => {
       return expect(ntriplesIri([])).toStrictEqual([]);
-    });
-  });
-
-  describe("join", () => {
-    it("should return same string from string", () => {
-      return expect(join(",", "test")).toBe("test");
-    });
-
-    it("should return same string from single string array", () => {
-      return expect(join(",", ["test"])).toBe("test");
-    });
-
-    it("should return joined string from array of strings", () => {
-      return expect(join(",", ["test1", "test2"])).toBe("test1,test2");
-    });
-
-    it("should return empty string if array is empty", () => {
-      return expect(join(",", [])).toBe("");
     });
   });
 });

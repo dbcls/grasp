@@ -1,0 +1,13 @@
+PREFIX : <https://github.com/dbcls/grasp/ns/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+CONSTRUCT {
+?iri :iri ?iri .
+?iri :id ?id .
+}
+WHERE
+{
+    { ?iri dcterms:identifier ?id }
+
+    {{#eq iri 'http://example.org/test'}}VALUES ?iri { {{join (as-iriref iri) " "}} }{{/eq}}
+}
