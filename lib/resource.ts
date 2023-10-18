@@ -317,17 +317,13 @@ export class UnionResource implements IResource {
   }
 
   async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<(ResourceEntry | null)[]> {
-    const union: ResourceEntry[] = []
-    for (const resource of this.resources) {
-      union.push(resource.fetchByIRIs(iris, opts))
-    }
-    return union
+    logger.debug(`Fetching entries by IRIs for union type ${this.name}`)
+    const promises = this.resources.map(resource => resource.fetchByIRIs(iris, opts));
+    return (await Promise.all(promises)).flat(1);
   }
   async fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<ResourceEntry[]> {
-    const union: ResourceEntry[] = []
-    for (const resource of this.resources) {
-      union.push(resource.fetch(args, opts))
-    }
-    return union
+    logger.debug(`Fetching entries for union type ${this.name}`)
+    const promises = this.resources.map(resource => resource.fetch(args, opts));
+    return (await Promise.all(promises)).flat(1);
   }
 }
