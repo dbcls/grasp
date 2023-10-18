@@ -151,12 +151,15 @@ type Concept @grasp(endpoint: "https://integbio.jp/rdf/sparql", sparql: "Concept
 
 When a SPARQL endpoint requires more details than a simple URL,
 for instance, when the endpoint requires security credentials,
-the endpoint parameters can be configured in a `services.json` file.
+the endpoint parameters can be configured using a `services.json` file or by setting environment variables.
+
+#### services.json file
+
 Set the `SERVICES_FILE` environment variable, so Grasp can locate the configuration file.
 
 ```json
 {
-    "dbpedia-sparql": {
+    "dbpedia": {
         "url": "http://dbpedia.org/sparql/",
         "graph": "http://dbpedia.org",
         "user": "",
@@ -165,6 +168,18 @@ Set the `SERVICES_FILE` environment variable, so Grasp can locate the configurat
     },
 }
 ```
+
+#### Environment variables
+
+Instead of using a services.json file, you can pass variables as well. The above example can be written using the following environment variables:
+
+```
+GRASP_dbpedia_url=http://dbpedia.org/sparql/
+GRASP_dbpedia_graph=http://dbpedia.org
+```
+
+#### Parameters
+
 Possible parameters:
 - `url`: the url of the endpoint
 - `graph`: the named graph to query
