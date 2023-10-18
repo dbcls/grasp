@@ -9,14 +9,14 @@ import {
   unwrapCompositeType,
 } from "./utils.js"
 import { Dictionary } from "lodash"
-import Resource, { ResourceEntry } from './resource.js'
+import { IResource, ResourceEntry } from './resource.js'
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//
 
 export function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
   subject: string,
-  resource: Resource,
+  resource: IResource,
   resources: Resources
 ): ResourceEntry {
   const entry: ResourceEntry = {}
@@ -39,7 +39,7 @@ export function buildEntry(
   );
 
   // Resolve any non-scalar types
-  (resource.definition.fields || []).forEach((field) => {
+  resource.fields.forEach((field) => {
     const type = field.type
     const name = field.name.value
     const values = pValues[name] || []

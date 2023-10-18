@@ -1,5 +1,5 @@
 import Handlebars from "handlebars";
-import { ObjectTypeDefinitionNode } from "graphql";
+import { FieldDefinitionNode, ObjectTypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
 
 import Resources from "./resources.js";
 import {
@@ -34,7 +34,19 @@ const options = {
 
 const cache = new LRUCache<string, ResourceEntry[]>(options);
 
-export default class Resource {
+export interface IResource {
+  name: string
+  fields: ReadonlyArray<FieldDefinitionNode>
+  isEmbeddedType : boolean
+  isRootType :  boolean
+  fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<ResourceEntry[]>
+  fetchByIRIs(
+    iris: ReadonlyArray<string>,
+    opts?:{proxyHeaders?:{[key:string]:string}}
+  ): Promise<Array<ResourceEntry | null>>
+}
+
+export default class Resource implements IResource {
   resources: Resources;
   definition: ObjectTypeDefinitionNode;
   sparqlClient?: SparqlClient;
@@ -260,4 +272,13 @@ export default class Resource {
   get isEmbeddedType(): boolean {
     return !this.isRootType;
   }
+
+  get fields(): ReadonlyArray<FieldDefinitionNode> {
+    return this.definition.fields || []
+  }
+
+  get name(): string {
+    return this.definition.name.value
+  }
 }
+

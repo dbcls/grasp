@@ -1,22 +1,24 @@
-import { ObjectTypeDefinitionNode, TypeNode } from 'graphql';
+import { ObjectTypeDefinitionNode, TypeNode, UnionTypeDefinitionNode } from 'graphql';
 import SparqlClient from "sparql-http-client";
 
-import Resource from './resource.js';
+import Resource, { IResource } from './resource.js';
 import { unwrapCompositeType } from './utils.js';
+import logger from "./logger.js";
 
 
 export default class Resources {
   //TODO: split into root array and rest array for quicker lookup
-  all: Resource[];
+  all: IResource[];
 
-  constructor(resourceTypeDefs: ObjectTypeDefinitionNode[], serviceIndex?: Map<string, SparqlClient>, templateIndex?:Map<string, string>) {
+  constructor(resourceTypeDefs: ReadonlyArray<ObjectTypeDefinitionNode>, unionTypeDefs: ReadonlyArray<UnionTypeDefinitionNode> = [], serviceIndex?: Map<string, SparqlClient>, templateIndex?:Map<string, string>) {
     this.all = resourceTypeDefs.map(def => Resource.buildFromTypeDefinition(this, def, serviceIndex, templateIndex));
+    //this.all.push(unionTypeDefs.map(def => UnionResource.buildFromUnionTypeDefinition(this,def)))
   }
   
   /**
    * Getter for all root resources
    */
-  get root(): Resource[] {
+  get root(): IResource[] {
     return this.all.filter(resource => resource.isRootType)
   }
 
@@ -25,8 +27,8 @@ export default class Resources {
    * @param name 
    * @returns 
    */
-  lookup(name: string): Resource | null {
-    return this.all.find(resource => resource.definition.name.value === name) || null;
+  lookup(name: string): IResource | null {
+    return this.all.find(resource => resource.name === name) || null;
   }
 
   /**
@@ -37,6 +39,6 @@ export default class Resources {
   isUserDefined(type: TypeNode): boolean {
     const unwrapped = unwrapCompositeType(type);
 
-    return this.all.some(resource => resource.definition.name.value === unwrapped.name.value);
+    return this.all.some(resource => resource.name === unwrapped.name.value);
   }
 }

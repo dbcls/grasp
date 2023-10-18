@@ -10,7 +10,7 @@ import DataLoader from "dataloader"
 import {transform,isEqual} from "lodash-es"
 
 
-import Resource, { ResourceEntry } from "./lib/resource.js"
+import { IResource, ResourceEntry } from "./lib/resource.js"
 import Resources from "./lib/resources.js"
 import SchemaLoader from "./lib/schema-loader.js"
 import {
@@ -31,7 +31,7 @@ type ResourceResolver = (
 
 interface Context {
   proxyHeaders: {[key:string]:string},
-  loaders: Map<Resource, DataLoader<string, ResourceEntry | null>>
+  loaders: Map<IResource, DataLoader<string, ResourceEntry | null>>
 }
 
 // Load config
@@ -52,6 +52,7 @@ const loader = await SchemaLoader.loadFromDirectory(resourcesDir)
 // Load all resource definitions
 const resources = new Resources(
   loader.resourceTypeDefs,
+  loader.unionTypeDefs,
   serviceIndex,
   templateIndex
 )
@@ -67,6 +68,7 @@ const queryResolvers: Record<string, ResourceResolver> = {};
   ) => {
     
     const resourceName = unwrapCompositeType(field.type).name.value
+    logger.debug(`Looking up resource for ${resourceName} (query resolver): ${field.kind}`)
     const resource = resources.lookup(resourceName)
 
     if (!resource) {
@@ -78,7 +80,7 @@ const queryResolvers: Record<string, ResourceResolver> = {};
 
       if (!loader) {
         throw new Error(
-          `missing resource loader for ${resource.definition.name.value}`
+          `missing resource loader for ${resource.name}`
         )
       }
 
@@ -95,11 +97,11 @@ const resourceResolvers: Record<string, Record<string, ResourceResolver>> = {}
 resources.all.forEach((resource) => {
   //Initalize empty field resolver
   const fieldResolvers: Record<string, ResourceResolver> = (resourceResolvers[
-    resource.definition.name.value
+    resource.name
   ] = {});
 
   //Iterate over every field definition
-  (resource.definition.fields || []).forEach((field) => {
+  resource.fields.forEach((field) => {
     const type = field.type
     const name = field.name.value
 
@@ -110,7 +112,7 @@ resources.all.forEach((resource) => {
       context: Context
     ) => {
       // get the parent of this field
-      const value = _parent[name]
+      const value: ResourceEntry = _parent[name]
 
       // If the parent exists, make sure it's an array
       if (!value) {
@@ -118,8 +120,10 @@ resources.all.forEach((resource) => {
       }
 
       // Get the underlying type
-      const resourceName = unwrapCompositeType(type).name.value
+      const resourceType = unwrapCompositeType(type)
+      const resourceName = resourceType.name.value
       // Check whether we can find a resource connected to this type
+      logger.debug(`Looking up resource for ${resourceName} (field resolver): ${field.kind}`)
       const resource = resources.lookup(resourceName)
 
       if (!resource || resource.isEmbeddedType) {
@@ -130,7 +134,7 @@ resources.all.forEach((resource) => {
         const loader = context.loaders.get(resource)
         if (!loader) {
           throw new Error(
-            `missing resource loader for ${resource.definition.name.value}`
+            `missing resource loader for ${resource.name}`
           )
         }
         const entry = await loader.loadMany(ensureArray(value))
@@ -226,7 +230,7 @@ app.use(
               )
             )
           },
-          new Map<Resource, DataLoader<string, ResourceEntry | null>>()
+          new Map<IResource, DataLoader<string, ResourceEntry | null>>()
         ),
       }
     },
