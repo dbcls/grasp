@@ -88,7 +88,8 @@ const queryResolvers: Record<string, ResourceResolver> = {};
       const iris = ensureArray(args.iri)
       return oneOrMany(await loader.loadMany(iris), !isListType(field.type))
     }
-    return oneOrMany(await resource.fetch(args, {proxyHeaders:context.proxyHeaders}), !isListType(field.type))
+    const entries = (await resource.fetch(args, {proxyHeaders:context.proxyHeaders})).values()
+    return oneOrMany(Array.from(entries), !isListType(field.type))
   }
 })
 
@@ -128,7 +129,7 @@ resources.all.forEach((resource) => {
       const resource = resources.lookup(resourceName)
 
       if (resource instanceof UnionResource){
-        logger.debug('hello!')
+        logger.debug('Reached UnionResource!')
       }
 
       if (!resource || resource.isEmbeddedType) {
@@ -150,8 +151,9 @@ resources.all.forEach((resource) => {
         const argIRIs = ensureArray(args.iri)
         const values = ensureArray(value)
         const allIRIs = Array.from(new Set([...values, ...argIRIs]))
+        const entries = (await resource.fetch({ ...args, ...{ iri: allIRIs } },{proxyHeaders:context.proxyHeaders})).values()
         return oneOrMany(
-          await resource.fetch({ ...args, ...{ iri: allIRIs } },{proxyHeaders:context.proxyHeaders}),
+          Array.from(entries),
           !isListType(type)
         )
       }
@@ -163,7 +165,6 @@ const rootResolvers = {
   Query: queryResolvers,
   ...resourceResolvers,
 }
-logger.debug(resourceResolvers)
 
 // Log application crashes
 process.on('unhandledRejection', (reason, p) => {
@@ -230,7 +231,8 @@ app.use(
               // Use DataLoader to pre-load and cache data from sparql endpoint
               new DataLoader(
                 async (iris: ReadonlyArray<string>) => {
-                  return resource.fetchByIRIs(iris, {proxyHeaders})
+                  const values = (await resource.fetchByIRIs(iris, {proxyHeaders})).values()
+                  return Array.from(values)
                 },
                 { maxBatchSize }
               )

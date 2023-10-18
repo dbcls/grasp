@@ -274,13 +274,14 @@ describe("resource", () => {
           test: false,
         },
       ];
-
-        expect(await res.fetch({},{proxyHeaders:{}})).toStrictEqual(expected)
+        const map = await res.fetch({},{proxyHeaders:{}})
+        expect(Array.from(map.values())).toStrictEqual(expected)
   
     });
 
     it("should not return properties not in graphql schema", async () => {
-      return expect((await res.fetch({},{proxyHeaders:{}}))[0]).not.toHaveProperty("obsolete");
+      const [firstValue] = await res.fetch({},{proxyHeaders:{}})
+      return expect(firstValue).not.toHaveProperty("obsolete");
     });
 
     it("should not return RDF literal", async () => {
@@ -305,30 +306,33 @@ describe("resource", () => {
 
   describe("fetchByIRIs", () => {
     const res = getTestResource("assets/with-docs.graphql");
-    res.fetch = async (args) => [
-      {
+    res.fetch = async (args) => new Map([
+      ["http://example.org/subject1",{
         id: "subject1",
         iri: "http://example.org/subject1",
-      },
-      {
+      }],
+      ["http://example.org/subject2",{
         id: "subject2",
         iri: "http://example.org/subject2",
-      },
-    ];
+      }],
+    ]);
 
     it("should return empty array when iris are empty", async () => {
-      return expect(await res.fetchByIRIs([],{proxyHeaders:{}})).toStrictEqual([]);
+      const map = await res.fetchByIRIs([],{proxyHeaders:{}})
+      return expect(Array.from(map.values())).toStrictEqual([]);
     });
 
     it("should return null when iri is not found", async () => {
+      const map = await res.fetchByIRIs(["http://example.org/subject3"],{proxyHeaders:{}})
       return expect(
-        await res.fetchByIRIs(["http://example.org/subject3"],{proxyHeaders:{}})
+        Array.from(map.values())
       ).toStrictEqual([null]);
     });
 
     it("should return matching entry when iri is given", async () => {
+      const map = await res.fetchByIRIs(["http://example.org/subject1"],{proxyHeaders:{}})
       return expect(
-        await res.fetchByIRIs(["http://example.org/subject1"],{proxyHeaders:{}})
+        Array.from(map.values())
       ).toStrictEqual([
         {
           id: "subject1",

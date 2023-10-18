@@ -32,18 +32,18 @@ const options = {
   ttl: parseInt(process.env.CACHE_TTL || `${DEFAULT_TTL}`, 10),
 };
 
-const cache = new LRUCache<string, ResourceEntry[]>(options);
+const cache = new LRUCache<string, Map<string, ResourceEntry>>(options);
 
 export interface IResource {
   name: string
   fields: ReadonlyArray<FieldDefinitionNode>
   isEmbeddedType : boolean
   isRootType :  boolean
-  fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<ResourceEntry[]>
+  fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<Map<string,ResourceEntry>>
   fetchByIRIs(
     iris: ReadonlyArray<string>,
     opts?:{proxyHeaders?:{[key:string]:string}}
-  ): Promise<Array<ResourceEntry | null>>
+  ): Promise<Map<string,ResourceEntry | null>>
 }
 
 export default class Resource implements IResource {
@@ -185,7 +185,7 @@ export default class Resource implements IResource {
    * @param args
    * @returns
    */
-  async fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<ResourceEntry[]> {
+  async fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<Map<string, ResourceEntry>> {
     if (!this.queryTemplate || !this.sparqlClient) {
       throw new Error(
         "query template and endpoint should be specified in order to query"
@@ -193,7 +193,7 @@ export default class Resource implements IResource {
     }
     const sparqlQuery = this.queryTemplate(args);
 
-    let entries: ResourceEntry[] | undefined = cache.get(sparqlQuery);
+    let entries: Map<string, ResourceEntry> | undefined = cache.get(sparqlQuery);
     logger.info(
       {
         cache: entries !== undefined,
@@ -219,16 +219,16 @@ export default class Resource implements IResource {
         await groupBindingsStream(bindingsStream);
 
       // Collect the final list of entries from primaryBindings
-      entries = Object.entries(primaryBindingsGroupedBySubject).map(
+      entries = new Map(Object.entries(primaryBindingsGroupedBySubject).map(
         ([subject, _sBindings]) => {
-          return buildEntry(
+          return [subject, buildEntry(
             bindingsGroupedBySubject,
             subject,
             this,
             this.resources
-          );
+          )];
         }
-      );
+      ));
       cache.set(sparqlQuery, entries);
           logger.info(
             { cached: true, triples: Object.entries(primaryBindingsGroupedBySubject).length },
@@ -251,18 +251,10 @@ export default class Resource implements IResource {
   async fetchByIRIs(
     iris: ReadonlyArray<string>,
     opts?:{proxyHeaders?:{[key:string]:string}}
-  ): Promise<Array<ResourceEntry | null>> {
+  ): Promise<Map<string, ResourceEntry | null>> {
     const entries = await this.fetch({ iri: iris }, opts);
-    // join entries
-    const entryMap = new Map(); // Create an object to store entries by their IRIs
-  
-    // Populate entryMap with entries
-    entries.forEach((entry) => {
-      entryMap.set(entry.iri, entry);
-    });
-
     // Map IRIs to entries from entryMap or return null if not found
-    return iris.map((iri) => entryMap.get(iri) || null);
+    return new Map(iris.map((iri) => [iri, entries.get(iri) || null]));
   }
 
   get isRootType(): boolean {
@@ -316,14 +308,17 @@ export class UnionResource implements IResource {
     return new UnionResource(unionResources, def)
   }
 
-  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<(ResourceEntry | null)[]> {
+  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry | null>> {
     logger.debug(`Fetching entries by IRIs for union type ${this.name}`)
     const promises = this.resources.map(resource => resource.fetchByIRIs(iris, opts));
-    return (await Promise.all(promises)).flat(1);
+    const entryMaps = await Promise.all(promises)
+    return new Map(entryMaps.flatMap(entryMap => [...entryMap]))
   }
-  async fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<ResourceEntry[]> {
+
+  async fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry>> {
     logger.debug(`Fetching entries for union type ${this.name}`)
     const promises = this.resources.map(resource => resource.fetch(args, opts));
-    return (await Promise.all(promises)).flat(1);
+    const entryMaps = await Promise.all(promises)
+    return new Map(entryMaps.flatMap(entryMap => [...entryMap]))
   }
 }
