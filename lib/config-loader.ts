@@ -8,7 +8,7 @@ import logger from "./logger.js";
 interface Service {
   type: string;
   url: string;
-  graph: string;
+  graph?: string;
   user?: string;
   password?: string;
   token?: string;
@@ -46,7 +46,7 @@ export default class ConfigLoader {
         services = JSON.parse(jsonString)
       } 
       catch (e) {
-        console.log()
+        logger.error(e, `Unable to parse services file ${process.env.SERVICES_FILE}.`)
       }
     }
     
@@ -63,23 +63,27 @@ export default class ConfigLoader {
   static loadServiceIndexFromJson(
     services: { [key: string]: Service }
   ): Map<string, SparqlClient> {
+    const index = new Map()
 
-    return new Map(
-      Object.keys(services).map((name) => {
-        const s: Service = services[name];
-        logger.debug(`Added service ${name} to service index.`)
-        return [
-          name,
-          new SparqlClient({
-            endpointUrl: s.url,
-            user: s.user,
-            password: s.password,
-            headers: {
-              ...(s.token && { Authorization: `Bearer ${s.token}` })
-            }
-          }),
-        ];
-      })
-    );
+    for (const name in services) {
+      const s: Service = services[name]
+
+      if (!s.url) {
+        logger.warn(`Service ${name} was not added to service index; field 'url' is not set.`)
+        continue
+      }
+      
+      index.set(name, new SparqlClient({
+        endpointUrl: s.url,
+        user: s.user,
+        password: s.password,
+        headers: {
+          ...(s.token && { Authorization: `Bearer ${s.token}` })
+        }
+      }))
+      logger.debug(`Added service ${name} to service index.`)
+    }
+
+    return index
   }
 }
