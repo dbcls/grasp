@@ -6,15 +6,27 @@ const dirname = url.fileURLToPath(new URL('.', import.meta.url));
 describe("config-loader", () => {
   describe("loadServiceIndexFromFile", () => {
 
+    const OLD_ENV = process.env;
+
+    beforeEach(() => {
+      jest.resetModules() // Most important - it clears the cache
+      process.env = { ...OLD_ENV }; // Make a copy
+    });
+
+    afterAll(() => {
+      process.env = OLD_ENV; // Restore old environment
+    });
+
     describe("with empty string", () => {
       it("should throw", async () => {
-        return expect(ConfigLoader.loadServiceIndexFromFile("")).rejects.toThrow();
+        return expect(ConfigLoader.loadServiceIndex()).rejects.toThrow();
       });
     });
     describe("with empty json file", () => {
       const filePath = join(dirname, "assets/services-empty.json");
       it("should return empty index", async () => {
-        return expect(ConfigLoader.loadServiceIndexFromFile(filePath)).resolves.toEqual(new Map<string, SparqlClient>());
+        process.env.SERVICES_FILE = filePath
+        return expect(ConfigLoader.loadServiceIndex()).resolves.toEqual(new Map<string, SparqlClient>());
       });
     });
     describe("with a single service file", () => {
@@ -29,7 +41,8 @@ describe("config-loader", () => {
       ])
 
       it("should return an index with one SparqlClient", async () => {
-        return expect(ConfigLoader.loadServiceIndexFromFile(filePath)).resolves.toEqual(expected);
+        process.env.SERVICES_FILE = filePath
+        return expect(ConfigLoader.loadServiceIndex()).resolves.toEqual(expected);
       });
     });
   });

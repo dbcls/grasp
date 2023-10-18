@@ -44,7 +44,7 @@ const resourcesDir = process.env.RESOURCES_DIR || "./resources"
 const templateIndex = await ConfigLoader.loadTemplateIndexFromDirectory(
   resourcesDir
 )
-const serviceIndex = ConfigLoader.loadServiceIndexFromEnv()
+const serviceIndex = await ConfigLoader.loadServiceIndex()
 
 // Load schema from folder
 const loader = await SchemaLoader.loadFromDirectory(resourcesDir)
