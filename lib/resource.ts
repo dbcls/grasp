@@ -1,7 +1,7 @@
 import Handlebars from "handlebars";
 import { FieldDefinitionNode, ObjectTypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
 
-import Resources from "./resources.js";
+import ResourceIndex from "./resource-index.js";
 import {
   hasDirective,
   getDirective,
@@ -47,13 +47,13 @@ export interface IResource {
 }
 
 export default class Resource implements IResource {
-  resources: Resources;
+  resources: ResourceIndex;
   definition: ObjectTypeDefinitionNode;
   sparqlClient?: SparqlClient;
   queryTemplate: CompiledTemplate | null;
 
   constructor(
-    resources: Resources,
+    resources: ResourceIndex,
     definition: ObjectTypeDefinitionNode,
     sparqlClient?: SparqlClient,
     sparql?: string
@@ -74,7 +74,7 @@ export default class Resource implements IResource {
    * @returns
    */
   static buildFromTypeDefinition(
-    resources: Resources,
+    resources: ResourceIndex,
     def: ObjectTypeDefinitionNode,
     serviceIndex?: Map<string, SparqlClient>,
     templateIndex?: Map<string, string>
@@ -282,3 +282,52 @@ export default class Resource implements IResource {
   }
 }
 
+export class UnionResource implements IResource {
+  private resources: IResource[]
+  private definition: UnionTypeDefinitionNode
+  constructor(resources: IResource[], definition: UnionTypeDefinitionNode) {
+    this.resources = resources
+    this.definition = definition
+  }
+  get fields(): ReadonlyArray<FieldDefinitionNode> {
+    return []
+  }
+
+  get name(): string {
+    return this.definition.name.value
+  }
+
+  get isEmbeddedType(): boolean {
+    return false
+  }
+  get isRootType(): boolean {
+    return false
+  }
+
+  static buildFromTypeDefinition(resourceIndex: ResourceIndex,
+    def: UnionTypeDefinitionNode): UnionResource {
+    const resources = (def.types || []).map(type => {
+      const resource = resourceIndex.lookup(type.name.value)
+      if (!resource) {
+        throw new Error(`Union type ${def.name.value} refers to unknown resource ${type.name.value}.`)
+      }
+      return resource
+    })
+    return new UnionResource(resources, def)
+  }
+
+  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<(ResourceEntry | null)[]> {
+    const union: ResourceEntry[] = []
+    for (const resource of this.resources) {
+      union.push(resource.fetchByIRIs(iris, opts))
+    }
+    return union
+  }
+  async fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<ResourceEntry[]> {
+    const union: ResourceEntry[] = []
+    for (const resource of this.resources) {
+      union.push(resource.fetch(args, opts))
+    }
+    return union
+  }
+}

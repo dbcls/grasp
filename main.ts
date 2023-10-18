@@ -11,7 +11,7 @@ import {transform,isEqual} from "lodash-es"
 
 
 import { IResource, ResourceEntry } from "./lib/resource.js"
-import Resources from "./lib/resources.js"
+import ResourceIndex from "./lib/resource-index.js"
 import SchemaLoader from "./lib/schema-loader.js"
 import {
   isListType,
@@ -50,7 +50,7 @@ const serviceIndex = await ConfigLoader.loadServiceIndex()
 const loader = await SchemaLoader.loadFromDirectory(resourcesDir)
 
 // Load all resource definitions
-const resources = new Resources(
+const resources = new ResourceIndex(
   loader.resourceTypeDefs,
   loader.unionTypeDefs,
   serviceIndex,

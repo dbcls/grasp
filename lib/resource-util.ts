@@ -2,7 +2,7 @@ import type { Quad, Stream } from "@rdfjs/types"
 import { getTermRaw } from "rdf-literal"
 import transform from "lodash/transform.js"
 
-import Resources from "./resources.js"
+import ResourceIndex from "./resource-index.js"
 import {
   oneOrMany,
   isListType,
@@ -17,7 +17,7 @@ export function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
   subject: string,
   resource: IResource,
-  resources: Resources
+  resources: ResourceIndex
 ): ResourceEntry {
   const entry: ResourceEntry = {}
 
