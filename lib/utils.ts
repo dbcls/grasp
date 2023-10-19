@@ -4,7 +4,8 @@ import {
   ValueNode,
   ObjectTypeDefinitionNode,
   DirectiveNode,
-  Kind
+  Kind,
+  TypeDefinitionNode
 } from "graphql";
 
 export function isListType(type: TypeNode): boolean {
@@ -22,7 +23,7 @@ export function unwrapCompositeType(type: TypeNode): NamedTypeNode {
 }
 
 export function hasDirective(
-  def: ObjectTypeDefinitionNode,
+  def: TypeDefinitionNode,
   directiveName: string
 ): boolean {
   return (

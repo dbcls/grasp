@@ -1,5 +1,5 @@
 import Handlebars from "handlebars";
-import { FieldDefinitionNode, ObjectTypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
+import { FieldDefinitionNode, Kind, ObjectTypeDefinitionNode, TypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
 
 import ResourceIndex from "./resource-index.js";
 import {
@@ -46,9 +46,46 @@ export interface IResource {
   ): Promise<Map<string,ResourceEntry | null>>
 }
 
-export default class Resource implements IResource {
+abstract class BaseResource implements IResource {
+  
+  definition: TypeDefinitionNode
+
+  constructor(definition: TypeDefinitionNode) {
+    this.definition = definition
+  }
+  
+  get fields(): ReadonlyArray<FieldDefinitionNode> {
+    return (this.definition.kind === Kind.OBJECT_TYPE_DEFINITION && this.definition.fields) ?  this.definition.fields : []
+  }
+
+  get name(): string {
+    return this.definition.name.value
+  }
+  
+  get isEmbeddedType(): boolean {
+    return false
+  }
+  get isRootType(): boolean {
+    return false
+  }
+
+  abstract fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string, ResourceEntry>> 
+
+  /**
+   * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
+   * @param iris
+   * @returns
+   */
+  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry | null>> {
+    const entries = await this.fetch({ iri: iris }, opts);
+    // Map IRIs to entries from entryMap or return null if not found
+    return new Map(iris.map((iri) => [iri, entries.get(iri) || null]));
+  }
+
+}
+
+export default class Resource extends BaseResource {
   resources: ResourceIndex;
-  definition: ObjectTypeDefinitionNode;
   sparqlClient?: SparqlClient;
   queryTemplate: CompiledTemplate | null;
 
@@ -58,8 +95,8 @@ export default class Resource implements IResource {
     sparqlClient?: SparqlClient,
     sparql?: string
   ) {
+    super(definition)
     this.resources = resources;
-    this.definition = definition;
     this.sparqlClient = sparqlClient;
     this.queryTemplate = sparql
       ? handlebars.compile(sparql, { noEscape: true })
@@ -243,20 +280,6 @@ export default class Resource implements IResource {
     }
   }
 
-  /**
-   * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
-   * @param iris
-   * @returns
-   */
-  async fetchByIRIs(
-    iris: ReadonlyArray<string>,
-    opts?:{proxyHeaders?:{[key:string]:string}}
-  ): Promise<Map<string, ResourceEntry | null>> {
-    const entries = await this.fetch({ iri: iris }, opts);
-    // Map IRIs to entries from entryMap or return null if not found
-    return new Map(iris.map((iri) => [iri, entries.get(iri) || null]));
-  }
-
   get isRootType(): boolean {
     return !hasDirective(this.definition, "embedded");
   }
@@ -264,36 +287,13 @@ export default class Resource implements IResource {
   get isEmbeddedType(): boolean {
     return !this.isRootType;
   }
-
-  get fields(): ReadonlyArray<FieldDefinitionNode> {
-    return this.definition.fields || []
-  }
-
-  get name(): string {
-    return this.definition.name.value
-  }
 }
 
-export class UnionResource implements IResource {
+export class UnionResource extends BaseResource {
   private resources: IResource[]
-  private definition: UnionTypeDefinitionNode
   constructor(resources: IResource[], definition: UnionTypeDefinitionNode) {
+    super(definition)
     this.resources = resources
-    this.definition = definition
-  }
-  get fields(): ReadonlyArray<FieldDefinitionNode> {
-    return []
-  }
-
-  get name(): string {
-    return this.definition.name.value
-  }
-
-  get isEmbeddedType(): boolean {
-    return false
-  }
-  get isRootType(): boolean {
-    return false
   }
 
   static buildFromTypeDefinition(resources: Resource[],
@@ -306,13 +306,6 @@ export class UnionResource implements IResource {
       return resource
     })
     return new UnionResource(unionResources, def)
-  }
-
-  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry | null>> {
-    logger.debug(`Fetching entries by IRIs for union type ${this.name}`)
-    const entries = await this.fetch({ iri: iris }, opts);
-    // Map IRIs to entries from entryMap or return null if not found
-    return new Map(iris.map((iri) => [iri, entries.get(iri) || null]));
   }
 
   async fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry>> {
