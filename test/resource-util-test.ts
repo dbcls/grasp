@@ -4,7 +4,7 @@ import {
 
 import {
     getTestResource,
-    getTestResources,
+    getTestResourceIndex,
 } from "./test-helpers.js"
 import type { Quad } from "@rdfjs/types"
 // @ts-ignore
@@ -20,7 +20,7 @@ describe("buildEntry", () => {
             ],
         }
         const res = getTestResource("assets/with-docs.graphql")
-        const resources = getTestResources(res)
+        const resources = getTestResourceIndex(res)
 
         it("should return ResourceEntry", () => {
             return expect(
@@ -42,7 +42,7 @@ describe("buildEntry", () => {
             ],
         }
         const res = getTestResource("assets/with-docs.graphql")
-        const resources = getTestResources(res)
+        const resources = getTestResourceIndex(res)
 
         it("should return ResourceEntry", () => {
             return expect(

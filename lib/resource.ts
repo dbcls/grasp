@@ -310,9 +310,9 @@ export class UnionResource implements IResource {
 
   async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry | null>> {
     logger.debug(`Fetching entries by IRIs for union type ${this.name}`)
-    const promises = this.resources.map(resource => resource.fetchByIRIs(iris, opts));
-    const entryMaps = await Promise.all(promises)
-    return new Map(entryMaps.flatMap(entryMap => [...entryMap]))
+    const entries = await this.fetch({ iri: iris }, opts);
+    // Map IRIs to entries from entryMap or return null if not found
+    return new Map(iris.map((iri) => [iri, entries.get(iri) || null]));
   }
 
   async fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry>> {

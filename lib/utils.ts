@@ -55,7 +55,7 @@ export function valueToString(value: ValueNode): string | undefined {
   return (!value || value.kind !== Kind.STRING) ? undefined : value.value;
 }
 
-export function ensureArray<T>(obj: T | Array<T>): Array<T> {
+export function ensureArray<T>(obj?: T | Array<T>): Array<T> {
   if (Array.isArray(obj)) {
     return obj;
   }
