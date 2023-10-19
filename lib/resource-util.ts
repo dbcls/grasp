@@ -10,6 +10,7 @@ import {
 } from "./utils.js"
 import { Dictionary } from "lodash"
 import { IResource, ResourceEntry } from './resource.js'
+import logger from "./logger.js"
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//
 
@@ -66,6 +67,7 @@ export function buildEntry(
   // Make sure entries always have an iri
   if (!entry.iri)
     entry.iri = subject
+  logger.debug({entry},`Produced entry for ${resource.name}`)
   return entry
 }
 

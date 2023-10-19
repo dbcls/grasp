@@ -67,7 +67,7 @@ const queryResolvers: Record<string, ResourceResolver> = {};
     args: { iri: string | Array<string> },
     context: Context
   ) => {
-    
+    logger.debug(`Called resolver for field ${field.name.value}`)
     const resourceName = unwrapCompositeType(field.type).name.value
     logger.debug(`Looking up resource for ${resourceName} (query resolver): ${field.kind}`)
     const resource = resources.lookup(resourceName)
@@ -113,6 +113,7 @@ resources.all.forEach((resource) => {
       args: { iri: string | Array<string> },
       context: Context
     ) => {
+      logger.debug(`Called resolver for field ${name}`)
       // get the parent of this field
       const value: ResourceEntry = _parent[name]
 

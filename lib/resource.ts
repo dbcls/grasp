@@ -80,9 +80,10 @@ abstract class BaseResource implements IResource {
   async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry | null>> {
     const entries = await this.fetch({ iri: iris }, opts);
     // Map IRIs to entries from entryMap or return null if not found
-    return new Map(iris.map((iri) => [iri, entries.get(iri) || null]));
+    const mapped = new Map(iris.map((iri) => [iri, entries.get(iri) || null]))
+    logger.debug({iris, returned: entries.size}, `Joining ${iris.length} objects of ${this.name}`)
+    return mapped;
   }
-
 }
 
 export default class Resource extends BaseResource {
