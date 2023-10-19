@@ -48,7 +48,7 @@ export interface IResource {
 
 abstract class BaseResource implements IResource {
   
-  definition: TypeDefinitionNode
+  protected definition: TypeDefinitionNode
 
   constructor(definition: TypeDefinitionNode) {
     this.definition = definition
@@ -62,11 +62,12 @@ abstract class BaseResource implements IResource {
     return this.definition.name.value
   }
   
-  get isEmbeddedType(): boolean {
-    return false
-  }
   get isRootType(): boolean {
-    return false
+    return !hasDirective(this.definition, "embedded");
+  }
+
+  get isEmbeddedType(): boolean {
+    return !this.isRootType;
   }
 
   abstract fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string, ResourceEntry>> 
@@ -278,14 +279,6 @@ export default class Resource extends BaseResource {
       logger.error(err, sparqlQuery);
       throw new Error(`SPARQL endpoint returns: ${err}`);
     }
-  }
-
-  get isRootType(): boolean {
-    return !hasDirective(this.definition, "embedded");
-  }
-
-  get isEmbeddedType(): boolean {
-    return !this.isRootType;
   }
 }
 
