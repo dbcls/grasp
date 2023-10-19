@@ -263,12 +263,14 @@ describe("Resource", () => {
     it("should return all ResourceEntries", async () => {
       const expected: ResourceEntry[] = [
         {
+          __typename: "Test",
           id: "subject1",
           iri: "http://example.org/subject1",
           count: 5,
           test: true,
         },
         {
+          __typename: "Test",
           id: "subject2",
           iri: "http://example.org/subject2",
           count: 4,
@@ -287,6 +289,7 @@ describe("Resource", () => {
 
     it("should not return RDF literal", async () => {
       const expected: ResourceEntry = {
+        __typename: "Test",
         id: "subject1",
         iri: "http://example.org/subject1",
         count: "\"5\"^^<http://www.w3.org/2001/XMLSchema#integer>",
@@ -298,6 +301,7 @@ describe("Resource", () => {
 
     it("should not return ResourceEntry when blanknode", async () => {
       const expected: ResourceEntry = {
+        __typename: "Test",
         id: "b1",
         iri: "http://example.org/subject",
       };
@@ -309,10 +313,12 @@ describe("Resource", () => {
     const res = getTestResource("assets/with-docs.graphql");
     res.fetch = async (args) => new Map([
       ["http://example.org/subject1",{
+        __typename: "Test",
         id: "subject1",
         iri: "http://example.org/subject1",
       }],
       ["http://example.org/subject2",{
+        __typename: "Test",
         id: "subject2",
         iri: "http://example.org/subject2",
       }],
@@ -336,6 +342,7 @@ describe("Resource", () => {
         Array.from(map.values())
       ).toStrictEqual([
         {
+          __typename: "Test",
           id: "subject1",
           iri: "http://example.org/subject1",
         },
@@ -511,18 +518,21 @@ describe("UnionResource", () => {
     it("should return all ResourceEntries", async () => {
       const expected: ResourceEntry[] = [
         {
+          __typename: "Test",
           id: "subject1",
           iri: "http://example.org/subject1",
           count: 5,
           test: true,
         },
         {
+          __typename: "Test",
           id: "subject2",
           iri: "http://example.org/subject2",
           count: 4,
           test: false,
         },
         {
+          __typename: "Test2",
           iri: "http://example.org/subject3",
           count: 5,
           name_ja: "test",
@@ -541,6 +551,7 @@ describe("UnionResource", () => {
 
     it("should not return RDF literal", async () => {
       const expected: ResourceEntry = {
+        __typename: "Test",
         id: "subject1",
         iri: "http://example.org/subject1",
         count: "\"5\"^^<http://www.w3.org/2001/XMLSchema#integer>",
@@ -552,6 +563,7 @@ describe("UnionResource", () => {
 
     it("should not return ResourceEntry when blanknode", async () => {
       const expected: ResourceEntry = {
+        __typename: "Test",
         id: "b1",
         iri: "http://example.org/subject",
       }
@@ -564,10 +576,12 @@ describe("UnionResource", () => {
 
     res.fetch = async (args) => new Map([
       ["http://example.org/subject1", {
+        __typename: "Test",
         id: "subject1",
         iri: "http://example.org/subject1",
       }],
       ["http://example.org/subject2", {
+        __typename: "Test",
         id: "subject2",
         iri: "http://example.org/subject2",
       }],
@@ -577,10 +591,12 @@ describe("UnionResource", () => {
 
     res2.fetch = async (args) => new Map([
       ["http://example.org/subject3", {
+        __typename: "Test2",
         id: "subject1",
         iri: "http://example.org/subject3",
       }],
       ["http://example.org/subject4", {
+        __typename: "Test2",
         id: "subject2",
         iri: "http://example.org/subject4",
       }],
@@ -628,6 +644,7 @@ describe("UnionResource", () => {
         Array.from(map.values())
       ).toStrictEqual([
         {
+          __typename: "Test",
           id: "subject1",
           iri: "http://example.org/subject1",
         },

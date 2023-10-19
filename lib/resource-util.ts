@@ -19,7 +19,10 @@ export function buildEntry(
   resource: IResource,
   resources: ResourceIndex
 ): ResourceEntry {
-  const entry: ResourceEntry = {}
+  const entry: ResourceEntry = {
+    // Add typename so union types can be resolved
+    __typename: resource.name
+  }
 
   // Turn the resulting Quads into records
   const pValues = transform(

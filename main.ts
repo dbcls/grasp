@@ -128,10 +128,6 @@ resources.all.forEach((resource) => {
       logger.debug(`Looking up resource for ${resourceName} (field resolver): ${field.kind}`)
       const resource = resources.lookup(resourceName)
 
-      // if (resource instanceof UnionResource){
-      //   logger.debug('Reached UnionResource!')
-      // }
-
       if (!resource || resource.isEmbeddedType) {
         return value
       }
