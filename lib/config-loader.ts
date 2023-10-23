@@ -3,11 +3,12 @@ import fs from "fs";
 const { readdir, readFile } = fs.promises;
 import { join } from "path";
 import { set } from "lodash-es";
+import logger from "./logger.js";
 
 interface Service {
   type: string;
   url: string;
-  graph: string;
+  graph?: string;
   user?: string;
   password?: string;
   token?: string;
@@ -32,18 +33,23 @@ export default class ConfigLoader {
     return templateIndex;
   }
 
-  static async loadServiceIndexFromFile(
-    serviceFile: string
+
+  static async loadServiceIndex(
   ): Promise<Map<string, SparqlClient>> {
 
-    const jsonString = await readFile(serviceFile, {
-        encoding: "utf-8",
-    });
-    return ConfigLoader.loadServiceIndexFromJson(JSON.parse(jsonString));
-  }
-  static loadServiceIndexFromEnv(
-  ): Map<string, SparqlClient> {
-    const services: { [key: string]: Service }  = {}
+    let services: { [key: string]: Service }  = {}
+    if (process.env.SERVICES_FILE) {
+      try {
+        const jsonString = await readFile(process.env.SERVICES_FILE, {
+          encoding: "utf-8",
+        });
+        services = JSON.parse(jsonString)
+      } 
+      catch (e) {
+        logger.error(e, `Unable to parse services file ${process.env.SERVICES_FILE}.`)
+      }
+    }
+    
     for (const envVar in process.env) {
       //should we store this env var in the config:
       if (envVar.startsWith("GRASP_")) {
@@ -51,28 +57,33 @@ export default class ConfigLoader {
         set(services, path, process.env[envVar]);
       }
     }
-    return this.loadServiceIndexFromJson(services)
+    return ConfigLoader.loadServiceIndexFromJson(services)
   }
 
   static loadServiceIndexFromJson(
     services: { [key: string]: Service }
   ): Map<string, SparqlClient> {
+    const index = new Map()
 
-    return new Map(
-      Object.keys(services).map((name) => {
-        const s: Service = services[name];
-        return [
-          name,
-          new SparqlClient({
-            endpointUrl: s.url,
-            user: s.user,
-            password: s.password,
-            headers: {
-              ...(s.token && { Authorization: `Bearer ${s.token}` })
-            }
-          }),
-        ];
-      })
-    );
+    for (const name in services) {
+      const s: Service = services[name]
+
+      if (!s.url) {
+        logger.warn(`Service ${name} was not added to service index; field 'url' is not set.`)
+        continue
+      }
+      
+      index.set(name, new SparqlClient({
+        endpointUrl: s.url,
+        user: s.user,
+        password: s.password,
+        headers: {
+          ...(s.token && { Authorization: `Bearer ${s.token}` })
+        }
+      }))
+      logger.debug(`Added service ${name} to service index.`)
+    }
+
+    return index
   }
 }
