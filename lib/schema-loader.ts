@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { ObjectTypeDefinitionNode, DocumentNode } from 'graphql';
+import { ObjectTypeDefinitionNode, DocumentNode, UnionTypeDefinitionNode } from 'graphql';
 import { join } from 'path';
 import { parse } from 'graphql/language/parser.js';
 
@@ -9,6 +9,7 @@ export default class SchemaLoader {
   originalTypeDefs: DocumentNode;
   queryDef: ObjectTypeDefinitionNode;
   resourceTypeDefs: ObjectTypeDefinitionNode[];
+  unionTypeDefs: UnionTypeDefinitionNode[];
 
   constructor(schema: string) {
     try {
@@ -19,6 +20,10 @@ export default class SchemaLoader {
     
     const typeDefinitionNodes = this.originalTypeDefs.definitions.filter((def): def is ObjectTypeDefinitionNode => {
       return def.kind === 'ObjectTypeDefinition';
+    });
+
+    this.unionTypeDefs = this.originalTypeDefs.definitions.filter((def): def is UnionTypeDefinitionNode => {
+      return def.kind === 'UnionTypeDefinition';
     });
 
     const queryDef = typeDefinitionNodes.filter(def => def.name.value === 'Query');

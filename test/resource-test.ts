@@ -1,13 +1,14 @@
 import {
   default as Resource,
   ResourceEntry,
+  UnionResource,
   handlebars
 } from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
 import { Parser } from "sparqljs";
 import {
   getTestResource,
-  getTestResources,
+  getTestResourceIndex,
   compileEmptyTemplate,
   getTestSparqlClient,
   getTestFile,
@@ -29,7 +30,7 @@ function expectQueriesToMatch(expected: string, actual: string) {
   return expect(parser.parse(actual)).toEqual(parser.parse(expected));
 }
 
-describe("resource", () => {
+describe("Resource", () => {
   describe("'s handlebars", () => {
     describe("with valid template", () => {
       const template = getTestFile("assets/queries/template.sparql")
@@ -79,7 +80,7 @@ describe("resource", () => {
       it("should not throw error", async () => {
         return expect(
           () =>
-            new Resource(getTestResources(), {
+            new Resource(getTestResourceIndex(), {
               kind: Kind.OBJECT_TYPE_DEFINITION,
               name: {
                 kind: Kind.NAME,
@@ -253,7 +254,7 @@ describe("resource", () => {
       quad("_:b1", "https://github.com/dbcls/grasp/ns/id", '"subject"'),
     ]);
 
-    res.resources = getTestResources(res);
+    res.resources = getTestResourceIndex(res);
 
     it("should not throw", async () => {
       await expect(res.fetch({}, {proxyHeaders:{}})).resolves.not.toThrow();
@@ -262,29 +263,33 @@ describe("resource", () => {
     it("should return all ResourceEntries", async () => {
       const expected: ResourceEntry[] = [
         {
+          __typename: "Test",
           id: "subject1",
           iri: "http://example.org/subject1",
           count: 5,
           test: true,
         },
         {
+          __typename: "Test",
           id: "subject2",
           iri: "http://example.org/subject2",
           count: 4,
           test: false,
         },
       ];
-
-        expect(await res.fetch({},{proxyHeaders:{}})).toStrictEqual(expected)
+        const map = await res.fetch({},{proxyHeaders:{}})
+        expect(Array.from(map.values())).toStrictEqual(expected)
   
     });
 
     it("should not return properties not in graphql schema", async () => {
-      return expect((await res.fetch({},{proxyHeaders:{}}))[0]).not.toHaveProperty("obsolete");
+      const [firstValue] = await res.fetch({},{proxyHeaders:{}})
+      return expect(firstValue).not.toHaveProperty("obsolete");
     });
 
     it("should not return RDF literal", async () => {
       const expected: ResourceEntry = {
+        __typename: "Test",
         id: "subject1",
         iri: "http://example.org/subject1",
         count: "\"5\"^^<http://www.w3.org/2001/XMLSchema#integer>",
@@ -296,6 +301,7 @@ describe("resource", () => {
 
     it("should not return ResourceEntry when blanknode", async () => {
       const expected: ResourceEntry = {
+        __typename: "Test",
         id: "b1",
         iri: "http://example.org/subject",
       };
@@ -305,32 +311,38 @@ describe("resource", () => {
 
   describe("fetchByIRIs", () => {
     const res = getTestResource("assets/with-docs.graphql");
-    res.fetch = async (args) => [
-      {
+    res.fetch = async (args) => new Map([
+      ["http://example.org/subject1",{
+        __typename: "Test",
         id: "subject1",
         iri: "http://example.org/subject1",
-      },
-      {
+      }],
+      ["http://example.org/subject2",{
+        __typename: "Test",
         id: "subject2",
         iri: "http://example.org/subject2",
-      },
-    ];
+      }],
+    ]);
 
     it("should return empty array when iris are empty", async () => {
-      return expect(await res.fetchByIRIs([],{proxyHeaders:{}})).toStrictEqual([]);
+      const map = await res.fetchByIRIs([],{proxyHeaders:{}})
+      return expect(Array.from(map.values())).toStrictEqual([]);
     });
 
     it("should return null when iri is not found", async () => {
+      const map = await res.fetchByIRIs(["http://example.org/subject3"],{proxyHeaders:{}})
       return expect(
-        await res.fetchByIRIs(["http://example.org/subject3"],{proxyHeaders:{}})
+        Array.from(map.values())
       ).toStrictEqual([null]);
     });
 
     it("should return matching entry when iri is given", async () => {
+      const map = await res.fetchByIRIs(["http://example.org/subject1"],{proxyHeaders:{}})
       return expect(
-        await res.fetchByIRIs(["http://example.org/subject1"],{proxyHeaders:{}})
+        Array.from(map.values())
       ).toStrictEqual([
         {
+          __typename: "Test",
           id: "subject1",
           iri: "http://example.org/subject1",
         },
@@ -360,3 +372,287 @@ describe("resource", () => {
   // });
 
 });
+
+describe("UnionResource", () => {
+  describe("constructed", () => {
+    const res = getTestResource("assets/with-directives-union-type.graphql")
+    describe("with valid arguments", () => {
+      it("should not throw error", async () => {
+        return expect(
+          () =>
+            new UnionResource(getTestResourceIndex(res).all, {
+              kind: Kind.UNION_TYPE_DEFINITION,
+              name: {
+                kind: Kind.NAME,
+                value: "UnionTest",
+              },
+              types: [
+                {
+                  kind: Kind.NAMED_TYPE,
+                  name: {
+                    kind: Kind.NAME,
+                    value: "Test",
+                  },
+                }
+              ]
+            })
+        ).not.toThrow()
+      })
+    })
+  })
+
+  describe("buildFromTypeDefinition", () => {
+
+    const res = getTestResource("assets/with-directives-union-type.graphql")
+
+    describe("with valid arguments", () => {
+      it("should not throw error", async () => {
+        return expect(
+          () =>
+            UnionResource.buildFromTypeDefinition([res], {
+              kind: Kind.UNION_TYPE_DEFINITION,
+              name: {
+                kind: Kind.NAME,
+                value: "UnionTest",
+              },
+              types: [
+                {
+                  kind: Kind.NAMED_TYPE,
+                  name: {
+                    kind: Kind.NAME,
+                    value: "Test",
+                  },
+                }
+              ]
+            })
+        ).not.toThrow()
+      })
+    })
+
+    describe("with missing Type", () => {
+      it("should throw error", async () => {
+        return expect(
+          () =>
+            UnionResource.buildFromTypeDefinition([res], {
+              kind: Kind.UNION_TYPE_DEFINITION,
+              name: {
+                kind: Kind.NAME,
+                value: "UnionTest",
+              },
+              types: [
+                {
+                  kind: Kind.NAMED_TYPE,
+                  name: {
+                    kind: Kind.NAME,
+                    value: "Test4",
+                  },
+                }
+              ]
+            })
+        ).toThrow()
+      })
+    })
+
+  })
+
+  describe("fetch", () => {
+
+    const res = getTestResource("assets/with-directives-union-type.graphql", "Test")
+    const subject = "http://example.org/subject1"
+    const subject2 = "http://example.org/subject2"
+
+    res.sparqlClient = getTestSparqlClient([
+      quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
+      quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject1"'),
+      quad(subject, "https://github.com/dbcls/grasp/ns/count", 5),
+      quad(subject, "https://github.com/dbcls/grasp/ns/test", true),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/iri", subject2),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/id", '"subject2"'),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/count", 4),
+      quad(subject2, "https://github.com/dbcls/grasp/ns/test", false),
+
+    ])
+
+    const res2 = getTestResource("assets/with-directives-union-type.graphql", "Test2")
+    const subject3 = "http://example.org/subject3"
+
+    res2.sparqlClient = getTestSparqlClient([
+      quad(subject3, "https://github.com/dbcls/grasp/ns/iri", subject3),
+      quad(subject3, "https://github.com/dbcls/grasp/ns/name_ja", '"test"'),
+      quad(subject3, "https://github.com/dbcls/grasp/ns/count", 5),
+      quad(subject3, "https://github.com/dbcls/grasp/ns/page", true),
+    ])
+
+    const index = getTestResourceIndex([res, res2])
+    res.resources = index
+    res2.resources = index
+
+    const unionRes = UnionResource.buildFromTypeDefinition([res, res2], {
+      kind: Kind.UNION_TYPE_DEFINITION,
+      name: {
+        kind: Kind.NAME,
+        value: "UnionTest",
+      },
+      types: [
+        {
+          kind: Kind.NAMED_TYPE,
+          name: {
+            kind: Kind.NAME,
+            value: "Test",
+          },
+        },
+        {
+          kind: Kind.NAMED_TYPE,
+          name: {
+            kind: Kind.NAME,
+            value: "Test2",
+          },
+        }
+      ]
+    })
+
+    it("should not throw", async () => {
+      await expect(unionRes.fetch({}, { proxyHeaders: {} })).resolves.not.toThrow()
+    })
+
+    it("should return all ResourceEntries", async () => {
+      const expected: ResourceEntry[] = [
+        {
+          __typename: "Test",
+          id: "subject1",
+          iri: "http://example.org/subject1",
+          count: 5,
+          test: true,
+        },
+        {
+          __typename: "Test",
+          id: "subject2",
+          iri: "http://example.org/subject2",
+          count: 4,
+          test: false,
+        },
+        {
+          __typename: "Test2",
+          iri: "http://example.org/subject3",
+          count: 5,
+          name_ja: "test",
+          page: true,
+        }
+      ]
+      const map = await unionRes.fetch({}, { proxyHeaders: {} })
+      expect(Array.from(map.values())).toStrictEqual(expected)
+
+    })
+
+    it("should not return properties not in graphql schema", async () => {
+      const [firstValue] = await unionRes.fetch({}, { proxyHeaders: {} })
+      return expect(firstValue).not.toHaveProperty("obsolete")
+    })
+
+    it("should not return RDF literal", async () => {
+      const expected: ResourceEntry = {
+        __typename: "Test",
+        id: "subject1",
+        iri: "http://example.org/subject1",
+        count: "\"5\"^^<http://www.w3.org/2001/XMLSchema#integer>",
+        test: "\"true\"^^<http://www.w3.org/2001/XMLSchema#boolean>",
+      }
+
+      return expect(await unionRes.fetch({}, { proxyHeaders: {} })).not.toContainEqual(expected)
+    })
+
+    it("should not return ResourceEntry when blanknode", async () => {
+      const expected: ResourceEntry = {
+        __typename: "Test",
+        id: "b1",
+        iri: "http://example.org/subject",
+      }
+      return expect(await unionRes.fetch({}, { proxyHeaders: {} })).not.toContainEqual(expected)
+    })
+  })
+
+  describe("fetchByIRIs", () => {
+    const res = getTestResource("assets/with-directives-union-type.graphql", "Test")
+
+    res.fetch = async (args) => new Map([
+      ["http://example.org/subject1", {
+        __typename: "Test",
+        id: "subject1",
+        iri: "http://example.org/subject1",
+      }],
+      ["http://example.org/subject2", {
+        __typename: "Test",
+        id: "subject2",
+        iri: "http://example.org/subject2",
+      }],
+    ])
+
+    const res2 = getTestResource("assets/with-directives-union-type.graphql", "Test2")
+
+    res2.fetch = async (args) => new Map([
+      ["http://example.org/subject3", {
+        __typename: "Test2",
+        id: "subject1",
+        iri: "http://example.org/subject3",
+      }],
+      ["http://example.org/subject4", {
+        __typename: "Test2",
+        id: "subject2",
+        iri: "http://example.org/subject4",
+      }],
+    ])
+
+    const unionRes = UnionResource.buildFromTypeDefinition([res, res2], {
+      kind: Kind.UNION_TYPE_DEFINITION,
+      name: {
+        kind: Kind.NAME,
+        value: "UnionTest",
+      },
+      types: [
+        {
+          kind: Kind.NAMED_TYPE,
+          name: {
+            kind: Kind.NAME,
+            value: "Test",
+          },
+        },
+        {
+          kind: Kind.NAMED_TYPE,
+          name: {
+            kind: Kind.NAME,
+            value: "Test2",
+          },
+        }
+      ]
+    })
+
+    it("should return empty array when iris are empty", async () => {
+      const map = await unionRes.fetchByIRIs([], { proxyHeaders: {} })
+      return expect(Array.from(map.values())).toStrictEqual([])
+    })
+
+    it("should return null when iri is not found", async () => {
+      const map = await unionRes.fetchByIRIs(["http://example.org/subject5"], { proxyHeaders: {} })
+      return expect(
+        Array.from(map.values())
+      ).toStrictEqual([null])
+    })
+
+    it("should return matching entry when iri is given", async () => {
+      const map = await unionRes.fetchByIRIs(["http://example.org/subject1"], { proxyHeaders: {} })
+      return expect(
+        Array.from(map.values())
+      ).toStrictEqual([
+        {
+          __typename: "Test",
+          id: "subject1",
+          iri: "http://example.org/subject1",
+        },
+      ])
+    })
+
+    it("should not throw error", async () => {
+      return expect(() => unionRes.fetchByIRIs([], { proxyHeaders: {} })).not.toThrow()
+    })
+  })
+})

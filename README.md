@@ -417,6 +417,8 @@ This query returns triples representing a `Dataset` and representing the `Publis
 Note that we need to return graph containing triples whose 1) subject points the embedded resource and 2) predicate reflects its field name. `?publisher` is bound to the blank node representing the `Publisher`.
 
 
+
+
 ## Write your own definition
 
 You can add your own definitions in the directory specified with `RESOURCES_DIR` (default is `./resources`).

@@ -4,7 +4,7 @@ import {
 
 import {
     getTestResource,
-    getTestResources,
+    getTestResourceIndex,
 } from "./test-helpers.js"
 import type { Quad } from "@rdfjs/types"
 // @ts-ignore
@@ -20,12 +20,13 @@ describe("buildEntry", () => {
             ],
         }
         const res = getTestResource("assets/with-docs.graphql")
-        const resources = getTestResources(res)
+        const resources = getTestResourceIndex(res)
 
         it("should return ResourceEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, subject, res, resources)
             ).toStrictEqual({
+                __typename: "Test",
                 iri: subject,
                 id: "subject",
             })
@@ -42,12 +43,13 @@ describe("buildEntry", () => {
             ],
         }
         const res = getTestResource("assets/with-docs.graphql")
-        const resources = getTestResources(res)
+        const resources = getTestResourceIndex(res)
 
         it("should return ResourceEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, subject, res, resources)
             ).toStrictEqual({
+                __typename: "Test",
                 iri: subject,
                 id: undefined,
             })
@@ -108,6 +110,7 @@ describe("buildEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, publisher, emRes, resources)
             ).toStrictEqual({
+                __typename: "Publisher",
                 iri: publisher,
                 name_en: "name_en",
                 name_ja: "name_ja",
@@ -119,8 +122,10 @@ describe("buildEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, subject, res, resources)
             ).toStrictEqual({
+                __typename: "Test",
                 iri: subject,
                 publisher: {
+                    __typename: "Publisher",
                     iri: publisher,
                     name_en: "name_en",
                     name_ja: "name_ja",
@@ -183,8 +188,10 @@ describe("buildEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, subject, res, resources)
             ).toStrictEqual({
+                __typename: "Test",
                 iri: subject,
                 publisher: {
+                    __typename: "Publisher",
                     iri: "b1",
                     name_en: "name_en",
                     name_ja: "name_ja",

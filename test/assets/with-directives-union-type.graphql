@@ -1,0 +1,16 @@
+directive @grasp(endpoint: String, sparql: String) on OBJECT
+type Test @grasp(endpoint: "https://integbio.jp/rdf/sparql", sparql: "test") {
+  iri: String!
+  id: String
+  count: Number
+  test: Boolean
+}
+
+type Test2 @grasp(endpoint: "https://integbio.jp/rdf/sparql", sparql: "test2") {
+  iri: String!
+  name_ja: String
+  page: String
+  count: Int
+}
+
+union UnionTest = Test | Test2

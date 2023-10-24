@@ -4,7 +4,8 @@ import {
   ValueNode,
   ObjectTypeDefinitionNode,
   DirectiveNode,
-  Kind
+  Kind,
+  TypeDefinitionNode
 } from "graphql";
 
 export function isListType(type: TypeNode): boolean {
@@ -22,7 +23,7 @@ export function unwrapCompositeType(type: TypeNode): NamedTypeNode {
 }
 
 export function hasDirective(
-  def: ObjectTypeDefinitionNode,
+  def: TypeDefinitionNode,
   directiveName: string
 ): boolean {
   return (
@@ -55,7 +56,7 @@ export function valueToString(value: ValueNode): string | undefined {
   return (!value || value.kind !== Kind.STRING) ? undefined : value.value;
 }
 
-export function ensureArray<T>(obj: T | Array<T>): Array<T> {
+export function ensureArray<T>(obj?: T | Array<T>): Array<T> {
   if (Array.isArray(obj)) {
     return obj;
   }

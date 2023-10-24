@@ -10,8 +10,8 @@ import DataLoader from "dataloader"
 import {transform,isEqual} from "lodash-es"
 
 
-import Resource, { ResourceEntry } from "./lib/resource.js"
-import Resources from "./lib/resources.js"
+import { IResource, ResourceEntry, UnionResource } from "./lib/resource.js"
+import ResourceIndex from "./lib/resource-index.js"
 import SchemaLoader from "./lib/schema-loader.js"
 import {
   isListType,
@@ -31,7 +31,7 @@ type ResourceResolver = (
 
 interface Context {
   proxyHeaders: {[key:string]:string},
-  loaders: Map<Resource, DataLoader<string, ResourceEntry | null>>
+  loaders: Map<IResource, DataLoader<string, ResourceEntry | null>>
 }
 
 // Load config
@@ -50,11 +50,13 @@ const serviceIndex = await ConfigLoader.loadServiceIndex()
 const loader = await SchemaLoader.loadFromDirectory(resourcesDir)
 
 // Load all resource definitions
-const resources = new Resources(
+const resources = new ResourceIndex(
   loader.resourceTypeDefs,
+  loader.unionTypeDefs,
   serviceIndex,
   templateIndex
 )
+logger.debug(`Resource index has entries for ${resources.all.map(r => r.name)}`)
 
 // Setup query resolvers
 const queryResolvers: Record<string, ResourceResolver> = {};
@@ -65,8 +67,9 @@ const queryResolvers: Record<string, ResourceResolver> = {};
     args: { iri: string | Array<string> },
     context: Context
   ) => {
-    
+    logger.debug(`Called resolver for field ${field.name.value}`)
     const resourceName = unwrapCompositeType(field.type).name.value
+    logger.debug(`Looking up resource for ${resourceName} (query resolver): ${field.kind}`)
     const resource = resources.lookup(resourceName)
 
     if (!resource) {
@@ -78,14 +81,15 @@ const queryResolvers: Record<string, ResourceResolver> = {};
 
       if (!loader) {
         throw new Error(
-          `missing resource loader for ${resource.definition.name.value}`
+          `missing resource loader for ${resource.name}`
         )
       }
 
       const iris = ensureArray(args.iri)
       return oneOrMany(await loader.loadMany(iris), !isListType(field.type))
     }
-    return oneOrMany(await resource.fetch(args, {proxyHeaders:context.proxyHeaders}), !isListType(field.type))
+    const entries = (await resource.fetch(args, {proxyHeaders:context.proxyHeaders})).values()
+    return oneOrMany(Array.from(entries), !isListType(field.type))
   }
 })
 
@@ -95,11 +99,11 @@ const resourceResolvers: Record<string, Record<string, ResourceResolver>> = {}
 resources.all.forEach((resource) => {
   //Initalize empty field resolver
   const fieldResolvers: Record<string, ResourceResolver> = (resourceResolvers[
-    resource.definition.name.value
+    resource.name
   ] = {});
 
   //Iterate over every field definition
-  (resource.definition.fields || []).forEach((field) => {
+  resource.fields.forEach((field) => {
     const type = field.type
     const name = field.name.value
 
@@ -109,8 +113,9 @@ resources.all.forEach((resource) => {
       args: { iri: string | Array<string> },
       context: Context
     ) => {
+      logger.debug(`Called resolver for field ${name}`)
       // get the parent of this field
-      const value = _parent[name]
+      const value: ResourceEntry = _parent[name]
 
       // If the parent exists, make sure it's an array
       if (!value) {
@@ -118,8 +123,10 @@ resources.all.forEach((resource) => {
       }
 
       // Get the underlying type
-      const resourceName = unwrapCompositeType(type).name.value
+      const resourceType = unwrapCompositeType(type)
+      const resourceName = resourceType.name.value
       // Check whether we can find a resource connected to this type
+      logger.debug(`Looking up resource for ${resourceName} (field resolver): ${field.kind}`)
       const resource = resources.lookup(resourceName)
 
       if (!resource || resource.isEmbeddedType) {
@@ -130,7 +137,7 @@ resources.all.forEach((resource) => {
         const loader = context.loaders.get(resource)
         if (!loader) {
           throw new Error(
-            `missing resource loader for ${resource.definition.name.value}`
+            `missing resource loader for ${resource.name}`
           )
         }
         const entry = await loader.loadMany(ensureArray(value))
@@ -141,8 +148,9 @@ resources.all.forEach((resource) => {
         const argIRIs = ensureArray(args.iri)
         const values = ensureArray(value)
         const allIRIs = Array.from(new Set([...values, ...argIRIs]))
+        const entries = (await resource.fetch({ ...args, ...{ iri: allIRIs } },{proxyHeaders:context.proxyHeaders})).values()
         return oneOrMany(
-          await resource.fetch({ ...args, ...{ iri: allIRIs } },{proxyHeaders:context.proxyHeaders}),
+          Array.from(entries),
           !isListType(type)
         )
       }
@@ -220,13 +228,14 @@ app.use(
               // Use DataLoader to pre-load and cache data from sparql endpoint
               new DataLoader(
                 async (iris: ReadonlyArray<string>) => {
-                  return resource.fetchByIRIs(iris, {proxyHeaders})
+                  const values = (await resource.fetchByIRIs(iris, {proxyHeaders})).values()
+                  return Array.from(values)
                 },
                 { maxBatchSize }
               )
             )
           },
-          new Map<Resource, DataLoader<string, ResourceEntry | null>>()
+          new Map<IResource, DataLoader<string, ResourceEntry | null>>()
         ),
       }
     },

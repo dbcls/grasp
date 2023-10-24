@@ -1,7 +1,7 @@
 import Handlebars from "handlebars";
-import { ObjectTypeDefinitionNode } from "graphql";
+import { FieldDefinitionNode, Kind, ObjectTypeDefinitionNode, TypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
 
-import Resources from "./resources.js";
+import ResourceIndex from "./resource-index.js";
 import {
   hasDirective,
   getDirective,
@@ -32,22 +32,73 @@ const options = {
   ttl: parseInt(process.env.CACHE_TTL || `${DEFAULT_TTL}`, 10),
 };
 
-const cache = new LRUCache<string, ResourceEntry[]>(options);
+const cache = new LRUCache<string, Map<string, ResourceEntry>>(options);
 
-export default class Resource {
-  resources: Resources;
-  definition: ObjectTypeDefinitionNode;
+export interface IResource {
+  name: string
+  fields: ReadonlyArray<FieldDefinitionNode>
+  isEmbeddedType : boolean
+  isRootType :  boolean
+  fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<Map<string,ResourceEntry>>
+  fetchByIRIs(
+    iris: ReadonlyArray<string>,
+    opts?:{proxyHeaders?:{[key:string]:string}}
+  ): Promise<Map<string,ResourceEntry | null>>
+}
+
+abstract class BaseResource implements IResource {
+  
+  protected definition: TypeDefinitionNode
+
+  constructor(definition: TypeDefinitionNode) {
+    this.definition = definition
+  }
+  
+  get fields(): ReadonlyArray<FieldDefinitionNode> {
+    return (this.definition.kind === Kind.OBJECT_TYPE_DEFINITION && this.definition.fields) ?  this.definition.fields : []
+  }
+
+  get name(): string {
+    return this.definition.name.value
+  }
+  
+  get isRootType(): boolean {
+    return !hasDirective(this.definition, "embedded");
+  }
+
+  get isEmbeddedType(): boolean {
+    return !this.isRootType;
+  }
+
+  abstract fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string, ResourceEntry>> 
+
+  /**
+   * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
+   * @param iris
+   * @returns
+   */
+  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry | null>> {
+    const entries = await this.fetch({ iri: iris }, opts);
+    // Map IRIs to entries from entryMap or return null if not found
+    const mapped = new Map(iris.map((iri) => [iri, entries.get(iri) || null]))
+    logger.debug({iris, returned: entries.size}, `Joining ${iris.length} objects of ${this.name}`)
+    return mapped;
+  }
+}
+
+export default class Resource extends BaseResource {
+  resources: ResourceIndex;
   sparqlClient?: SparqlClient;
   queryTemplate: CompiledTemplate | null;
 
   constructor(
-    resources: Resources,
+    resources: ResourceIndex,
     definition: ObjectTypeDefinitionNode,
     sparqlClient?: SparqlClient,
     sparql?: string
   ) {
+    super(definition)
     this.resources = resources;
-    this.definition = definition;
     this.sparqlClient = sparqlClient;
     this.queryTemplate = sparql
       ? handlebars.compile(sparql, { noEscape: true })
@@ -62,7 +113,7 @@ export default class Resource {
    * @returns
    */
   static buildFromTypeDefinition(
-    resources: Resources,
+    resources: ResourceIndex,
     def: ObjectTypeDefinitionNode,
     serviceIndex?: Map<string, SparqlClient>,
     templateIndex?: Map<string, string>
@@ -173,7 +224,7 @@ export default class Resource {
    * @param args
    * @returns
    */
-  async fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<ResourceEntry[]> {
+  async fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<Map<string, ResourceEntry>> {
     if (!this.queryTemplate || !this.sparqlClient) {
       throw new Error(
         "query template and endpoint should be specified in order to query"
@@ -181,7 +232,7 @@ export default class Resource {
     }
     const sparqlQuery = this.queryTemplate(args);
 
-    let entries: ResourceEntry[] | undefined = cache.get(sparqlQuery);
+    let entries: Map<string, ResourceEntry> | undefined = cache.get(sparqlQuery);
     logger.info(
       {
         cache: entries !== undefined,
@@ -207,16 +258,16 @@ export default class Resource {
         await groupBindingsStream(bindingsStream);
 
       // Collect the final list of entries from primaryBindings
-      entries = Object.entries(primaryBindingsGroupedBySubject).map(
+      entries = new Map(Object.entries(primaryBindingsGroupedBySubject).map(
         ([subject, _sBindings]) => {
-          return buildEntry(
+          return [subject, buildEntry(
             bindingsGroupedBySubject,
             subject,
             this,
             this.resources
-          );
+          )];
         }
-      );
+      ));
       cache.set(sparqlQuery, entries);
           logger.info(
             { cached: true, triples: Object.entries(primaryBindingsGroupedBySubject).length },
@@ -230,34 +281,31 @@ export default class Resource {
       throw new Error(`SPARQL endpoint returns: ${err}`);
     }
   }
+}
 
-  /**
-   * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
-   * @param iris
-   * @returns
-   */
-  async fetchByIRIs(
-    iris: ReadonlyArray<string>,
-    opts?:{proxyHeaders?:{[key:string]:string}}
-  ): Promise<Array<ResourceEntry | null>> {
-    const entries = await this.fetch({ iri: iris }, opts);
-    // join entries
-    const entryMap = new Map(); // Create an object to store entries by their IRIs
-  
-    // Populate entryMap with entries
-    entries.forEach((entry) => {
-      entryMap.set(entry.iri, entry);
-    });
-
-    // Map IRIs to entries from entryMap or return null if not found
-    return iris.map((iri) => entryMap.get(iri) || null);
+export class UnionResource extends BaseResource {
+  private resources: IResource[]
+  constructor(resources: IResource[], definition: UnionTypeDefinitionNode) {
+    super(definition)
+    this.resources = resources
   }
 
-  get isRootType(): boolean {
-    return !hasDirective(this.definition, "embedded");
+  static buildFromTypeDefinition(resources: Resource[],
+    def: UnionTypeDefinitionNode): UnionResource {
+    const unionResources = (def.types || []).map(type => {
+      const resource = resources.find(resource => resource.name === type.name.value)
+      if (!resource) {
+        throw new Error(`Union type ${def.name.value} refers to unknown resource ${type.name.value}.`)
+      }
+      return resource
+    })
+    return new UnionResource(unionResources, def)
   }
 
-  get isEmbeddedType(): boolean {
-    return !this.isRootType;
+  async fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry>> {
+    logger.debug(`Fetching entries for union type ${this.name}`)
+    const promises = this.resources.map(resource => resource.fetch(args, opts));
+    const entryMaps = await Promise.all(promises)
+    return new Map(entryMaps.flatMap(entryMap => [...entryMap]))
   }
 }

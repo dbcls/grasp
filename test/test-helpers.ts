@@ -4,12 +4,14 @@ import { ObjectTypeDefinitionNode } from "graphql";
 import { join } from "path";
 import Resource from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
-import Resources from "../lib/resources.js";
+import ResourceIndex from "../lib/resource-index.js";
 import { Quad } from "@rdfjs/types";
 import StreamStore from "sparql-http-client/StreamStore.js";
 import Endpoint from "sparql-http-client/Endpoint.js";
 import { Readable } from "stream";
 import * as url from 'url';
+import {ensureArray} from '../lib/utils.js'
+
 const dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 export function getTestFile(path: string): string {
@@ -23,10 +25,10 @@ export function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
     }
   );
 }
-export function getTestResources(res?: Resource): Resources {
+export function getTestResourceIndex(res?: Resource | Resource[]): ResourceIndex {
   return {
-    all: res ? [res] : [],
-    root: res ? [res] : [],
+    all: ensureArray(res),
+    root: ensureArray(res),
     isUserDefined: () => true,
     lookup: (name: string) => null,
   };
@@ -42,7 +44,7 @@ export function getTestResource(
     (def) => def.name.value === name
   )[0];
   return Resource.buildFromTypeDefinition(
-    getTestResources(),
+    getTestResourceIndex(),
     testResourceTypeDef,
     serviceIndex,
     templateIndex
