@@ -5,6 +5,7 @@ import { join } from "path";
 import Resource from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
 import ResourceIndex from "../lib/resource-index.js";
+
 import { Readable } from "stream";
 import * as url from 'url';
 import {ensureArray} from '../lib/utils.js'
@@ -50,12 +51,11 @@ export function getTestResource(
 
 export function getTestSparqlClient(body:string):SparqlClient {
 
-  const mockFetch = function () {
-    const res: Response = new Response(Readable.from(body), {
+  const mockFetch = async function () {
+    return new Response(Readable.from(body), {
       headers: new Headers({'Content-Type': 'application/n-triples'}),
       status: 200
     })
-    return Promise.resolve(res)
   }
   mockFetch.Headers = Headers
 
