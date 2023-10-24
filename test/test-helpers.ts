@@ -53,7 +53,7 @@ export function getTestSparqlClient(body:string):SparqlClient {
 
   const mockFetch = async function () {
     return new Response(Readable.from(body), {
-      headers: new Headers({'Content-Type': 'application/n-triples'}),
+      headers: new Headers({'Content-Type': 'text/turtle'}),
       status: 200
     })
   }

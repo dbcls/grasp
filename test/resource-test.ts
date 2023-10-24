@@ -13,8 +13,6 @@ import {
   getTestSparqlClient,
   getTestFile,
 } from "./test-helpers.js";
-// @ts-ignore
-import quad from "rdf-quad";
 import { Kind } from "graphql";
 
 const parser = new Parser();
@@ -237,8 +235,6 @@ describe("Resource", () => {
   describe("fetch", () => {
 
     const res = getTestResource("assets/with-docs-primitives.graphql");
-    const subject = "http://example.org/subject1";
-    const subject2 = "http://example.org/subject2";
 
     res.sparqlClient = getTestSparqlClient(getTestFile("assets/responses/fetch.ttl"));
 
@@ -446,30 +442,12 @@ describe("UnionResource", () => {
   describe("fetch", () => {
 
     const res = getTestResource("assets/with-directives-union-type.graphql", "Test")
-    const subject = "http://example.org/subject1"
-    const subject2 = "http://example.org/subject2"
 
-    res.sparqlClient = getTestSparqlClient([
-      quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
-      quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject1"'),
-      quad(subject, "https://github.com/dbcls/grasp/ns/count", 5),
-      quad(subject, "https://github.com/dbcls/grasp/ns/test", true),
-      quad(subject2, "https://github.com/dbcls/grasp/ns/iri", subject2),
-      quad(subject2, "https://github.com/dbcls/grasp/ns/id", '"subject2"'),
-      quad(subject2, "https://github.com/dbcls/grasp/ns/count", 4),
-      quad(subject2, "https://github.com/dbcls/grasp/ns/test", false),
-
-    ])
+    res.sparqlClient = getTestSparqlClient(getTestFile("assets/responses/fetch-union-1.ttl"))
 
     const res2 = getTestResource("assets/with-directives-union-type.graphql", "Test2")
-    const subject3 = "http://example.org/subject3"
 
-    res2.sparqlClient = getTestSparqlClient([
-      quad(subject3, "https://github.com/dbcls/grasp/ns/iri", subject3),
-      quad(subject3, "https://github.com/dbcls/grasp/ns/name_ja", '"test"'),
-      quad(subject3, "https://github.com/dbcls/grasp/ns/count", 5),
-      quad(subject3, "https://github.com/dbcls/grasp/ns/page", true),
-    ])
+    res2.sparqlClient = getTestSparqlClient(getTestFile("assets/responses/fetch-union-2.ttl"))
 
     const index = getTestResourceIndex([res, res2])
     res.resources = index
