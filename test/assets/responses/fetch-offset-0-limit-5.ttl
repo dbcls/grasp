@@ -2,4 +2,4 @@
 <http://example.org/subject1> <https://github.com/dbcls/grasp/ns/id> "subject1" .
 <http://example.org/subject1> <https://github.com/dbcls/grasp/ns/count> 5 .
 <http://example.org/subject1> <https://github.com/dbcls/grasp/ns/test> true .
-<http://example.org/subject1> <https://github.com/dbcls/grasp/ns/obsolete> "obsolete" .
+<http://example.org/subject1> <https://github.com/dbcls/grasp/ns/obsolete> "obsolete"^^<http://www.w3.org/2001/XMLSchema#string> .

@@ -6,31 +6,32 @@ import {
 import {
     getTestResource,
     getTestResourceIndex,
-    getTestSparqlClient,
-    getTestFile,
     getTestPagedSparqlClient
 } from "./test-helpers.js"
 import type { Quad } from "@rdfjs/types"
-// @ts-ignore
-import quad from "rdf-quad"
+import { DataFactory } from "rdf-data-factory"; 
+import "jest-rdf";
+
+const factory = new DataFactory();
 
 describe("fetchResultsUntilThreshold", () => {
 
-    const subject = "http://example.org/subject1"
-    const subject2 = "http://example.org/subject2"
+    const subject = factory.namedNode("http://example.org/subject1")
+    const subject2 = factory.namedNode("http://example.org/subject2")
+    const urn = factory.namedNode("urn:test:b1")
 
     const triples = [
-        quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
-        quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject1"'),
-        quad(subject, "https://github.com/dbcls/grasp/ns/count", 5),
-        quad(subject, "https://github.com/dbcls/grasp/ns/test", true),
-        quad(subject, "https://github.com/dbcls/grasp/ns/obsolete", "obsolete"),
-        quad(subject2, "https://github.com/dbcls/grasp/ns/iri", subject2),
-        quad(subject2, "https://github.com/dbcls/grasp/ns/id", '"subject2"'),
-        quad(subject2, "https://github.com/dbcls/grasp/ns/count", 4),
-        quad(subject2, "https://github.com/dbcls/grasp/ns/test", false),
-        quad("_:b1", "https://github.com/dbcls/grasp/ns/iri", subject),
-        quad("_:b1", "https://github.com/dbcls/grasp/ns/id", '"subject"'),
+        factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/iri"), subject),
+        factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/id"), factory.literal("subject1")),
+        factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/count"), factory.literal("5", factory.namedNode('http://www.w3.org/2001/XMLSchema#integer'))),
+        factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/test"), factory.literal("true", factory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'))),
+        factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/obsolete"), factory.literal("obsolete")),
+        factory.quad(subject2, factory.namedNode("https://github.com/dbcls/grasp/ns/iri"), subject2),
+        factory.quad(subject2, factory.namedNode("https://github.com/dbcls/grasp/ns/id"), factory.literal("subject2")),
+        factory.quad(subject2, factory.namedNode("https://github.com/dbcls/grasp/ns/count"), factory.literal("4", factory.namedNode('http://www.w3.org/2001/XMLSchema#integer'))),
+        factory.quad(subject2, factory.namedNode("https://github.com/dbcls/grasp/ns/test"), factory.literal("false", factory.namedNode('http://www.w3.org/2001/XMLSchema#boolean'))),
+        factory.quad(urn, factory.namedNode("https://github.com/dbcls/grasp/ns/iri"), subject),
+        factory.quad(urn, factory.namedNode("https://github.com/dbcls/grasp/ns/id"), factory.literal("subject")),
     ]
     const threshold = 5
     const sparqlClient = getTestPagedSparqlClient("assets/responses/fetch")
@@ -39,7 +40,7 @@ describe("fetchResultsUntilThreshold", () => {
         await expect(fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)).resolves.not.toThrow()
     })
 
-    it("should return stream", done => {
+    it("should return stream with correct number of triples", done => {
         const actual: Array<Quad> = []
         fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
         .then(bindingsStream => {
@@ -52,15 +53,29 @@ describe("fetchResultsUntilThreshold", () => {
             })
         })
     })
+
+    it("should return stream with correct triples", done => {
+        const actual: Array<Quad> = []
+        fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
+        .then(bindingsStream => {
+            bindingsStream.on('data', (q: Quad) => {
+                actual.push(q)
+            })
+            bindingsStream.on('end', () => {
+                expect(actual).toBeRdfIsomorphic(triples)
+                done()
+            })
+        })
+    })
 })
 
 describe("buildEntry", () => {
     describe("called with values", () => {
-        const subject = "http://example.org/subject"
+        const subject = factory.namedNode("http://example.org/subject")
         const bindingGroupedBySubject: Record<string, Quad[]> = {
-            [subject]: [
-                quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
-                quad(subject, "https://github.com/dbcls/grasp/ns/id", '"subject"'),
+            [subject.value]: [
+                factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/iri"), subject),
+                factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/id"), factory.literal("subject")),
             ],
         }
         const res = getTestResource("assets/with-docs.graphql")
@@ -68,22 +83,22 @@ describe("buildEntry", () => {
 
         it("should return ResourceEntry", () => {
             return expect(
-                buildEntry(bindingGroupedBySubject, subject, res, resources)
+                buildEntry(bindingGroupedBySubject, subject.value, res, resources)
             ).toStrictEqual({
                 __typename: "Test",
-                iri: subject,
+                iri: subject.value,
                 id: "subject",
             })
         })
     })
 
     describe("called without iri", () => {
-        const subject = "http://example.org/subject"
+        const subject = factory.namedNode("http://example.org/subject")
         const bindingGroupedBySubject: Record<string, Quad[]> = {
-            [subject]: [
-                quad(subject, "https://github.com/dbcls/grasp/ns/test1", '"Test"'),
-                quad(subject, "https://github.com/dbcls/grasp/ns/test2", "http://example.org/X"),
-                quad(subject, "https://github.com/dbcls/grasp/ns/test3", "http://example.org/Y")
+            [subject.value]: [
+                factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/test1"), factory.literal("Test")),
+                factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/test2"), factory.namedNode("http://example.org/X")),
+                factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/test3"), factory.namedNode("http://example.org/Y"))
             ],
         }
         const res = getTestResource("assets/with-docs.graphql")
@@ -91,42 +106,42 @@ describe("buildEntry", () => {
 
         it("should return ResourceEntry", () => {
             return expect(
-                buildEntry(bindingGroupedBySubject, subject, res, resources)
+                buildEntry(bindingGroupedBySubject, subject.value, res, resources)
             ).toStrictEqual({
                 __typename: "Test",
-                iri: subject,
+                iri: subject.value,
                 id: undefined,
             })
         })
     })
 
     describe("called with embedded type", () => {
-        const subject = "http://example.org/subject"
-        const publisher = "http://example.org/publisher"
+        const subject = factory.namedNode("http://example.org/subject")
+        const publisher = factory.namedNode("http://example.org/publisher")
         const bindingGroupedBySubject: Record<string, Quad[]> = {
-            [subject]: [
-                quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
-                quad(
+            [subject.value]: [
+                factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/iri"), subject),
+                factory.quad(
                     subject,
-                    "https://github.com/dbcls/grasp/ns/publisher",
+                    factory.namedNode("https://github.com/dbcls/grasp/ns/publisher"),
                     publisher
                 ),
             ],
-            [publisher]: [
-                quad(
+            [publisher.value]: [
+                factory.quad(
                     publisher,
-                    "https://github.com/dbcls/grasp/ns/name_ja",
-                    '"name_ja"'
+                    factory.namedNode("https://github.com/dbcls/grasp/ns/name_ja"),
+                    factory.literal("name_ja")
                 ),
-                quad(
+                factory.quad(
                     publisher,
-                    "https://github.com/dbcls/grasp/ns/name_en",
-                    '"name_en"'
+                    factory.namedNode("https://github.com/dbcls/grasp/ns/name_en"),
+                    factory.literal("name_en")
                 ),
-                quad(
+                factory.quad(
                     publisher,
-                    "https://github.com/dbcls/grasp/ns/page",
-                    '"publisher_page"'
+                    factory.namedNode("https://github.com/dbcls/grasp/ns/page"),
+                    factory.literal("publisher_page")
                 ),
             ],
         }
@@ -152,10 +167,10 @@ describe("buildEntry", () => {
 
         it("should return ResourceEntry for embedded type", () => {
             return expect(
-                buildEntry(bindingGroupedBySubject, publisher, emRes, resources)
+                buildEntry(bindingGroupedBySubject, publisher.value, emRes, resources)
             ).toStrictEqual({
                 __typename: "Publisher",
-                iri: publisher,
+                iri: publisher.value,
                 name_en: "name_en",
                 name_ja: "name_ja",
                 page: "publisher_page",
@@ -164,13 +179,13 @@ describe("buildEntry", () => {
 
         it("should return nested ResourceEntry for root type", () => {
             return expect(
-                buildEntry(bindingGroupedBySubject, subject, res, resources)
+                buildEntry(bindingGroupedBySubject, subject.value, res, resources)
             ).toStrictEqual({
                 __typename: "Test",
-                iri: subject,
+                iri: subject.value,
                 publisher: {
                     __typename: "Publisher",
-                    iri: publisher,
+                    iri: publisher.value,
                     name_en: "name_en",
                     name_ja: "name_ja",
                     page: "publisher_page",
@@ -180,31 +195,32 @@ describe("buildEntry", () => {
     })
 
     describe("called with blanknode embedded type", () => {
-        const subject = "http://example.org/subject"
+        const subject = factory.namedNode("http://example.org/subject")
+        const bnode = factory.blankNode('b1')
         const bindingGroupedBySubject: Record<string, Quad[]> = {
-            [subject]: [
-                quad(subject, "https://github.com/dbcls/grasp/ns/iri", subject),
-                quad(
+            [subject.value]: [
+                factory.quad(subject, factory.namedNode("https://github.com/dbcls/grasp/ns/iri"), subject),
+                factory.quad(
                     subject,
-                    "https://github.com/dbcls/grasp/ns/publisher",
-                    '_:b1'
+                    factory.namedNode("https://github.com/dbcls/grasp/ns/publisher"),
+                    bnode
                 ),
             ],
             ['b1']: [
-                quad(
-                    '_:b1',
-                    "https://github.com/dbcls/grasp/ns/name_ja",
-                    '"name_ja"'
+                factory.quad(
+                    bnode,
+                    factory.namedNode("https://github.com/dbcls/grasp/ns/name_ja"),
+                    factory.literal("name_ja")
                 ),
-                quad(
-                    '_:b1',
-                    "https://github.com/dbcls/grasp/ns/name_en",
-                    '"name_en"'
+                factory.quad(
+                    bnode,
+                    factory.namedNode("https://github.com/dbcls/grasp/ns/name_en"),
+                    factory.literal("name_en")
                 ),
-                quad(
-                    '_:b1',
-                    "https://github.com/dbcls/grasp/ns/page",
-                    '"publisher_page"'
+                factory.quad(
+                    bnode,
+                    factory.namedNode("https://github.com/dbcls/grasp/ns/page"),
+                    factory.literal("publisher_page")
                 ),
             ],
         }
@@ -230,10 +246,10 @@ describe("buildEntry", () => {
 
         it("should return nested ResourceEntry for root type", () => {
             return expect(
-                buildEntry(bindingGroupedBySubject, subject, res, resources)
+                buildEntry(bindingGroupedBySubject, subject.value, res, resources)
             ).toStrictEqual({
                 __typename: "Test",
-                iri: subject,
+                iri: subject.value,
                 publisher: {
                     __typename: "Publisher",
                     iri: "b1",
