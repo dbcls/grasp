@@ -207,7 +207,7 @@ app.use(
   expressMiddleware(server, {
     context: async (ctx) => {
       const authHeader = ctx.req.get("Authorization")
-      const proxyHeaders: HeadersInit = new Headers({...(authHeader && {"Authorization":authHeader})})
+      const proxyHeaders = authHeader ? new Headers({"Authorization":authHeader}) : undefined
       
       if (process.env['AUTH_URL']) {
         const response = await fetch(process.env["AUTH_URL"], {
