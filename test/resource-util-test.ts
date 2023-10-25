@@ -36,34 +36,55 @@ describe("fetchResultsUntilThreshold", () => {
     const threshold = 5
     const sparqlClient = getTestPagedSparqlClient("assets/responses/fetch")
 
+    
+
     it("should not throw", async () => {
         await expect(fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)).resolves.not.toThrow()
     })
 
-    it("should return stream with correct number of triples", done => {
-        const actual: Array<Quad> = []
-        fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
-        .then(bindingsStream => {
-            bindingsStream.on('data', (q: Quad) => {
-                actual.push(q)
+    describe("when threshold matches triple count", () => {
+        it("should return stream with correct number of triples", done => {
+            const actual: Array<Quad> = []
+            fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
+            .then(bindingsStream => {
+                bindingsStream.on('data', (q: Quad) => {
+                    actual.push(q)
+                })
+                bindingsStream.on('end', () => {
+                    expect(actual.length).toEqual(triples.length)
+                    done()
+                })
             })
-            bindingsStream.on('end', () => {
-                expect(actual.length).toEqual(triples.length)
-                done()
+        })
+
+        it("should return stream with correct triples", done => {
+            const actual: Array<Quad> = []
+            fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
+            .then(bindingsStream => {
+                bindingsStream.on('data', (q: Quad) => {
+                    actual.push(q)
+                })
+                bindingsStream.on('end', () => {
+                    expect(actual).toBeRdfIsomorphic(triples)
+                    done()
+                })
             })
         })
     })
 
-    it("should return stream with correct triples", done => {
-        const actual: Array<Quad> = []
-        fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
-        .then(bindingsStream => {
-            bindingsStream.on('data', (q: Quad) => {
-                actual.push(q)
-            })
-            bindingsStream.on('end', () => {
-                expect(actual).toBeRdfIsomorphic(triples)
-                done()
+    describe("when threshold is higher than triple count", () => {
+
+        it("should return the correct number of triples", done => {
+            const actual: Array<Quad> = []
+            fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold + 1)
+            .then(bindingsStream => {
+                bindingsStream.on('data', (q: Quad) => {
+                    actual.push(q)
+                })
+                bindingsStream.on('end', () => {
+                    expect(actual.length).toEqual(threshold)
+                    done()
+                })
             })
         })
     })
