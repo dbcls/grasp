@@ -116,7 +116,7 @@ WHERE
   OPTIONAL { ?iri skos:altLabel ?alt_label }
   
   {{#if iri}}
-  VALUES ?iri { {{join " " (as-iriref iri)}} }
+  VALUES ?iri { {{join (as-iriref iri) " "}} }
   {{/if}}
 }
 """
@@ -151,12 +151,15 @@ type Concept @grasp(endpoint: "https://integbio.jp/rdf/sparql", sparql: "Concept
 
 When a SPARQL endpoint requires more details than a simple URL,
 for instance, when the endpoint requires security credentials,
-the endpoint parameters can be configured in a `services.json` file.
+the endpoint parameters can be configured using a `services.json` file or by setting environment variables.
+
+#### services.json file
+
 Set the `SERVICES_FILE` environment variable, so Grasp can locate the configuration file.
 
 ```json
 {
-    "dbpedia-sparql": {
+    "dbpedia": {
         "url": "http://dbpedia.org/sparql/",
         "graph": "http://dbpedia.org",
         "user": "",
@@ -165,6 +168,18 @@ Set the `SERVICES_FILE` environment variable, so Grasp can locate the configurat
     },
 }
 ```
+
+#### Environment variables
+
+Instead of using a services.json file, you can pass variables as well. The above example can be written using the following environment variables:
+
+```
+GRASP_dbpedia_url=http://dbpedia.org/sparql/
+GRASP_dbpedia_graph=http://dbpedia.org
+```
+
+#### Parameters
+
 Possible parameters:
 - `url`: the url of the endpoint
 - `graph`: the named graph to query
@@ -206,7 +221,7 @@ WHERE
   OPTIONAL { ?iri skos:altLabel ?alt_label }
   
   {{#if iri}}
-  VALUES ?iri { {{join " " (as-iriref iri)}} }
+  VALUES ?iri { {{join (as-iriref iri) " "}} }
   {{/if}}
 }
 """
@@ -235,7 +250,7 @@ CONSTRUCT {
   # ...
 } WHERE {
   # ...
-  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
+  {{#if iri}}VALUES ?iri { {{join (as-iriref iri) " "}} }{{/if}}
 }
 ```
 
@@ -246,7 +261,7 @@ We use predicates with the special namespace (`https://github.com/dbcls/grasp/ns
 The last part,
 
 ```
-  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
+  {{#if iri}}VALUES ?iri { {{join (as-iriref iri) " "}} }{{/if}}
 ```
 
 should look complicated. Let us explain.
@@ -257,9 +272,9 @@ The SPARQL query is actually written in [Handlebars](https://handlebarsjs.com/gu
 
 `if` is a built-in helper of Handlebars. The argument of `if` helper, in this case `iri`, is *falsy* (that is, not passed to the query), it isn't rendered.
 
-`join` is a helper defined by Grasp that concatenates the elements of the second argument using the first argument as the delimiter.
+`join` is a helper defined by [helpers-for-handlebars](https://www.npmjs.com/package/helpers-for-handlebars), which is included in Grasp, that concatenates the elements of the first argument using the second argument as the delimiter.
 
-`as-iriref` is a helper that wraps the elements of the second parameter with `<` and `>`.
+`as-iriref` is a helper defined by Grasp that wraps the elements of the second parameter with `<` and `>`.
 
 Taken together, this part consequently selects triples by `iri`, if `iri` given. For more about the use of Grasp-defined helpers, see the later section.
 
@@ -402,6 +417,8 @@ This query returns triples representing a `Dataset` and representing the `Publis
 Note that we need to return graph containing triples whose 1) subject points the embedded resource and 2) predicate reflects its field name. `?publisher` is bound to the blank node representing the `Publisher`.
 
 
+
+
 ## Write your own definition
 
 You can add your own definitions in the directory specified with `RESOURCES_DIR` (default is `./resources`).
@@ -472,7 +489,7 @@ WHERE
 {
   ?iri dcterms:identifier ?id .
   {{#if ids}}
-    VALUES ?id { {{join " " (as-string ids)}} }
+    VALUES ?id { {{join (as-string ids) " "}} }
   {{/if}}
 }
 ```
@@ -492,7 +509,7 @@ You can write the template using helpers as follows:
 WHERE
 {
   {{#if iris}}
-    FILTER (?iri IN ({{join ", " (as-iriref iris)}}))
+    FILTER (?iri IN ({{join (as-iriref iris) ", "}}))
   {{/if}}
 }
 ```
@@ -500,6 +517,7 @@ WHERE
 Note that we've specified `, ` as the delimiter for `join`.
 `as-iriref` works almost same as `as-string` except wrapping the elements with `<` and `>`.
 
+Grasp also includes the ['array'](https://www.npmjs.com/package/helpers-for-handlebars#array), ['comparison'](https://www.npmjs.com/package/helpers-for-handlebars#comparison), ['string'](https://www.npmjs.com/package/helpers-for-handlebars#string), and ['object'](https://www.npmjs.com/package/helpers-for-handlebars#object) helper libraries from [helpers-for-handlebars](https://www.npmjs.com/package/helpers-for-handlebars). 
 
 ## Configuration
 

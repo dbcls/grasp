@@ -1,4 +1,4 @@
-import Resources from "../lib/resources.js";
+import ResourceIndex from "../lib/resource-index.js";
 import { getResourceTypeDefs } from "./test-helpers.js";
 import { TypeNode } from 'graphql';
 import Resource from "../lib/resource.js";
@@ -7,7 +7,7 @@ import { Kind } from "graphql";
 
 describe("resources", () => {
   describe("initalized with empty array", () => {
-    const resources = new Resources([]);
+    const resources = new ResourceIndex([]);
     
     it("should not contain root resources", () => {
       expect(resources.root).toStrictEqual([]);
@@ -34,7 +34,7 @@ describe("resources", () => {
 
   describe("initalized with empty array", () => {
     const typeDefs = getResourceTypeDefs("assets/with-docs.graphql");
-    const resources = new Resources(typeDefs);
+    const resources = new ResourceIndex(typeDefs);
 
      it("should contain root resources", () => {
        expect(resources.all).toHaveLength(1);

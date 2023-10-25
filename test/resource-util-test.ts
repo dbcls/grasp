@@ -1,17 +1,18 @@
 import {
     buildEntry,
-    fetchResultsUntilThreshold
+    fetchBindingsUntilThreshold
 } from "../lib/resource-util.js"
 
 import {
     getTestResource,
-    getTestResources,
+    getTestResourceIndex,
     getTestSparqlClient,
+    getTestFile,
+    getTestPagedSparqlClient
 } from "./test-helpers.js"
 import type { Quad } from "@rdfjs/types"
 // @ts-ignore
 import quad from "rdf-quad"
-
 
 describe("fetchResultsUntilThreshold", () => {
 
@@ -32,21 +33,20 @@ describe("fetchResultsUntilThreshold", () => {
         quad("_:b1", "https://github.com/dbcls/grasp/ns/id", '"subject"'),
     ]
     const threshold = 5
-    const sparqlClient = getTestSparqlClient(triples, threshold)
+    const sparqlClient = getTestPagedSparqlClient("assets/responses/fetch")
 
     it("should not throw", async () => {
-        await expect(await fetchResultsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)).resolves.not.toThrow()
+        await expect(fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)).resolves.not.toThrow()
     })
 
     it("should return stream", done => {
         const actual: Array<Quad> = []
-        fetchResultsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
+        fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", threshold)
         .then(bindingsStream => {
             bindingsStream.on('data', (q: Quad) => {
                 actual.push(q)
             })
             bindingsStream.on('end', () => {
-                console.log(triples)
                 expect(actual.length).toEqual(triples.length)
                 done()
             })
@@ -64,12 +64,13 @@ describe("buildEntry", () => {
             ],
         }
         const res = getTestResource("assets/with-docs.graphql")
-        const resources = getTestResources(res)
+        const resources = getTestResourceIndex(res)
 
         it("should return ResourceEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, subject, res, resources)
             ).toStrictEqual({
+                __typename: "Test",
                 iri: subject,
                 id: "subject",
             })
@@ -86,12 +87,13 @@ describe("buildEntry", () => {
             ],
         }
         const res = getTestResource("assets/with-docs.graphql")
-        const resources = getTestResources(res)
+        const resources = getTestResourceIndex(res)
 
         it("should return ResourceEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, subject, res, resources)
             ).toStrictEqual({
+                __typename: "Test",
                 iri: subject,
                 id: undefined,
             })
@@ -152,6 +154,7 @@ describe("buildEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, publisher, emRes, resources)
             ).toStrictEqual({
+                __typename: "Publisher",
                 iri: publisher,
                 name_en: "name_en",
                 name_ja: "name_ja",
@@ -163,8 +166,10 @@ describe("buildEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, subject, res, resources)
             ).toStrictEqual({
+                __typename: "Test",
                 iri: subject,
                 publisher: {
+                    __typename: "Publisher",
                     iri: publisher,
                     name_en: "name_en",
                     name_ja: "name_ja",
@@ -227,8 +232,10 @@ describe("buildEntry", () => {
             return expect(
                 buildEntry(bindingGroupedBySubject, subject, res, resources)
             ).toStrictEqual({
+                __typename: "Test",
                 iri: subject,
                 publisher: {
+                    __typename: "Publisher",
                     iri: "b1",
                     name_en: "name_en",
                     name_ja: "name_ja",

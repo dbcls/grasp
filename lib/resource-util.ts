@@ -2,26 +2,30 @@ import type { Quad, Stream } from "@rdfjs/types"
 import { getTermRaw } from "rdf-literal"
 import transform from "lodash/transform.js"
 
-import Resources from "./resources.js"
+import ResourceIndex from "./resource-index.js"
 import {
   oneOrMany,
   isListType,
   unwrapCompositeType,
 } from "./utils.js"
-import SparqlClient from "sparql-http-client"
+import {QueryOptions, StreamClient} from "sparql-http-client"
 import { Dictionary } from "lodash"
 import internal, { PassThrough, Readable } from "stream"
-import Resource, { ResourceEntry } from './resource.js'
+import { IResource, ResourceEntry } from './resource.js'
+import logger from "./logger.js"
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//
 
 export function buildEntry(
   bindingsGroupedBySubject: Record<string, Quad[]>,
   subject: string,
-  resource: Resource,
-  resources: Resources
+  resource: IResource,
+  resources: ResourceIndex
 ): ResourceEntry {
-  const entry: ResourceEntry = {}
+  const entry: ResourceEntry = {
+    // Add typename so union types can be resolved
+    __typename: resource.name
+  }
 
   // Turn the resulting Quads into records
   const pValues = transform(
@@ -41,7 +45,7 @@ export function buildEntry(
   );
 
   // Resolve any non-scalar types
-  (resource.definition.fields || []).forEach((field) => {
+  resource.fields.forEach((field) => {
     const type = field.type
     const name = field.name.value
     const values = pValues[name] || []
@@ -65,6 +69,7 @@ export function buildEntry(
   // Make sure entries always have an iri
   if (!entry.iri)
     entry.iri = subject
+  logger.debug({entry},`Produced entry for ${resource.name}`)
   return entry
 }
 
@@ -102,9 +107,9 @@ export async function groupBindingsStream(stream: Stream<Quad>): Promise<{
 }
 
 export async function fetchBindingsUntilThreshold(
-  sparqlClient: SparqlClient,
+  sparqlClient: StreamClient,
   sparqlQuery: string,
-  threshold: number, options?: SparqlClient.QueryOptions
+  threshold: number, options?: QueryOptions
 ): Promise<Stream<Quad> & internal.Readable> {
   // If the threshold is 0 or lower, just execute the query without paging
   if (threshold <= 0) {
