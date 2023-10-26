@@ -1,5 +1,5 @@
 import Handlebars from "handlebars";
-import { FieldDefinitionNode, Kind, ObjectTypeDefinitionNode, TypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
+import { FieldDefinitionNode, GraphQLError, Kind, ObjectTypeDefinitionNode, TypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
 
 import ResourceIndex from "./resource-index.js";
 import {
@@ -14,6 +14,7 @@ import { LRUCache } from "lru-cache";
 import logger from "./logger.js";
 import { buildEntry, fetchBindingsUntilThreshold, groupBindingsStream } from './resource-util.js'
 import helpers from "helpers-for-handlebars";
+import { HeadersInit } from 'node-fetch'
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
@@ -41,10 +42,10 @@ export interface IResource {
   fields: ReadonlyArray<FieldDefinitionNode>
   isEmbeddedType : boolean
   isRootType :  boolean
-  fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<Map<string,ResourceEntry>>
+  fetch(args: object, opts?:{ proxyHeaders?:HeadersInit }): Promise<Map<string,ResourceEntry>>
   fetchByIRIs(
     iris: ReadonlyArray<string>,
-    opts?:{proxyHeaders?:{[key:string]:string}}
+    opts?:{proxyHeaders?:HeadersInit}
   ): Promise<Map<string,ResourceEntry | null>>
 }
 
@@ -72,14 +73,14 @@ abstract class BaseResource implements IResource {
     return !this.isRootType;
   }
 
-  abstract fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string, ResourceEntry>> 
+  abstract fetch(args: object, opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string, ResourceEntry>> 
 
   /**
    * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
    * @param iris
    * @returns
    */
-  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry | null>> {
+  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string,ResourceEntry | null>> {
     const entries = await this.fetch({ iri: iris }, opts);
     // Map IRIs to entries from entryMap or return null if not found
     const mapped = new Map(iris.map((iri) => [iri, entries.get(iri) || null]))
@@ -226,7 +227,7 @@ export default class Resource extends BaseResource {
    * @param args
    * @returns
    */
-  async fetch(args: object, opts?:{proxyHeaders?:{[key:string]:string}}): Promise<Map<string, ResourceEntry>> {
+  async fetch(args: object, opts?:{proxyHeaders?:HeadersInit}): Promise<Map<string, ResourceEntry>> {
     if (!this.queryTemplate || !this.sparqlClient) {
       throw new Error(
         "query template and endpoint should be specified in order to query"
@@ -281,8 +282,20 @@ export default class Resource extends BaseResource {
       return entries;
 
     } catch (err) {
-      logger.error(err, sparqlQuery);
-      throw new Error(`SPARQL endpoint returns: ${err}`);
+      const endpointUrl = this.sparqlClient.store.endpoint.endpointUrl
+      logger.error({
+        cache: entries !== undefined,
+        query: sparqlQuery,
+        endpointUrl,
+        error: err
+      }, sparqlQuery);
+      throw new GraphQLError(`Cannot query SPARQL service`, {
+        ...(err instanceof Error && { originalError: err }),
+        extensions: {
+          code: 'SPARQL_SERVICE_FAILURE',
+          http: { status: 500 }
+        },
+      });
     }
   }
 }
@@ -306,7 +319,7 @@ export class UnionResource extends BaseResource {
     return new UnionResource(unionResources, def)
   }
 
-  async fetch(args: object, opts?: { proxyHeaders?: { [key: string]: string } | undefined } | undefined): Promise<Map<string,ResourceEntry>> {
+  async fetch(args: object, opts?: { proxyHeaders?: HeadersInit } ): Promise<Map<string,ResourceEntry>> {
     logger.debug(`Fetching entries for union type ${this.name}`)
     const promises = this.resources.map(resource => resource.fetch(args, opts));
     const entryMaps = await Promise.all(promises)
