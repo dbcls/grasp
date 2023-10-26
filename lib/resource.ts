@@ -1,5 +1,5 @@
 import Handlebars from "handlebars";
-import { FieldDefinitionNode, Kind, ObjectTypeDefinitionNode, TypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
+import { FieldDefinitionNode, GraphQLError, Kind, ObjectTypeDefinitionNode, TypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
 
 import ResourceIndex from "./resource-index.js";
 import {
@@ -278,8 +278,19 @@ export default class Resource extends BaseResource {
       return entries;
 
     } catch (err) {
-      logger.error(err, sparqlQuery);
-      throw err
+      const endpointUrl = this.sparqlClient.store.endpoint.endpointUrl
+      logger.error({
+        cache: entries !== undefined,
+        query: sparqlQuery,
+        endpointUrl,
+        error: err
+      }, sparqlQuery);
+      throw new GraphQLError(`Cannot query SPARQL service`, {
+        ...(err instanceof Error && {originalError: err}),
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR'
+        },
+      });
     }
   }
 }
