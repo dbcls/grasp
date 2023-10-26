@@ -286,9 +286,10 @@ export default class Resource extends BaseResource {
         error: err
       }, sparqlQuery);
       throw new GraphQLError(`Cannot query SPARQL service`, {
-        ...(err instanceof Error && {originalError: err}),
+        ...(err instanceof Error && { originalError: err }),
         extensions: {
-          code: 'INTERNAL_SERVER_ERROR'
+          code: 'SPARQL_SERVICE_FAILURE',
+          http: { status: 500 }
         },
       });
     }
