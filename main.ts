@@ -5,12 +5,12 @@ import { ApolloServerPluginLandingPageLocalDefault } from '@apollo/server/plugin
 import { ApolloServerPluginLandingPageProductionDefault } from '@apollo/server/plugin/landingPage/default'
 import cors from 'cors'
 import parser from 'body-parser'
-import fetch from 'node-fetch'
+import fetch, { Headers, HeadersInit } from 'node-fetch'
 import DataLoader from "dataloader"
 import {transform,isEqual} from "lodash-es"
 
 
-import { IResource, ResourceEntry, UnionResource } from "./lib/resource.js"
+import { IResource, ResourceEntry } from "./lib/resource.js"
 import ResourceIndex from "./lib/resource-index.js"
 import SchemaLoader from "./lib/schema-loader.js"
 import {
@@ -30,7 +30,7 @@ type ResourceResolver = (
 ) => Promise<ResourceEntry | ResourceEntry[] | null>
 
 interface Context {
-  proxyHeaders: {[key:string]:string},
+  proxyHeaders?: HeadersInit,
   loaders: Map<IResource, DataLoader<string, ResourceEntry | null>>
 }
 
@@ -206,9 +206,13 @@ app.use(
   parser.json(),
   expressMiddleware(server, {
     context: async (ctx) => {
-      const proxyHeaders = {"Authorization":ctx.req.get("Authorization") || ""}
+      const authHeader = ctx.req.get("Authorization")
+      const proxyHeaders = authHeader ? new Headers({"Authorization":authHeader}) : undefined
+      
       if (process.env['AUTH_URL']) {
-        const response = await fetch(process.env["AUTH_URL"], {method: "HEAD", headers: proxyHeaders});
+        const response = await fetch(process.env["AUTH_URL"], {
+          method: "HEAD",
+          headers: proxyHeaders});
         if (response.status === authResponseCode) {
           throw new GraphQLError('User is not authenticated', {
             extensions: {
