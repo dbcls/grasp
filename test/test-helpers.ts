@@ -5,13 +5,11 @@ import { join } from "path";
 import Resource from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
 import ResourceIndex from "../lib/resource-index.js";
-import { Quad } from "@rdfjs/types";
-import StreamStore from "sparql-http-client/StreamStore.js";
-import Endpoint from "sparql-http-client/Endpoint.js";
+
 import { Readable } from "stream";
 import * as url from 'url';
 import {ensureArray} from '../lib/utils.js'
-
+import { Headers, Response } from 'node-fetch'
 const dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 export function getTestFile(path: string): string {
@@ -51,18 +49,19 @@ export function getTestResource(
   );
 }
 
-export function getTestSparqlClient(quads: Quad[]):SparqlClient {
-  const endpoint = new Endpoint({endpointUrl: "http://example.org"})
-  return {
-    query: { 
-      endpoint, 
-      ask: async (query) => true, 
-      construct: async (query) => Readable.from(quads), 
-      select: async (query) => new Readable(), 
-      update: async (query) => {}, 
-    },
-    store: new StreamStore({endpoint})
+export function getTestSparqlClient(body:string):SparqlClient {
+
+  const mockFetch = async function () {
+    return new Response(Readable.from(body), {
+      headers: new Headers({'Content-Type': 'text/turtle'}),
+      status: 200
+    })
   }
+  mockFetch.Headers = Headers
+
+  return new SparqlClient({
+    endpointUrl: "http://example.org", fetch: mockFetch
+  })
 }
 
 export function compileEmptyTemplate(res: Resource) {

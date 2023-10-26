@@ -1,0 +1,4 @@
+<http://example.org/subject3> <https://github.com/dbcls/grasp/ns/iri> <http://example.org/subject3> .
+<http://example.org/subject3> <https://github.com/dbcls/grasp/ns/name_ja> "test" .
+<http://example.org/subject3> <https://github.com/dbcls/grasp/ns/count> 5 .
+<http://example.org/subject3> <https://github.com/dbcls/grasp/ns/page> true .
