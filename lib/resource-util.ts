@@ -140,7 +140,7 @@ export async function fetchBindingsUntilThreshold(
       if (count == 0) {
         // if we have seen the first quad before, something is off
         if (first && first.equals(q)) {
-          throw new Error("Found duplicate triple; possible indefinite loop detected.")
+          throw new Error("Found duplicate triple; possible infinite loop detected.")
         } else {
           first = q
         }
