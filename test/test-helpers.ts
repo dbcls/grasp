@@ -49,9 +49,40 @@ export function getTestResource(
   );
 }
 
-export function getTestSparqlClient(body:string):SparqlClient {
+export function getTestSparqlClient(body:string): SparqlClient {
 
   const mockFetch = async function () {
+    return new Response(Readable.from(body), {
+      headers: new Headers({'Content-Type': 'text/turtle'}),
+      status: 200
+    })
+  }
+  mockFetch.Headers = Headers
+
+  return new SparqlClient({
+    endpointUrl: "http://example.org", fetch: mockFetch
+  })
+}
+
+export function getTestPagedSparqlClient(basePath:string, threshold = 5): SparqlClient {
+
+  const mockFetch = async function (fetchUrl: url.URL | string) {
+
+    fetchUrl = fetchUrl instanceof url.URL ? fetchUrl : new url.URL(fetchUrl)
+    const query = fetchUrl.searchParams.get('query')
+
+    if (!query) {
+      return new Response('No query parameter', {status: 400})
+    }
+
+    const match = query.match(/OFFSET\s+(\d+)\s+LIMIT\s+(\d+)$/);
+    let limitValue = threshold, offsetValue = 0
+    if (match) {
+        offsetValue = parseInt(match[1], 10); // Convert the captured string to an integer
+        limitValue = parseInt(match[2], 10); // Convert the captured string to an integer
+    } 
+    const body = getTestFile(basePath + `-offset-${offsetValue}-limit-${limitValue}.ttl`)
+
     return new Response(Readable.from(body), {
       headers: new Headers({'Content-Type': 'text/turtle'}),
       status: 200

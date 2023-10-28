@@ -12,7 +12,7 @@ import {
 import SparqlClient from "sparql-http-client";
 import { LRUCache } from "lru-cache";
 import logger from "./logger.js";
-import { buildEntry, groupBindingsStream } from './resource-util.js'
+import { buildEntry, fetchBindingsUntilThreshold, groupBindingsStream } from './resource-util.js'
 import helpers from "helpers-for-handlebars";
 import { HeadersInit } from 'node-fetch'
 
@@ -20,6 +20,8 @@ type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
 
 const DEFAULT_TTL = 1000 * 60 * 1;
+const RESULT_LIMIT = Number(process.env.ENDPOINT_RESULT_LIMIT) || 10000;
+
 // Create handlebars compiler
 export const handlebars = Handlebars.create();
 // Register handlebars helpers
@@ -247,13 +249,15 @@ export default class Resource extends BaseResource {
     }
 
     try {
-      const bindingsStream = await this.sparqlClient.query.construct(
-        sparqlQuery,
+      const bindingsStream = await fetchBindingsUntilThreshold(
+        this.sparqlClient,
+        sparqlQuery, 
+        RESULT_LIMIT,
         {
           operation: "postUrlencoded",
           headers: opts?.proxyHeaders
         }
-      );
+      )
 
       const { bindingsGroupedBySubject, primaryBindingsGroupedBySubject } =
         await groupBindingsStream(bindingsStream);
