@@ -13,6 +13,7 @@ import { Dictionary } from "lodash"
 import internal, { PassThrough, Readable } from "stream"
 import { IResource, ResourceEntry } from './resource.js'
 import logger from "./logger.js"
+import { GraphQLError } from 'graphql'
 
 const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//
 
@@ -101,7 +102,14 @@ export async function groupBindingsStream(stream: Stream<Quad>): Promise<{
       })
     })
     stream.on("error", (err: any) => {
-      throw new Error(`Cannot process SPARQL endpoint results: ${err}`)
+      throw new GraphQLError(`Unable to process SPARQL endpoint results`,
+      {
+        ...(err instanceof Error && { originalError: err }),
+        extensions: {
+          code: 'SPARQL_SERVICE_FAILURE',
+          http: { status: 500 }
+        },
+      })
     })
   })
 }
