@@ -14,8 +14,8 @@ export function isListType(type: TypeNode): boolean {
   return type.kind == Kind.LIST_TYPE
 }
 
-export function oneOrMany<T>(xs: T[], one: boolean): T | T[] {
-  return one ? xs[0] : xs;
+export function oneOrMany<T>(xs: T[], type: TypeNode): T | T[] {
+  return !isListType(type) ? xs[0] : xs;
 }
 
 export function unwrapCompositeType(type: TypeNode): NamedTypeNode {

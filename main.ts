@@ -86,10 +86,10 @@ const queryResolvers: Record<string, ResourceResolver> = {};
       }
 
       const iris = ensureArray(args.iri)
-      return oneOrMany(await loader.loadMany(iris), !isListType(field.type))
+      return oneOrMany(await loader.loadMany(iris), field.type)
     }
     const entries = (await resource.fetch(args, {proxyHeaders:context.proxyHeaders})).values()
-    return oneOrMany(Array.from(entries), !isListType(field.type))
+    return oneOrMany(Array.from(entries), field.type)
   }
 })
 
@@ -142,17 +142,14 @@ resources.all.forEach((resource) => {
         }
         const entry = await loader.loadMany(ensureArray(value))
         // If multiple values are returned when the schema defines single value, value is no array. Pick first element of array in case.
-        return oneOrMany(entry, !isListType(type))
+        return oneOrMany(entry, type)
       } else {
         // Get all IRIs
         const argIRIs = ensureArray(args.iri)
         const values = ensureArray(value)
         const allIRIs = Array.from(new Set([...values, ...argIRIs]))
         const entries = (await resource.fetch({ ...args, ...{ iri: allIRIs } },{proxyHeaders:context.proxyHeaders})).values()
-        return oneOrMany(
-          Array.from(entries),
-          !isListType(type)
-        )
+        return oneOrMany(Array.from(entries), type)
       }
     }
   })
