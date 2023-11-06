@@ -184,30 +184,90 @@ describe("utils", () => {
 
   describe("oneOrMany", () => {
     describe("with one", () => {
+      const def: TypeNode = {
+        kind: Kind.NAMED_TYPE,
+        name: {
+          kind: Kind.NAME,
+          value: "test",
+        },
+      };
       it("should return one if multi value", () => {
-        return expect(oneOrMany(["a", "b"], true)).toEqual("a");
+        return expect(oneOrMany(["a", "b"], def)).toEqual("a");
       });
 
       it("should return one if single value", () => {
-        return expect(oneOrMany(["a"], true)).toEqual("a");
+        return expect(oneOrMany(["a"], def)).toEqual("a");
       });
 
       it("should return undefined if empty array", () => {
-        return expect(oneOrMany([], true)).toEqual(undefined);
+        return expect(oneOrMany([], def)).toEqual(undefined);
+      });
+
+      it("should return null if nulls in array", () => {
+        return expect(oneOrMany([null], def)).toEqual(null);
       });
     });
 
     describe("with many", () => {
-      it("should return one if multi value", () => {
-        return expect(oneOrMany(["a", "b"], false)).toEqual(["a", "b"]);
+      const def: TypeNode = {
+        kind: Kind.LIST_TYPE,
+        type: {
+          kind: Kind.NAMED_TYPE,
+          name: {
+            kind: Kind.NAME,
+            value: "test",
+          },
+        },
+      };
+      it("should return many if multi value", () => {
+        return expect(oneOrMany(["a", "b"], def)).toEqual(["a", "b"]);
       });
 
-      it("should return one if single value", () => {
-        return expect(oneOrMany(["a"], false)).toEqual(["a"]);
+      it("should return many if single value", () => {
+        return expect(oneOrMany(["a"], def)).toEqual(["a"]);
       });
 
       it("should return empty array if empty array", () => {
-        return expect(oneOrMany([], false)).toEqual([]);
+        return expect(oneOrMany([], def)).toEqual([]);
+      });
+
+      it("should return nulls if null in array", () => {
+        return expect(oneOrMany([null], def)).toEqual([null]);
+      });
+    });
+
+    describe("with many non nullable", () => {
+      const def: TypeNode = {
+        kind: Kind.LIST_TYPE,
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.NAMED_TYPE,
+            name: {
+              kind: Kind.NAME,
+              value: "test",
+            },
+          },
+        },
+      };
+      it("should return many if multi value", () => {
+        return expect(oneOrMany(["a", "b"], def)).toEqual(["a", "b"]);
+      });
+
+      it("should return many if single value", () => {
+        return expect(oneOrMany(["a"], def)).toEqual(["a"]);
+      });
+
+      it("should return empty array if empty array", () => {
+        return expect(oneOrMany([], def)).toEqual([]);
+      });
+
+      it("should return empty array if null in array", () => {
+        return expect(oneOrMany([null], def)).toEqual([]);
+      });
+
+      it("should not return nulls if multi value", () => {
+        return expect(oneOrMany(["a", null, "b"], def)).toEqual(["a", "b"]);
       });
     });
   });

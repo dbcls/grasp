@@ -7,6 +7,7 @@ import {
   Kind,
   TypeDefinitionNode
 } from "graphql";
+import isNull from 'lodash-es/isNull.js'
 
 export function isListType(type: TypeNode): boolean {
   if (type.kind == Kind.NON_NULL_TYPE)
@@ -14,7 +15,18 @@ export function isListType(type: TypeNode): boolean {
   return type.kind == Kind.LIST_TYPE
 }
 
+export function isNonNullListType(type: TypeNode): boolean {
+  if (type.kind == Kind.NON_NULL_TYPE)
+    return isNonNullListType(type.type);
+  if (type.kind == Kind.LIST_TYPE)
+    return type.type.kind == Kind.NON_NULL_TYPE
+  return false
+}
+
 export function oneOrMany<T>(xs: T[], type: TypeNode): T | T[] {
+  if (isNonNullListType(type))
+    return xs.filter((i) => !isNull(i));
+  
   return !isListType(type) ? xs[0] : xs;
 }
 
