@@ -5,7 +5,6 @@ import transform from "lodash/transform.js"
 import ResourceIndex from "./resource-index.js"
 import {
   oneOrMany,
-  isListType,
   unwrapCompositeType,
 } from "./utils.js"
 import {QueryOptions, StreamClient} from "sparql-http-client"
@@ -61,9 +60,9 @@ export function buildEntry(
       const entries = values.map((nodeId) =>
         buildEntry(bindingsGroupedBySubject, nodeId, targetResource, resources)
       )
-      entry[name] = oneOrMany(entries, !isListType(type))
+      entry[name] = oneOrMany(entries, type)
     } else {
-      entry[name] = oneOrMany(values, !isListType(type))
+      entry[name] = oneOrMany(values, type)
     }
   })
 

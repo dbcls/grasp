@@ -7,6 +7,8 @@ import {
   Kind,
   TypeDefinitionNode
 } from "graphql";
+import isNull from 'lodash-es/isNull.js'
+import logger from "./logger.js"
 
 export function isListType(type: TypeNode): boolean {
   if (type.kind == Kind.NON_NULL_TYPE)
@@ -14,8 +16,26 @@ export function isListType(type: TypeNode): boolean {
   return type.kind == Kind.LIST_TYPE
 }
 
-export function oneOrMany<T>(xs: T[], one: boolean): T | T[] {
-  return one ? xs[0] : xs;
+export function isNonNullListType(type: TypeNode): boolean {
+  if (type.kind == Kind.NON_NULL_TYPE)
+    return isNonNullListType(type.type);
+  if (type.kind == Kind.LIST_TYPE)
+    return type.type.kind == Kind.NON_NULL_TYPE
+  return false
+}
+
+export function oneOrMany<T>(xs: T[], type: TypeNode): T | T[] {
+  if (isNonNullListType(type))
+    return xs.filter((i) => {
+      const itemIsNull: boolean = isNull(i)
+      if (itemIsNull){
+        logger.warn({type}, 'A null value was detected when resolving a GraphQL list with non-nullable items. This might indicate that a SPARQL query is not returning the desired triples.')
+      }
+      return !itemIsNull
+    }
+  );
+  
+  return !isListType(type) ? xs[0] : xs;
 }
 
 export function unwrapCompositeType(type: TypeNode): NamedTypeNode {
