@@ -52,6 +52,16 @@ build-org:
     GRASP_CONFIG: org
   script:
     - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} registry.triply.cc
-    - docker build --build-arg "ENDPOINT=${ENDPOINT}" --build-arg "GRASP_CONFIG=${GRASP_CONFIG}" -t registry.triply.cc/customers/meemoo/grasp:${GRASP_CONFIG} .
+    - docker build --build-arg "ENDPOINT=${ENDPOINT}" --build-arg "GRASP_CONFIG=${GRASP_CONFIG}" -t registry.triply.cc/customers/meemoo/grasp:${GRASP_CONFIG}-${CONFIG_BRANCH} .
+    - docker push registry.triply.cc/customers/meemoo/grasp:${GRASP_CONFIG}-${CONFIG_BRANCH}
+
+build-objects:
+  stage: build
+  image: docker:20.10.18-cli
+  variables:
+    GRASP_CONFIG: objects
+  script:
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} registry.triply.cc
+    - docker build --build-arg "ENDPOINT=${ENDPOINT}" --build-arg "GRASP_CONFIG=${GRASP_CONFIG}" -t registry.triply.cc/customers/meemoo/grasp:${GRASP_CONFIG}-${CONFIG_BRANCH} .
     - docker push registry.triply.cc/customers/meemoo/grasp:${GRASP_CONFIG}-${CONFIG_BRANCH}
 
