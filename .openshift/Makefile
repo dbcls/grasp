@@ -5,6 +5,7 @@ SHELL = /bin/bash
 
 test:
 	npm install
+	npm run build
 	npm run test
 	mv junit.xml test/test_results.xml
 
