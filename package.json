@@ -84,9 +84,6 @@
     "npm": {
       "publish": false
     },
-    "gitlab": {
-      "release": true
-    },
     "github": {
       "release": true
     }
