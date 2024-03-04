@@ -86,6 +86,9 @@
     },
     "gitlab": {
       "release": true
+    },
+    "github": {
+      "release": true
     }
   },
   "jest": {
