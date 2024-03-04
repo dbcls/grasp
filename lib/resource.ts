@@ -1,35 +1,31 @@
 import Handlebars from "handlebars";
-import type { Quad, Stream } from "@rdfjs/types";
-import { getTermRaw } from "rdf-literal";
-import transform from "lodash/transform";
-import { ObjectTypeDefinitionNode } from "graphql";
+import { FieldDefinitionNode, GraphQLError, Kind, ObjectTypeDefinitionNode, TypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
 
-import Resources from "./resources";
+import ResourceIndex from "./resource-index.js";
 import {
-  oneOrMany,
-  isListType,
-  unwrapCompositeType,
   hasDirective,
   getDirective,
   getDirectiveArgumentValue,
-  join,
   ntriplesIri,
   ntriplesLiteral,
-} from "./utils";
+} from "./utils.js";
 import SparqlClient from "sparql-http-client";
 import { LRUCache } from "lru-cache";
-import logger from "./logger";
-import { Dictionary } from "lodash";
+import logger from "./logger.js";
+import { buildEntry, fetchBindingsUntilThreshold, groupBindingsStream } from './resource-util.js'
+import helpers from "helpers-for-handlebars";
+import { HeadersInit } from 'node-fetch'
 
 type CompiledTemplate = (args: object) => string;
 export type ResourceEntry = Record<string, any>;
 
-const NS_REGEX = /^https:\/\/github\.com\/dbcls\/grasp\/ns\//;
 const DEFAULT_TTL = 1000 * 60 * 1;
+const RESULT_LIMIT = Number(process.env.ENDPOINT_RESULT_LIMIT) || 10000;
 
 // Create handlebars compiler
-const handlebars = Handlebars.create();
-handlebars.registerHelper("join", join);
+export const handlebars = Handlebars.create();
+// Register handlebars helpers
+helpers(['array', 'comparison', 'string', 'object'], {handlebars})
 handlebars.registerHelper("as-iriref", ntriplesIri);
 handlebars.registerHelper("as-string", ntriplesLiteral);
 
@@ -39,108 +35,73 @@ const options = {
   ttl: parseInt(process.env.CACHE_TTL || `${DEFAULT_TTL}`, 10),
 };
 
-const cache = new LRUCache<string, ResourceEntry[]>(options);
+const cache = new LRUCache<string, Map<string, ResourceEntry>>(options);
 
-export function buildEntry(
-  bindingsGroupedBySubject: Record<string, Quad[]>,
-  subject: string,
-  resource: Resource,
-  resources: Resources
-): ResourceEntry {
-  const entry: ResourceEntry = {};
-
-  // Turn the resulting Quads into records
-  const pValues = transform(
-    bindingsGroupedBySubject[subject],
-    (acc, { predicate, object }: Quad) => {
-      // Extract property name from URI
-      const k = predicate.value.replace(NS_REGEX, "");
-
-      // Converts any RDF term to a JavaScript primitive.
-      const v: any = getTermRaw(object);
-
-      // If property is not yet in the record accumulator, then initialise with empty array
-      // Push object value into array
-      (acc[k] || (acc[k] = [])).push(v);
-    },
-    {} as Record<string, string[]>
-  );
-
-  // Resolve any non-scalar types
-  (resource.definition.fields || []).forEach((field) => {
-    const type = field.type;
-    const name = field.name.value;
-    const values = pValues[name] || [];
-
-    // Get the type
-    const targetType = unwrapCompositeType(type);
-    // Find the corresponding resource
-    const targetResource = resources.lookup(targetType.name.value);
-
-    // If the resource is embedded, build entries from exiting bindings
-    if (targetResource?.isEmbeddedType) {
-      const entries = values.map((nodeId) =>
-        buildEntry(bindingsGroupedBySubject, nodeId, targetResource, resources)
-      );
-      entry[name] = oneOrMany(entries, !isListType(type));
-    } else {
-      entry[name] = oneOrMany(values, !isListType(type));
-    }
-  });
-
-  // Make sure entries always have an iri
-  if (!entry.iri)
-    entry.iri = subject
-  return entry;
+export interface IResource {
+  name: string
+  fields: ReadonlyArray<FieldDefinitionNode>
+  isEmbeddedType : boolean
+  isRootType :  boolean
+  fetch(args: object, opts?:{ proxyHeaders?:HeadersInit }): Promise<Map<string,ResourceEntry>>
+  fetchByIRIs(
+    iris: ReadonlyArray<string>,
+    opts?:{proxyHeaders?:HeadersInit}
+  ): Promise<Map<string,ResourceEntry | null>>
 }
 
-export async function groupBindingsStream(stream: Stream<Quad>): Promise<{
-  bindingsGroupedBySubject: Dictionary<Quad[]>;
-  primaryBindingsGroupedBySubject: Dictionary<Quad[]>;
-}> {
-  return new Promise((resolve) => {
-    const bindingsGroupedBySubject: Dictionary<Quad[]> = {};
-    const primaryBindingsGroupedBySubject: Dictionary<Quad[]> = {};
+abstract class BaseResource implements IResource {
+  
+  protected definition: TypeDefinitionNode
 
-    stream.on("data", (binding: Quad) => {
-      // Group all bindings by subject
-      bindingsGroupedBySubject[binding.subject.value] =
-        bindingsGroupedBySubject[binding.subject.value] || [];
-      bindingsGroupedBySubject[binding.subject.value].push(binding);
-      // Remove BlankNodes from bindings
-      if (binding.subject.termType !== "BlankNode") {
-        // Group the primaryBindings by subject value
-        primaryBindingsGroupedBySubject[binding.subject.value] =
-          primaryBindingsGroupedBySubject[binding.subject.value] || [];
-        primaryBindingsGroupedBySubject[binding.subject.value].push(binding);
-      }
-    });
-    stream.on("end", () => {
-      resolve({
-        bindingsGroupedBySubject,
-        primaryBindingsGroupedBySubject,
-      });
-    });
-    stream.on("error", (err: any) => {
-      throw new Error(`Cannot process SPARQL endpoint results: ${err}`);
-    });
-  });
+  constructor(definition: TypeDefinitionNode) {
+    this.definition = definition
+  }
+  
+  get fields(): ReadonlyArray<FieldDefinitionNode> {
+    return (this.definition.kind === Kind.OBJECT_TYPE_DEFINITION && this.definition.fields) ?  this.definition.fields : []
+  }
+
+  get name(): string {
+    return this.definition.name.value
+  }
+  
+  get isRootType(): boolean {
+    return !hasDirective(this.definition, "embedded");
+  }
+
+  get isEmbeddedType(): boolean {
+    return !this.isRootType;
+  }
+
+  abstract fetch(args: object, opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string, ResourceEntry>> 
+
+  /**
+   * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
+   * @param iris
+   * @returns
+   */
+  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string,ResourceEntry | null>> {
+    const entries = await this.fetch({ iri: iris }, opts);
+    // Map IRIs to entries from entryMap or return null if not found
+    const mapped = new Map(iris.map((iri) => [iri, entries.get(iri) || null]))
+    logger.debug({iris, returned: entries.size}, `Joining ${iris.length} objects of ${this.name}`)
+    return mapped;
+  }
 }
 
-export default class Resource {
-  resources: Resources;
-  definition: ObjectTypeDefinitionNode;
+export default class Resource extends BaseResource {
+  resources: ResourceIndex;
   sparqlClient?: SparqlClient;
   queryTemplate: CompiledTemplate | null;
 
   constructor(
-    resources: Resources,
+    resources: ResourceIndex,
     definition: ObjectTypeDefinitionNode,
     sparqlClient?: SparqlClient,
     sparql?: string
   ) {
+    super(definition)
     this.resources = resources;
-    this.definition = definition;
     this.sparqlClient = sparqlClient;
     this.queryTemplate = sparql
       ? handlebars.compile(sparql, { noEscape: true })
@@ -155,7 +116,7 @@ export default class Resource {
    * @returns
    */
   static buildFromTypeDefinition(
-    resources: Resources,
+    resources: ResourceIndex,
     def: ObjectTypeDefinitionNode,
     serviceIndex?: Map<string, SparqlClient>,
     templateIndex?: Map<string, string>
@@ -266,7 +227,7 @@ export default class Resource {
    * @param args
    * @returns
    */
-  async fetch(args: object): Promise<ResourceEntry[]> {
+  async fetch(args: object, opts?:{proxyHeaders?:HeadersInit}): Promise<Map<string, ResourceEntry>> {
     if (!this.queryTemplate || !this.sparqlClient) {
       throw new Error(
         "query template and endpoint should be specified in order to query"
@@ -274,7 +235,7 @@ export default class Resource {
     }
     const sparqlQuery = this.queryTemplate(args);
 
-    let entries: ResourceEntry[] | undefined = cache.get(sparqlQuery);
+    let entries: Map<string, ResourceEntry> | undefined = cache.get(sparqlQuery);
     logger.info(
       {
         cache: entries !== undefined,
@@ -288,27 +249,30 @@ export default class Resource {
     }
 
     try {
-      const bindingsStream = await this.sparqlClient.query.construct(
-        sparqlQuery,
+      const bindingsStream = await fetchBindingsUntilThreshold(
+        this.sparqlClient,
+        sparqlQuery, 
+        RESULT_LIMIT,
         {
           operation: "postUrlencoded",
+          headers: opts?.proxyHeaders
         }
-      );
+      )
 
       const { bindingsGroupedBySubject, primaryBindingsGroupedBySubject } =
         await groupBindingsStream(bindingsStream);
 
       // Collect the final list of entries from primaryBindings
-      entries = Object.entries(primaryBindingsGroupedBySubject).map(
+      entries = new Map(Object.entries(primaryBindingsGroupedBySubject).map(
         ([subject, _sBindings]) => {
-          return buildEntry(
+          return [subject, buildEntry(
             bindingsGroupedBySubject,
             subject,
             this,
             this.resources
-          );
+          )];
         }
-      );
+      ));
       cache.set(sparqlQuery, entries);
           logger.info(
             { cached: true, triples: Object.entries(primaryBindingsGroupedBySubject).length },
@@ -318,31 +282,47 @@ export default class Resource {
       return entries;
 
     } catch (err) {
-      logger.error(err, sparqlQuery);
-      throw new Error(`SPARQL endpoint returns: ${err}`);
+      const endpointUrl = this.sparqlClient.store.endpoint.endpointUrl
+      logger.error({
+        cache: entries !== undefined,
+        query: sparqlQuery,
+        endpointUrl,
+        error: err
+      }, sparqlQuery);
+      throw new GraphQLError(`Cannot query SPARQL service`, {
+        ...(err instanceof Error && { originalError: err }),
+        extensions: {
+          code: 'SPARQL_SERVICE_FAILURE',
+          http: { status: 500 }
+        },
+      });
     }
   }
+}
 
-  /**
-   * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
-   * @param iris
-   * @returns
-   */
-  async fetchByIRIs(
-    iris: ReadonlyArray<string>
-  ): Promise<Array<ResourceEntry | null>> {
-    const entries = await this.fetch({ iri: iris });
-    // join entries
-    return iris.map(
-      (iri) => entries.find((entry) => entry.iri === iri) || null
-    );
+export class UnionResource extends BaseResource {
+  private resources: IResource[]
+  constructor(resources: IResource[], definition: UnionTypeDefinitionNode) {
+    super(definition)
+    this.resources = resources
   }
 
-  get isRootType(): boolean {
-    return !hasDirective(this.definition, "embedded");
+  static buildFromTypeDefinition(resources: Resource[],
+    def: UnionTypeDefinitionNode): UnionResource {
+    const unionResources = (def.types || []).map(type => {
+      const resource = resources.find(resource => resource.name === type.name.value)
+      if (!resource) {
+        throw new Error(`Union type ${def.name.value} refers to unknown resource ${type.name.value}.`)
+      }
+      return resource
+    })
+    return new UnionResource(unionResources, def)
   }
 
-  get isEmbeddedType(): boolean {
-    return !this.isRootType;
+  async fetch(args: object, opts?: { proxyHeaders?: HeadersInit } ): Promise<Map<string,ResourceEntry>> {
+    logger.debug(`Fetching entries for union type ${this.name}`)
+    const promises = this.resources.map(resource => resource.fetch(args, opts));
+    const entryMaps = await Promise.all(promises)
+    return new Map(entryMaps.flatMap(entryMap => [...entryMap]))
   }
 }

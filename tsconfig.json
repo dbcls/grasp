@@ -2,16 +2,21 @@
   "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
     "target": "esnext",
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "esModuleInterop": true
   },
+  "lib": [
+    "esnext",
+    "dom"
+  ],
   "include": [
     "main.ts",
-    "lib/**/*"
+    "validateConfig.ts",
+    "lib/**/**/*.ts",
+    "test/**/**/*.ts"
   ],
   "exclude": [
-    "**/node_modules",
-    "**/test/*"
+    "**/node_modules"
   ]
 }

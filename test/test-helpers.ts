@@ -1,27 +1,32 @@
 import fs from "fs";
-import { parse } from "graphql/language/parser";
+import { parse } from "graphql/language/parser.js";
 import { ObjectTypeDefinitionNode } from "graphql";
 import { join } from "path";
-import Resource from "../lib/resource";
+import Resource from "../lib/resource.js";
 import SparqlClient from "sparql-http-client";
-import Resources from "../lib/resources";
-import { Quad } from "@rdfjs/types";
-import StreamStore from "sparql-http-client/StreamStore";
-import Endpoint from "sparql-http-client/Endpoint";
-import { Readable } from "stream";
+import ResourceIndex from "../lib/resource-index.js";
 
+import { Readable } from "stream";
+import * as url from 'url';
+import {ensureArray} from '../lib/utils.js'
+import { Headers, Response } from 'node-fetch'
+const dirname = url.fileURLToPath(new URL('.', import.meta.url));
+
+export function getTestFile(path: string): string {
+  return fs.readFileSync(join(dirname, path), { encoding: "utf-8" });
+}
 export function getResourceTypeDefs(path: string): ObjectTypeDefinitionNode[] {
-  const schema = fs.readFileSync(join(__dirname, path), { encoding: "utf-8" });
+  const schema = getTestFile(path);
   return parse(schema).definitions.filter(
     (def): def is ObjectTypeDefinitionNode => {
       return def.kind === "ObjectTypeDefinition";
     }
   );
 }
-export function getTestResources(res?: Resource): Resources {
+export function getTestResourceIndex(res?: Resource | Resource[]): ResourceIndex {
   return {
-    all: res ? [res] : [],
-    root: res ? [res] : [],
+    all: ensureArray(res),
+    root: ensureArray(res),
     isUserDefined: () => true,
     lookup: (name: string) => null,
   };
@@ -37,25 +42,57 @@ export function getTestResource(
     (def) => def.name.value === name
   )[0];
   return Resource.buildFromTypeDefinition(
-    getTestResources(),
+    getTestResourceIndex(),
     testResourceTypeDef,
     serviceIndex,
     templateIndex
   );
 }
 
-export function getTestSparqlClient(quads: Quad[]):SparqlClient {
-  const endpoint = new Endpoint({endpointUrl: "http://example.org"})
-  return {
-    query: { 
-      endpoint, 
-      ask: async (query) => true, 
-      construct: async (query) => Readable.from(quads), 
-      select: async (query) => new Readable(), 
-      update: async (query) => {}, 
-    },
-    store: new StreamStore({endpoint})
+export function getTestSparqlClient(body:string): SparqlClient {
+
+  const mockFetch = async function () {
+    return new Response(Readable.from(body), {
+      headers: new Headers({'Content-Type': 'text/turtle'}),
+      status: 200
+    })
   }
+  mockFetch.Headers = Headers
+
+  return new SparqlClient({
+    endpointUrl: "http://example.org", fetch: mockFetch
+  })
+}
+
+export function getTestPagedSparqlClient(basePath:string, threshold = 5): SparqlClient {
+
+  const mockFetch = async function (fetchUrl: url.URL | string) {
+
+    fetchUrl = fetchUrl instanceof url.URL ? fetchUrl : new url.URL(fetchUrl)
+    const query = fetchUrl.searchParams.get('query')
+
+    if (!query) {
+      return new Response('No query parameter', {status: 400})
+    }
+
+    const match = query.match(/OFFSET\s+(\d+)\s+LIMIT\s+(\d+)$/);
+    let limitValue = threshold, offsetValue = 0
+    if (match) {
+        offsetValue = parseInt(match[1], 10); // Convert the captured string to an integer
+        limitValue = parseInt(match[2], 10); // Convert the captured string to an integer
+    } 
+    const body = getTestFile(basePath + `-offset-${offsetValue}-limit-${limitValue}.ttl`)
+
+    return new Response(Readable.from(body), {
+      headers: new Headers({'Content-Type': 'text/turtle'}),
+      status: 200
+    })
+  }
+  mockFetch.Headers = Headers
+
+  return new SparqlClient({
+    endpointUrl: "http://example.org", fetch: mockFetch
+  })
 }
 
 export function compileEmptyTemplate(res: Resource) {

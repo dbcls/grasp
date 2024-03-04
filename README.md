@@ -23,17 +23,18 @@ Let's look at a simple example.
 
 ### Requirements
 
-* [Node.js](https://nodejs.org/) 14 or later
+* [Node.js](https://nodejs.org/) 16.14 or later
 
 ### Install
 
-    $ git clone https://github.com/dbcls/grasp.git
+Clone this repository with `git clone` or something similar, and run
+
     $ cd grasp
     $ npm install
 
 ### Run
 
-    $ RESOURCES_DIR=./examples npm run watch
+    $ RESOURCES_DIR=./examples npm run dev
 
 This loads the example resource definitions from `./example`.
 
@@ -70,6 +71,9 @@ From a local build:
   $ docker run --rm -it -p 4000:4000 -v /full/path/to/resources:/app/resources grasp:latest
 
 From published image:
+
+> [!IMPORTANT]
+> Published docker images contain a very old version of Grasp. We are working on releasing a recent one.
 
   $ docker run --rm -it -p 4000:4000 -v /full/path/to/resources:/app/resources ghcr.io/dbcls/grasp:<tag>
 
@@ -116,7 +120,7 @@ WHERE
   OPTIONAL { ?iri skos:altLabel ?alt_label }
   
   {{#if iri}}
-  VALUES ?iri { {{join " " (as-iriref iri)}} }
+  VALUES ?iri { {{join (as-iriref iri) " "}} }
   {{/if}}
 }
 """
@@ -151,12 +155,18 @@ type Concept @grasp(endpoint: "https://integbio.jp/rdf/sparql", sparql: "Concept
 
 When a SPARQL endpoint requires more details than a simple URL,
 for instance, when the endpoint requires security credentials,
-the endpoint parameters can be configured in a `services.json` file.
+the endpoint parameters can be configured using a `services.json` file an/or by setting environment variables.
+
+> [!IMPORTANT]
+> When a `services.json` file and environment variables are used together, the values set by environment variables gain preference.
+
+#### services.json file
+
 Set the `SERVICES_FILE` environment variable, so Grasp can locate the configuration file.
 
 ```json
 {
-    "dbpedia-sparql": {
+    "dbpedia": {
         "url": "http://dbpedia.org/sparql/",
         "graph": "http://dbpedia.org",
         "user": "",
@@ -165,6 +175,18 @@ Set the `SERVICES_FILE` environment variable, so Grasp can locate the configurat
     },
 }
 ```
+
+#### Environment variables
+
+Instead of using a services.json file, you can pass variables as well. The above example can be written using the following environment variables:
+
+```bash
+GRASP_dbpedia_url=http://dbpedia.org/sparql/
+GRASP_dbpedia_graph=http://dbpedia.org
+```
+
+#### Parameters
+
 Possible parameters:
 - `url`: the url of the endpoint
 - `graph`: the named graph to query
@@ -177,13 +199,7 @@ Currently, only basic auth is supported.
 Each endpoint configuration is identified by a unique key (in the example: `dbpedia-sparql`).
 This key can be used in the GraphQL type definitions to refer to the right endpoint.
 
-``` graphql
-type Concept @grasp(endpoint: "dbpedia-sparql", sparql: "Concept.sparql") {
-  iri: ID!
-  label: String
-  alt_label: String
-}
-```
+Via a GraphQL comment:
 
 ``` graphql
 """
@@ -206,11 +222,21 @@ WHERE
   OPTIONAL { ?iri skos:altLabel ?alt_label }
   
   {{#if iri}}
-  VALUES ?iri { {{join " " (as-iriref iri)}} }
+  VALUES ?iri { {{join (as-iriref iri) " "}} }
   {{/if}}
 }
 """
 type Concept {
+  iri: ID!
+  label: String
+  alt_label: String
+}
+```
+
+Via directives:
+
+``` graphql
+type Concept @grasp(endpoint: "dbpedia-sparql", sparql: "Concept.sparql") {
   iri: ID!
   label: String
   alt_label: String
@@ -235,7 +261,7 @@ CONSTRUCT {
   # ...
 } WHERE {
   # ...
-  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
+  {{#if iri}}VALUES ?iri { {{join (as-iriref iri) " "}} }{{/if}}
 }
 ```
 
@@ -246,7 +272,7 @@ We use predicates with the special namespace (`https://github.com/dbcls/grasp/ns
 The last part,
 
 ```
-  {{#if iri}}VALUES ?iri { {{join " " (as-iriref iri)}} }{{/if}}
+  {{#if iri}}VALUES ?iri { {{join (as-iriref iri) " "}} }{{/if}}
 ```
 
 should look complicated. Let us explain.
@@ -257,9 +283,9 @@ The SPARQL query is actually written in [Handlebars](https://handlebarsjs.com/gu
 
 `if` is a built-in helper of Handlebars. The argument of `if` helper, in this case `iri`, is *falsy* (that is, not passed to the query), it isn't rendered.
 
-`join` is a helper defined by Grasp that concatenates the elements of the second argument using the first argument as the delimiter.
+`join` is a helper defined by [helpers-for-handlebars](https://www.npmjs.com/package/helpers-for-handlebars), which is included in Grasp, that concatenates the elements of the first argument using the second argument as the delimiter.
 
-`as-iriref` is a helper that wraps the elements of the second parameter with `<` and `>`.
+`as-iriref` is a helper defined by Grasp that wraps the elements of the second parameter with `<` and `>`.
 
 Taken together, this part consequently selects triples by `iri`, if `iri` given. For more about the use of Grasp-defined helpers, see the later section.
 
@@ -402,6 +428,8 @@ This query returns triples representing a `Dataset` and representing the `Publis
 Note that we need to return graph containing triples whose 1) subject points the embedded resource and 2) predicate reflects its field name. `?publisher` is bound to the blank node representing the `Publisher`.
 
 
+
+
 ## Write your own definition
 
 You can add your own definitions in the directory specified with `RESOURCES_DIR` (default is `./resources`).
@@ -472,7 +500,7 @@ WHERE
 {
   ?iri dcterms:identifier ?id .
   {{#if ids}}
-    VALUES ?id { {{join " " (as-string ids)}} }
+    VALUES ?id { {{join (as-string ids) " "}} }
   {{/if}}
 }
 ```
@@ -492,7 +520,7 @@ You can write the template using helpers as follows:
 WHERE
 {
   {{#if iris}}
-    FILTER (?iri IN ({{join ", " (as-iriref iris)}}))
+    FILTER (?iri IN ({{join (as-iriref iris) ", "}}))
   {{/if}}
 }
 ```
@@ -500,6 +528,26 @@ WHERE
 Note that we've specified `, ` as the delimiter for `join`.
 `as-iriref` works almost same as `as-string` except wrapping the elements with `<` and `>`.
 
+Grasp also includes the ['array'](https://www.npmjs.com/package/helpers-for-handlebars#array), ['comparison'](https://www.npmjs.com/package/helpers-for-handlebars#comparison), ['string'](https://www.npmjs.com/package/helpers-for-handlebars#string), and ['object'](https://www.npmjs.com/package/helpers-for-handlebars#object) helper libraries from [helpers-for-handlebars](https://www.npmjs.com/package/helpers-for-handlebars). 
+
+### Enabling authorization via third-party web service
+
+Grasp supports authorization via a third-party web service. 
+The `Authorization` header from the request is proxied to an URL set in `AUTH_URL`.
+When the proxied request returns the statuscode set in `AUTH_RESPONSE_CODE`, Grasp returns a `401`. 
+If `AUTH_URL` is not set, authorization is disabled and the Graphql endpoint is publicly accessible.
+
+### Dealing with SPARQL endpoint result limits
+
+Some triple stores limit the number of returned results to a fixed amount. 
+The most prominent one is Openlink Virtuoso, where the default value is `10000`.
+
+Grasp can circumvent these limits by requesting the query in consecutive pages (using SPARQL's `OFFSET` and `LIMIT`).
+When the number of returned triples equals the number set in `ENDPOINT_RESULT_LIMIT`, a consecutive page is requested. 
+You can disable paging alltogether by setting `ENDPOINT_RESULT_LIMIT` to `0` or less.
+
+> [!NOTE]
+> Grasp has a safeguard in place that prevents a page from being requested over and over again. If this happens, Grasp will throw an error. This probably indicates the SPARQL template was not properly implemented or the endpoint is not behaving as expected. 
 
 ## Configuration
 
@@ -547,3 +595,41 @@ Set the time in milliseconds that SPARQL queries live in the cache.
 
 Set the max number of SPARQL queries that are stored in the cache.
 You can disable the cache by setting this to 0.
+
+### `GRASP_<servicename>_<key>`
+
+Set a service parameter. Possible values for `<key>` are found in the [service parameters section](#parameters).
+
+### `ENDPOINT_RESULT_LIMIT`
+
+(default: `10000`)
+
+Set the maximum number of results that the endpoint will return for a query. This is typically used when using Openlink Virtuoso.
+Any value of `0` or less will disable this behaviour.
+
+### `AUTH_URL`
+
+Set the url of a third-party authorization web service that validates the request `Authorization` header.
+If this is not set, authorization is disabled.
+
+### `AUTH_RESPONSE_CODE`
+
+(default: `401`)
+
+Set the HTTP status code that the third-party authentication web service returns when rejecting access.
+
+## Releasing
+
+### Pipelines
+
+The Gitlab CI is responsible for building and updating the grasp deployments.
+
+- A push to a feature branch with a merge request will trigger a build and deployment of `int`
+- A push to the `main` branch will trigger a build and deployment of `qas`
+- A git-tag will trigger a build and deployment of `prd`
+
+### Creating a new version
+
+- `npm version patch|minor|major`
+- `git push --tags`
+- The pipeline will now build the correct `prd` version

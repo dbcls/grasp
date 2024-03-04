@@ -1,7 +1,8 @@
 import fs from 'fs';
-import { ObjectTypeDefinitionNode, DocumentNode } from 'graphql';
+import { ObjectTypeDefinitionNode, DocumentNode, UnionTypeDefinitionNode } from 'graphql';
 import { join } from 'path';
-import { parse } from 'graphql/language/parser';
+import { parse } from 'graphql/language/parser.js';
+import logger from "./logger.js";
 
 const {readdir, readFile} = fs.promises;
 
@@ -9,16 +10,22 @@ export default class SchemaLoader {
   originalTypeDefs: DocumentNode;
   queryDef: ObjectTypeDefinitionNode;
   resourceTypeDefs: ObjectTypeDefinitionNode[];
+  unionTypeDefs: UnionTypeDefinitionNode[];
 
   constructor(schema: string) {
     try {
       this.originalTypeDefs = parse(schema);
     } catch (error) {
-      throw new Error('GraphQL schema is invalid or not found');
+      logger.error(error)
+      throw new Error('GraphQL schema is either invalid or not found. Make sure you have a correct RESOURCES_DIR environment variable set');
     }
     
     const typeDefinitionNodes = this.originalTypeDefs.definitions.filter((def): def is ObjectTypeDefinitionNode => {
       return def.kind === 'ObjectTypeDefinition';
+    });
+
+    this.unionTypeDefs = this.originalTypeDefs.definitions.filter((def): def is UnionTypeDefinitionNode => {
+      return def.kind === 'UnionTypeDefinition';
     });
 
     const queryDef = typeDefinitionNodes.filter(def => def.name.value === 'Query');

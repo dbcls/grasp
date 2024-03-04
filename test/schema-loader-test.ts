@@ -1,6 +1,7 @@
-import SchemaLoader from "../lib/schema-loader";
+import SchemaLoader from "../lib/schema-loader.js";
 import { join } from "path";
-
+import * as url from 'url';
+const dirname = url.fileURLToPath(new URL('.', import.meta.url));
 describe("schema-loader", () => {
   describe("constructed with empty string", () => {
     it("should throw error", async () => {
@@ -86,14 +87,14 @@ describe("schema-loader", () => {
         ).rejects.toThrow();
       });
       it("if dir is empty", () => {
-        const dirPath = join(__dirname, "./assets/resources-empty");
+        const dirPath = join(dirname, "./assets/resources-empty");
         return expect(
           SchemaLoader.loadFromDirectory(dirPath)
         ).rejects.toThrow();
       });
     });
     describe("with files in dir", () => {
-      const dirPath = join(__dirname, "./assets/resources");
+      const dirPath = join(dirname, "./assets/resources");
 
       it("should have query def", async () => {
         const loader = await SchemaLoader.loadFromDirectory(dirPath);
@@ -118,7 +119,7 @@ describe("schema-loader", () => {
   });
   describe("loadFromFile", () => {
     it("should throw if file is not parseable", async () => {
-      const dirPath = join(__dirname, "./assets/invalid.graphql");
+      const dirPath = join(dirname, "./assets/invalid.graphql");
       return expect(SchemaLoader.loadFromFile(dirPath)).rejects.toThrow();
     });
   });
