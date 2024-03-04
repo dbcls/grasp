@@ -159,7 +159,7 @@ pipeline {
 }
 
 void getImageFromDockerfile() {
-    return 'node:14'
+    return 'node:18'
 }
 void getBaseImageName() {
     return getImageFromDockerfile().split(':')[0]
