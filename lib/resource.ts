@@ -258,6 +258,9 @@ export default class Resource extends BaseResource {
           headers: opts?.proxyHeaders
         }
       )
+      bindingsStream.on('error', (e) => {
+        throw e
+      })
 
       const { bindingsGroupedBySubject, primaryBindingsGroupedBySubject } =
         await groupBindingsStream(bindingsStream);
