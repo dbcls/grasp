@@ -7,7 +7,7 @@ import {
   oneOrMany,
   unwrapCompositeType,
 } from "./utils.js"
-import {QueryOptions, StreamClient} from "sparql-http-client"
+import { QueryOptions, StreamClient } from "sparql-http-client"
 import { Dictionary } from "lodash"
 import internal, { PassThrough, Readable } from "stream"
 import { IResource, ResourceEntry } from './resource.js'
@@ -42,7 +42,7 @@ export function buildEntry(
       (acc[k] || (acc[k] = [])).push(v)
     },
     {} as Record<string, string[]>
-  );
+  )
 
   // Resolve any non-scalar types
   resource.fields.forEach((field) => {
@@ -69,7 +69,7 @@ export function buildEntry(
   // Make sure entries always have an iri
   if (!entry.iri)
     entry.iri = subject
-  logger.debug({entry},`Produced entry for ${resource.name}`)
+  logger.debug({ entry }, `Produced entry for ${resource.name}`)
   return entry
 }
 
@@ -102,13 +102,13 @@ export async function groupBindingsStream(stream: Stream<Quad>): Promise<{
     })
     stream.on("error", (err: any) => {
       throw new GraphQLError(`Unable to process SPARQL endpoint results`,
-      {
-        ...(err instanceof Error && { originalError: err }),
-        extensions: {
-          code: 'SPARQL_SERVICE_FAILURE',
-          http: { status: 500 }
-        },
-      })
+        {
+          ...(err instanceof Error && { originalError: err }),
+          extensions: {
+            code: 'SPARQL_SERVICE_FAILURE',
+            http: { status: 500 }
+          },
+        })
     })
   })
 }
@@ -136,13 +136,12 @@ export async function fetchBindingsUntilThreshold(
     pagedQuery: string,
     offset: number = 0): Promise<void> {
 
-    return new Promise(async (resolve) =>{
-      try {
-        // Fetch all bindings
-        const bindingsStream = await sparqlClient.query.construct(
-          pagedQuery,
-          options
-        )
+    return new Promise(async (resolve) => {
+      // Fetch all bindings
+      sparqlClient.query.construct(
+        pagedQuery,
+        options
+      ).then(bindingsStream => {
 
         let count = 0
         bindingsStream.on('data', (q: Quad) => {
@@ -180,10 +179,10 @@ export async function fetchBindingsUntilThreshold(
           }
           resolve()
         })
-      } catch (error) {
-        logger.error(error, 'Error while fetching bindings')
-        reader.emit('error', error)
-      }
+      }).catch(error => {
+          logger.error(error, 'Error while fetching bindings')
+          reader.emit('error', error)
+        })
     })
   }
   // Implement the logic to fetch and emit results here
