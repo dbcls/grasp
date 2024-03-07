@@ -219,8 +219,10 @@ app.use(
           });
         }
       }
+      //const proxyAuthHeader = !!process.env['PROXY_AUTH_HEADER']
       return {
-        proxyHeaders ,
+        //proxyHeaders: proxyAuthHeader ? proxyHeaders : undefined ,
+        proxyHeaders,
         loaders: transform(
           resources.root,
           (acc, resource) => {
@@ -229,7 +231,10 @@ app.use(
               // Use DataLoader to pre-load and cache data from sparql endpoint
               new DataLoader(
                 async (iris: ReadonlyArray<string>) => {
-                  const values = (await resource.fetchByIRIs(iris, {proxyHeaders})).values()
+                  const values = (await resource.fetchByIRIs(iris, {
+                    //proxyHeaders: proxyAuthHeader ? proxyHeaders : undefined
+                    proxyHeaders
+                  })).values()
                   return Array.from(values)
                 },
                 { maxBatchSize }

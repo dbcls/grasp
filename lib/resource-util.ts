@@ -137,7 +137,7 @@ export async function fetchBindingsUntilThreshold(
     offset: number = 0): Promise<void> {
 
     return new Promise(async (resolve) =>{
-
+      try {
       // Fetch all bindings
       const bindingsStream = await sparqlClient.query.construct(
         pagedQuery,
@@ -180,6 +180,10 @@ export async function fetchBindingsUntilThreshold(
         }
         resolve()
       })
+      } catch (error) {
+        logger.error(error, 'Error while fetching bindings')
+        throw error
+      }
     })
   }
   // Implement the logic to fetch and emit results here
