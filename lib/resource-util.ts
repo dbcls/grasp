@@ -180,9 +180,9 @@ export async function fetchBindingsUntilThreshold(
           resolve()
         })
       }).catch(error => {
-          logger.error(error, 'Error while fetching bindings')
-          reader.emit('error', error)
-        })
+        logger.error(error, 'Error while fetching bindings')
+        reader.emit('error', error)
+      })
     })
   }
   // Implement the logic to fetch and emit results here

@@ -3,29 +3,30 @@ import {
   ResourceEntry,
   UnionResource,
   handlebars
-} from "../lib/resource.js";
-import SparqlClient from "sparql-http-client";
-import { Parser } from "sparqljs";
+} from "../lib/resource.js"
+import SparqlClient from "sparql-http-client"
+import { Parser } from "sparqljs"
 import {
   getTestResource,
   getTestResourceIndex,
   compileEmptyTemplate,
   getTestSparqlClient,
   getTestFile,
-} from "./test-helpers.js";
-import { Kind } from "graphql";
+  getTestErrorSparqlClient,
+} from "./test-helpers.js"
+import { Kind } from "graphql"
 
-const parser = new Parser();
+const parser = new Parser()
 
 function expectTemplatesToMatch(expected: string, actual: Resource) {
   return expectQueriesToMatch(
     handlebars.compile(expected, { noEscape: true })({}),
     compileEmptyTemplate(actual)
-  );
+  )
 }
 
 function expectQueriesToMatch(expected: string, actual: string) {
-  return expect(parser.parse(actual)).toEqual(parser.parse(expected));
+  return expect(parser.parse(actual)).toEqual(parser.parse(expected))
 }
 
 describe("Resource", () => {
@@ -36,40 +37,40 @@ describe("Resource", () => {
       it("should compile correct template with no arguments", async () => {
         const actual = handlebars.compile(template, { noEscape: true })({})
         const expected = getTestFile("assets/queries/expected.sparql")
-        return expectQueriesToMatch(expected, actual);
-      });
-      
+        return expectQueriesToMatch(expected, actual)
+      })
+
       it("should compile correct template with iri argument", async () => {
-        const actual = handlebars.compile(template, { noEscape: true })({iri: 'http://example.org/test'})
+        const actual = handlebars.compile(template, { noEscape: true })({ iri: 'http://example.org/test' })
         const expected = getTestFile("assets/queries/expected-iri.sparql")
-        return expectQueriesToMatch(expected, actual);
-      });
+        return expectQueriesToMatch(expected, actual)
+      })
 
       it("should compile correct template with id argument", async () => {
-        const actual = handlebars.compile(template, { noEscape: true })({id: 'test'})
+        const actual = handlebars.compile(template, { noEscape: true })({ id: 'test' })
         const expected = getTestFile("assets/queries/expected-id.sparql")
-        return expectQueriesToMatch(expected, actual);
-      });
-    });
+        return expectQueriesToMatch(expected, actual)
+      })
+    })
     describe("with template containing eq helper", () => {
       const template = getTestFile("assets/queries/template-eq.sparql")
-      const actual = handlebars.compile(template, { noEscape: true })({iri: 'http://example.org/test'})
+      const actual = handlebars.compile(template, { noEscape: true })({ iri: 'http://example.org/test' })
       const expected = getTestFile("assets/queries/expected-iri.sparql")
-      
+
       it("should compile correct template", async () => {
-        return expectQueriesToMatch(expected, actual);
-      });
-    });
+        return expectQueriesToMatch(expected, actual)
+      })
+    })
 
     describe("with invalid template", () => {
       const template = getTestFile("assets/queries/template-invalid.sparql")
-  
+
       it("should throw", () => {
         expect(
           handlebars.compile(template, { noEscape: true })
         ).toThrow()
-      });
-    });
+      })
+    })
   })
 
 
@@ -85,29 +86,29 @@ describe("Resource", () => {
                 value: "test",
               },
             })
-        ).not.toThrow();
-      });
-    });
-  });
+        ).not.toThrow()
+      })
+    })
+  })
 
   describe("buildFromTypeDefinition", () => {
     describe("with missing docs", () => {
       it("should throw error", async () => {
         return expect(() =>
           getTestResource("assets/with-no-docs.graphql")
-        ).toThrowError();
-      });
-    });
+        ).toThrowError()
+      })
+    })
 
     describe("with docs", () => {
-      const res = getTestResource("assets/with-docs.graphql");
+      const res = getTestResource("assets/with-docs.graphql")
 
       it("should have a SPARQL client", () => {
         const expected = new SparqlClient({
           endpointUrl: "https://integbio.jp/rdf/sparql",
-        });
-        return expect(res.sparqlClient).toEqual(expected);
-      });
+        })
+        return expect(res.sparqlClient).toEqual(expected)
+      })
 
       it("should have the correct SPARQL template", () => {
         const sparql = `
@@ -122,63 +123,63 @@ describe("Resource", () => {
         {
           { ?iri dcterms:identifier ?id }
         }
-        `;
-        return expectTemplatesToMatch(sparql, res);
-      });
+        `
+        return expectTemplatesToMatch(sparql, res)
+      })
 
       describe("and missing values", () => {
         it("should throw error if no endpoint", async () => {
           return expect(() =>
             getTestResource("assets/with-docs-no-endpoint.graphql")
-          ).toThrowError();
-        });
+          ).toThrowError()
+        })
 
         it("should throw error if no sparql", async () => {
           return expect(() =>
             getTestResource("assets/with-docs-no-sparql.graphql")
-          ).toThrowError();
-        });
-      });
-    });
+          ).toThrowError()
+        })
+      })
+    })
     describe("with grasp directives", () => {
-      const res = getTestResource("assets/with-directives.graphql");
+      const res = getTestResource("assets/with-directives.graphql")
 
       it("should have a SPARQL client", () => {
         const expected = new SparqlClient({
           endpointUrl: "https://integbio.jp/rdf/sparql",
-        });
-        return expect(res.sparqlClient).toEqual(expected);
-      });
+        })
+        return expect(res.sparqlClient).toEqual(expected)
+      })
 
       it("should return sparql value if no index", () => {
-        return expect(compileEmptyTemplate(res)).toBe("test");
-      });
+        return expect(compileEmptyTemplate(res)).toBe("test")
+      })
 
       describe("and missing values", () => {
         it("should throw error if no endpoint", async () => {
           return expect(() =>
             getTestResource("assets/with-directives-no-endpoint.graphql")
-          ).toThrowError();
-        });
+          ).toThrowError()
+        })
 
         it("should throw error if no sparql", async () => {
           return expect(() =>
             getTestResource("assets/with-directives-no-sparql.graphql")
-          ).toThrowError();
-        });
-      });
-    });
+          ).toThrowError()
+        })
+      })
+    })
     describe("with embedded directive", () => {
-      const res = getTestResource("assets/with-embedded.graphql", "Publisher");
+      const res = getTestResource("assets/with-embedded.graphql", "Publisher")
 
       it("should not have a SPARQL client", () => {
-        return expect(res.sparqlClient).toBeUndefined();
-      });
+        return expect(res.sparqlClient).toBeUndefined()
+      })
 
       it("should not have a query template", () => {
-        return expect(res.queryTemplate).toBeNull();
-      });
-    });
+        return expect(res.queryTemplate).toBeNull()
+      })
+    })
     describe("with template index", () => {
       it("should return entry if entry found in index", () => {
         const res = getTestResource(
@@ -186,9 +187,9 @@ describe("Resource", () => {
           "Test",
           undefined,
           new Map([["test", "sparql query"]])
-        );
-        return expect(compileEmptyTemplate(res)).toBe("sparql query");
-      });
+        )
+        return expect(compileEmptyTemplate(res)).toBe("sparql query")
+      })
 
       it("should return value if entry not found", () => {
         const res = getTestResource(
@@ -196,23 +197,23 @@ describe("Resource", () => {
           "Test",
           undefined,
           new Map([["not test", "sparql query"]])
-        );
-        return expect(compileEmptyTemplate(res)).toBe("test");
-      });
-    });
+        )
+        return expect(compileEmptyTemplate(res)).toBe("test")
+      })
+    })
 
     describe("with service index", () => {
       const expected = new SparqlClient({
         endpointUrl: "https://integbio.jp/rdf/sparql",
-      });
+      })
       it("should return sparql client if entry found in index", () => {
         const res = getTestResource(
           "assets/with-directives.graphql",
           "Test",
           new Map([["https://integbio.jp/rdf/sparql", expected]])
-        );
-        return expect(res.sparqlClient).toEqual(expected);
-      });
+        )
+        return expect(res.sparqlClient).toEqual(expected)
+      })
 
       it("should create sparql client if entry not found", () => {
         const res = getTestResource(
@@ -226,102 +227,118 @@ describe("Resource", () => {
               }),
             ],
           ])
-        );
-        return expect(res.sparqlClient).toEqual(expected);
-      });
-    });
-  });
+        )
+        return expect(res.sparqlClient).toEqual(expected)
+      })
+    })
+  })
 
   describe("fetch", () => {
 
-    const res = getTestResource("assets/with-docs-primitives.graphql");
+    describe("with unsuccessful response", () => {
+      const res = getTestResource("assets/with-docs-primitives.graphql")
 
-    res.sparqlClient = getTestSparqlClient(getTestFile("assets/responses/fetch.ttl"));
+      res.sparqlClient = getTestErrorSparqlClient()
 
-    res.resources = getTestResourceIndex(res);
+      res.resources = getTestResourceIndex(res)
 
-    it("should not throw", async () => {
-      await expect(res.fetch({}, {proxyHeaders:{}})).resolves.not.toThrow();
-    });
+      it("should throw", async () => {
+        await expect(res.fetch({}, { proxyHeaders: {} })).resolves.toThrow()
+      })
 
-    it("should return all ResourceEntries", async () => {
-      const expected: ResourceEntry[] = [
-        {
+    })
+
+    describe("with successful response", () => {
+
+      const res = getTestResource("assets/with-docs-primitives.graphql")
+
+      res.sparqlClient = getTestSparqlClient(getTestFile("assets/responses/fetch.ttl"))
+
+      res.resources = getTestResourceIndex(res)
+
+      it("should not throw", async () => {
+        await expect(res.fetch({}, { proxyHeaders: {} })).resolves.not.toThrow()
+      })
+
+      it("should return all ResourceEntries", async () => {
+        const expected: ResourceEntry[] = [
+          {
+            __typename: "Test",
+            id: "subject1",
+            iri: "http://example.org/subject1",
+            count: 5,
+            test: true,
+          },
+          {
+            __typename: "Test",
+            id: "subject2",
+            iri: "http://example.org/subject2",
+            count: 4,
+            test: false,
+          },
+        ]
+        const map = await res.fetch({}, { proxyHeaders: {} })
+        expect(Array.from(map.values())).toStrictEqual(expected)
+
+      })
+
+      it("should not return properties not in graphql schema", async () => {
+        const [firstValue] = await res.fetch({}, { proxyHeaders: {} })
+        return expect(firstValue).not.toHaveProperty("obsolete")
+      })
+
+      it("should not return RDF literal", async () => {
+        const expected: ResourceEntry = {
           __typename: "Test",
           id: "subject1",
           iri: "http://example.org/subject1",
-          count: 5,
-          test: true,
-        },
-        {
+          count: "\"5\"^^<http://www.w3.org/2001/XMLSchema#integer>",
+          test: "\"true\"^^<http://www.w3.org/2001/XMLSchema#boolean>",
+        }
+
+        return expect(await res.fetch({}, { proxyHeaders: {} })).not.toContainEqual(expected)
+      })
+
+      it("should not return ResourceEntry when blanknode", async () => {
+        const expected: ResourceEntry = {
           __typename: "Test",
-          id: "subject2",
-          iri: "http://example.org/subject2",
-          count: 4,
-          test: false,
-        },
-      ];
-        const map = await res.fetch({},{proxyHeaders:{}})
-        expect(Array.from(map.values())).toStrictEqual(expected)
-  
-    });
-
-    it("should not return properties not in graphql schema", async () => {
-      const [firstValue] = await res.fetch({},{proxyHeaders:{}})
-      return expect(firstValue).not.toHaveProperty("obsolete");
-    });
-
-    it("should not return RDF literal", async () => {
-      const expected: ResourceEntry = {
-        __typename: "Test",
-        id: "subject1",
-        iri: "http://example.org/subject1",
-        count: "\"5\"^^<http://www.w3.org/2001/XMLSchema#integer>",
-        test: "\"true\"^^<http://www.w3.org/2001/XMLSchema#boolean>",
-      };
-
-      return expect(await res.fetch({},{proxyHeaders:{}})).not.toContainEqual(expected);
-    });
-
-    it("should not return ResourceEntry when blanknode", async () => {
-      const expected: ResourceEntry = {
-        __typename: "Test",
-        id: "b1",
-        iri: "http://example.org/subject",
-      };
-      return expect(await res.fetch({},{proxyHeaders:{}})).not.toContainEqual(expected);
-    });
-  });
+          id: "b1",
+          iri: "http://example.org/subject",
+        }
+        return expect(await res.fetch({}, { proxyHeaders: {} })).not.toContainEqual(expected)
+      })
+    })
+  })
 
   describe("fetchByIRIs", () => {
-    const res = getTestResource("assets/with-docs.graphql");
+    const res = getTestResource("assets/with-docs.graphql")
     res.fetch = async (args) => new Map([
-      ["http://example.org/subject1",{
+      ["http://example.org/subject1", {
         __typename: "Test",
         id: "subject1",
         iri: "http://example.org/subject1",
       }],
-      ["http://example.org/subject2",{
+      ["http://example.org/subject2", {
         __typename: "Test",
         id: "subject2",
         iri: "http://example.org/subject2",
       }],
-    ]);
+    ])
 
     it("should return empty array when iris are empty", async () => {
-      const map = await res.fetchByIRIs([],{proxyHeaders:{}})
-      return expect(Array.from(map.values())).toStrictEqual([]);
-    });
+      const map = await res.fetchByIRIs([], { proxyHeaders: {} })
+      return expect(Array.from(map.values())).toStrictEqual([])
+    })
 
     it("should return null when iri is not found", async () => {
-      const map = await res.fetchByIRIs(["http://example.org/subject3"],{proxyHeaders:{}})
+      const map = await res.fetchByIRIs(["http://example.org/subject3"], { proxyHeaders: {} })
       return expect(
         Array.from(map.values())
-      ).toStrictEqual([null]);
-    });
+      ).toStrictEqual([null])
+    })
 
     it("should return matching entry when iri is given", async () => {
-      const map = await res.fetchByIRIs(["http://example.org/subject1"],{proxyHeaders:{}})
+      const map = await res.fetchByIRIs(["http://example.org/subject1"], { proxyHeaders: {} })
       return expect(
         Array.from(map.values())
       ).toStrictEqual([
@@ -330,13 +347,13 @@ describe("Resource", () => {
           id: "subject1",
           iri: "http://example.org/subject1",
         },
-      ]);
-    });
+      ])
+    })
 
     it("should not throw error", async () => {
-      return expect(() => res.fetchByIRIs([],{proxyHeaders:{}})).not.toThrow();
-    });
-  });
+      return expect(() => res.fetchByIRIs([], { proxyHeaders: {} })).not.toThrow()
+    })
+  })
 
   // describe("query", () => {
   //   it("should throw when client is undefined", async () => {
@@ -355,7 +372,7 @@ describe("Resource", () => {
   //   });
   // });
 
-});
+})
 
 describe("UnionResource", () => {
   describe("constructed", () => {

@@ -95,6 +95,21 @@ export function getTestPagedSparqlClient(basePath:string, threshold = 5): Sparql
   })
 }
 
+export function getTestErrorSparqlClient(): SparqlClient {
+
+  const mockFetch = async function (fetchUrl: url.URL | string) {
+    return new Response(undefined, {
+      //headers: new Headers({'Content-Type': 'text/turtle'}),
+      status: 401
+    })
+  }
+  mockFetch.Headers = Headers
+
+  return new SparqlClient({
+    endpointUrl: "http://example.org", fetch: mockFetch
+  })
+}
+
 export function compileEmptyTemplate(res: Resource) {
   return res.queryTemplate != null ? res.queryTemplate({}) : "";
 }

@@ -6,7 +6,8 @@ import {
 import {
     getTestResource,
     getTestResourceIndex,
-    getTestPagedSparqlClient
+    getTestPagedSparqlClient,
+    getTestErrorSparqlClient
 } from "./test-helpers.js"
 import type { Quad } from "@rdfjs/types"
 import { DataFactory } from "rdf-data-factory"; 
@@ -86,6 +87,38 @@ describe("fetchResultsUntilThreshold", () => {
                     done()
                 })
             })
+        })
+    })
+
+    describe("when endpoint returns error", () => {
+        const sparqlClient = getTestErrorSparqlClient();
+        
+        it("should produce error event with no threshold", done => {
+            fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", 0)
+            .catch(e => {
+                console.log('found this thrown error: %s:',e)
+                done()
+            })
+            // .then(bindingsStream => {
+            //     bindingsStream.on('error', (e) => {
+            //         console.log('found this error: %s:',e)
+            //         done()
+            //     })
+            // })
+        })
+
+        it("should produce error event with threshold", done => {
+            fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", 1)
+            .catch(e => {
+                console.log('found this thrown error: %s:',e)
+                done()
+            })
+            // .then(bindingsStream => {
+            //     bindingsStream.on('error', (e) => {
+            //         console.log('found this error: %s:',e)
+            //         done()
+            //     })
+            // })
         })
     })
 })
