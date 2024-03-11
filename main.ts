@@ -18,6 +18,7 @@ import {
   oneOrMany,
   unwrapCompositeType,
   ensureArray,
+  toBoolean,
 } from "./lib/utils.js"
 import ConfigLoader from "./lib/config-loader.js"
 import logger from "./lib/logger.js"
@@ -219,10 +220,9 @@ app.use(
           });
         }
       }
-      //const proxyAuthHeader = !!process.env['PROXY_AUTH_HEADER']
+      const proxyAuthHeader = toBoolean(process.env['PROXY_AUTH_HEADER'])
       return {
-        //proxyHeaders: proxyAuthHeader ? proxyHeaders : undefined ,
-        proxyHeaders,
+        proxyHeaders: proxyAuthHeader ? proxyHeaders : undefined ,
         loaders: transform(
           resources.root,
           (acc, resource) => {
@@ -232,8 +232,7 @@ app.use(
               new DataLoader(
                 async (iris: ReadonlyArray<string>) => {
                   const values = (await resource.fetchByIRIs(iris, {
-                    //proxyHeaders: proxyAuthHeader ? proxyHeaders : undefined
-                    proxyHeaders
+                    proxyHeaders: proxyAuthHeader ? proxyHeaders : undefined
                   })).values()
                   return Array.from(values)
                 },

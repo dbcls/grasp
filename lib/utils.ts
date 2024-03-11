@@ -90,3 +90,7 @@ export function ntriplesLiteral(strs: string | string[]): string[] {
 export function ntriplesIri(strs: string | string[]): string[] {
   return ensureArray(strs).map((str) => `<${str}>`);
 }
+
+export function toBoolean(value?: string) {
+  return !!(value?.toLowerCase() === 'true');
+};
