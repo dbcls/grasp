@@ -95,6 +95,21 @@ export function getTestPagedSparqlClient(basePath:string, threshold = 5): Sparql
   })
 }
 
+// NEEDS FIX: following function influences other SPARQL clients
+export function getTestErrorSparqlClient(status: number = 401): SparqlClient {
+
+  const mockFetch = async () => {
+    return new Response(undefined, {
+      status
+    })
+  }
+  mockFetch.Headers = Headers
+
+  return new SparqlClient({
+    endpointUrl: "http://example.org/error", fetch: mockFetch
+  })
+}
+
 export function compileEmptyTemplate(res: Resource) {
   return res.queryTemplate != null ? res.queryTemplate({}) : "";
 }

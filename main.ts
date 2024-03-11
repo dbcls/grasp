@@ -18,6 +18,7 @@ import {
   oneOrMany,
   unwrapCompositeType,
   ensureArray,
+  toBoolean,
 } from "./lib/utils.js"
 import ConfigLoader from "./lib/config-loader.js"
 import logger from "./lib/logger.js"
@@ -219,8 +220,9 @@ app.use(
           });
         }
       }
+      const proxyAuthHeader = toBoolean(process.env['PROXY_AUTH_HEADER'])
       return {
-        proxyHeaders ,
+        proxyHeaders: proxyAuthHeader ? proxyHeaders : undefined ,
         loaders: transform(
           resources.root,
           (acc, resource) => {
@@ -229,7 +231,9 @@ app.use(
               // Use DataLoader to pre-load and cache data from sparql endpoint
               new DataLoader(
                 async (iris: ReadonlyArray<string>) => {
-                  const values = (await resource.fetchByIRIs(iris, {proxyHeaders})).values()
+                  const values = (await resource.fetchByIRIs(iris, {
+                    proxyHeaders: proxyAuthHeader ? proxyHeaders : undefined
+                  })).values()
                   return Array.from(values)
                 },
                 { maxBatchSize }

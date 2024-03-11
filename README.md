@@ -537,6 +537,8 @@ The `Authorization` header from the request is proxied to an URL set in `AUTH_UR
 When the proxied request returns the statuscode set in `AUTH_RESPONSE_CODE`, Grasp returns a `401`. 
 If `AUTH_URL` is not set, authorization is disabled and the Graphql endpoint is publicly accessible.
 
+In case the SPARQL service uses the same credentaisl, you can also make grasp proxy the `Authorization` header to the SPARQL services by setting `PROXY_AUTH_HEADER` to `true`.
+
 ### Dealing with SPARQL endpoint result limits
 
 Some triple stores limit the number of returned results to a fixed amount. 
@@ -617,6 +619,12 @@ If this is not set, authorization is disabled.
 (default: `401`)
 
 Set the HTTP status code that the third-party authentication web service returns when rejecting access.
+
+### `PROXY_AUTH_HEADER`
+
+(default: `false`)
+
+Proxy the `Authorization` header to the SPARQL services. Note that this will use a single set of credentials for all SPARQL services.
 
 ## Releasing
 

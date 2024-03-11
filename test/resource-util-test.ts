@@ -6,7 +6,8 @@ import {
 import {
     getTestResource,
     getTestResourceIndex,
-    getTestPagedSparqlClient
+    getTestPagedSparqlClient,
+    getTestErrorSparqlClient
 } from "./test-helpers.js"
 import type { Quad } from "@rdfjs/types"
 import { DataFactory } from "rdf-data-factory"; 
@@ -83,6 +84,41 @@ describe("fetchResultsUntilThreshold", () => {
                 })
                 bindingsStream.on('end', () => {
                     expect(actual.length).toEqual(threshold)
+                    done()
+                })
+            })
+        })
+    })
+
+    describe("when endpoint returns error", () => {
+        const sparqlClient = getTestErrorSparqlClient();
+        
+        it("sparqlclient should produce error", async () => {
+            expect.assertions(1);
+            try {
+                await sparqlClient.query.construct('CONSTRUCT { ?s ?p ?o }')
+            } catch (error) {
+                expect((error as Error).message).toMatch(" (401): ");
+            }
+        })
+        
+        it("should produce error event with no threshold", done => {
+            expect.assertions(1);
+            fetchBindingsUntilThreshold(sparqlClient, "CONSTRUCT { ?s ?p ?o }", 0)
+            .then(bindingsStream => {
+                bindingsStream.on('error', (e) => {
+                    expect((e as Error).message).toMatch(" (401): ");
+                    done()
+                })
+            })
+        })
+
+        it("should produce error event with threshold", done => {
+            expect.assertions(1);
+            fetchBindingsUntilThreshold(sparqlClient, "CONSTRUCT { ?s ?p ?o }", 1)
+            .then(bindingsStream => {
+                bindingsStream.on('error', (e) => {
+                    expect((e as Error).message).toMatch(" (401): ");
                     done()
                 })
             })

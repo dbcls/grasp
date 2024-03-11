@@ -1,98 +1,98 @@
-import Handlebars from "handlebars";
-import { FieldDefinitionNode, GraphQLError, Kind, ObjectTypeDefinitionNode, TypeDefinitionNode, UnionTypeDefinitionNode } from "graphql";
+import Handlebars from "handlebars"
+import { FieldDefinitionNode, GraphQLError, Kind, ObjectTypeDefinitionNode, TypeDefinitionNode, UnionTypeDefinitionNode } from "graphql"
 
-import ResourceIndex from "./resource-index.js";
+import ResourceIndex from "./resource-index.js"
 import {
   hasDirective,
   getDirective,
   getDirectiveArgumentValue,
   ntriplesIri,
   ntriplesLiteral,
-} from "./utils.js";
-import SparqlClient from "sparql-http-client";
-import { LRUCache } from "lru-cache";
-import logger from "./logger.js";
+} from "./utils.js"
+import SparqlClient from "sparql-http-client"
+import { LRUCache } from "lru-cache"
+import logger from "./logger.js"
 import { buildEntry, fetchBindingsUntilThreshold, groupBindingsStream } from './resource-util.js'
-import helpers from "helpers-for-handlebars";
+import helpers from "helpers-for-handlebars"
 import { HeadersInit } from 'node-fetch'
 
-type CompiledTemplate = (args: object) => string;
-export type ResourceEntry = Record<string, any>;
+type CompiledTemplate = (args: object) => string
+export type ResourceEntry = Record<string, any>
 
-const DEFAULT_TTL = 1000 * 60 * 1;
-const RESULT_LIMIT = Number(process.env.ENDPOINT_RESULT_LIMIT) || 10000;
+const DEFAULT_TTL = 1000 * 60 * 1
+const RESULT_LIMIT = Number(process.env.ENDPOINT_RESULT_LIMIT) || 10000
 
 // Create handlebars compiler
-export const handlebars = Handlebars.create();
+export const handlebars = Handlebars.create()
 // Register handlebars helpers
-helpers(['array', 'comparison', 'string', 'object'], {handlebars})
-handlebars.registerHelper("as-iriref", ntriplesIri);
-handlebars.registerHelper("as-string", ntriplesLiteral);
+helpers(['array', 'comparison', 'string', 'object'], { handlebars })
+handlebars.registerHelper("as-iriref", ntriplesIri)
+handlebars.registerHelper("as-string", ntriplesLiteral)
 
 // Create data cache
 const options = {
   max: parseInt(process.env.CACHE_SIZE || "20", 10),
   ttl: parseInt(process.env.CACHE_TTL || `${DEFAULT_TTL}`, 10),
-};
+}
 
-const cache = new LRUCache<string, Map<string, ResourceEntry>>(options);
+const cache = new LRUCache<string, Map<string, ResourceEntry>>(options)
 
 export interface IResource {
   name: string
   fields: ReadonlyArray<FieldDefinitionNode>
-  isEmbeddedType : boolean
-  isRootType :  boolean
-  fetch(args: object, opts?:{ proxyHeaders?:HeadersInit }): Promise<Map<string,ResourceEntry>>
+  isEmbeddedType: boolean
+  isRootType: boolean
+  fetch(args: object, opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string, ResourceEntry>>
   fetchByIRIs(
     iris: ReadonlyArray<string>,
-    opts?:{proxyHeaders?:HeadersInit}
-  ): Promise<Map<string,ResourceEntry | null>>
+    opts?: { proxyHeaders?: HeadersInit }
+  ): Promise<Map<string, ResourceEntry | null>>
 }
 
 abstract class BaseResource implements IResource {
-  
+
   protected definition: TypeDefinitionNode
 
   constructor(definition: TypeDefinitionNode) {
     this.definition = definition
   }
-  
+
   get fields(): ReadonlyArray<FieldDefinitionNode> {
-    return (this.definition.kind === Kind.OBJECT_TYPE_DEFINITION && this.definition.fields) ?  this.definition.fields : []
+    return (this.definition.kind === Kind.OBJECT_TYPE_DEFINITION && this.definition.fields) ? this.definition.fields : []
   }
 
   get name(): string {
     return this.definition.name.value
   }
-  
+
   get isRootType(): boolean {
-    return !hasDirective(this.definition, "embedded");
+    return !hasDirective(this.definition, "embedded")
   }
 
   get isEmbeddedType(): boolean {
-    return !this.isRootType;
+    return !this.isRootType
   }
 
-  abstract fetch(args: object, opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string, ResourceEntry>> 
+  abstract fetch(args: object, opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string, ResourceEntry>>
 
   /**
    * Fetch the SPARQL bindings for the GraphQL Type based on a list of IRIs and construct the result
    * @param iris
    * @returns
    */
-  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string,ResourceEntry | null>> {
-    const entries = await this.fetch({ iri: iris }, opts);
+  async fetchByIRIs(iris: readonly string[], opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string, ResourceEntry | null>> {
+    const entries = await this.fetch({ iri: iris }, opts)
     // Map IRIs to entries from entryMap or return null if not found
     const mapped = new Map(iris.map((iri) => [iri, entries.get(iri) || null]))
-    logger.debug({iris, returned: entries.size}, `Joining ${iris.length} objects of ${this.name}`)
-    return mapped;
+    logger.debug({ iris, returned: entries.size }, `Joining ${iris.length} objects of ${this.name}`)
+    return mapped
   }
 }
 
 export default class Resource extends BaseResource {
-  resources: ResourceIndex;
-  sparqlClient?: SparqlClient;
-  queryTemplate: CompiledTemplate | null;
+  resources: ResourceIndex
+  sparqlClient?: SparqlClient
+  queryTemplate: CompiledTemplate | null
 
   constructor(
     resources: ResourceIndex,
@@ -101,11 +101,11 @@ export default class Resource extends BaseResource {
     sparql?: string
   ) {
     super(definition)
-    this.resources = resources;
-    this.sparqlClient = sparqlClient;
+    this.resources = resources
+    this.sparqlClient = sparqlClient
     this.queryTemplate = sparql
       ? handlebars.compile(sparql, { noEscape: true })
-      : null;
+      : null
   }
 
   /**
@@ -124,102 +124,102 @@ export default class Resource extends BaseResource {
     // Check whether Type definition has directive
     if (hasDirective(def, "embedded")) {
       //TODO: check out bug with embedded directive
-      return new Resource(resources, def);
+      return new Resource(resources, def)
     }
 
     // Check wether type has a grasp directive
     // Find grasp directive
-    let endpoint: string | undefined, sparql: string | undefined;
+    let endpoint: string | undefined, sparql: string | undefined
 
-    const graspDirective = getDirective(def, "grasp");
+    const graspDirective = getDirective(def, "grasp")
     if (graspDirective) {
-      endpoint = getDirectiveArgumentValue(graspDirective, "endpoint");
+      endpoint = getDirectiveArgumentValue(graspDirective, "endpoint")
       if (!endpoint) {
         throw new Error(
           `argument 'endpoint' is not defined in grasp directive for type ${def.name.value}`
-        );
+        )
       }
 
-      sparql = getDirectiveArgumentValue(graspDirective, "sparql");
+      sparql = getDirectiveArgumentValue(graspDirective, "sparql")
       if (!sparql) {
         throw new Error(
           `argument 'sparql' is not defined in grasp directive for type ${def.name.value}`
-        );
+        )
       }
     } else {
       // Check whether the type description has a good description
       if (!def.description) {
         throw new Error(
           `description for type ${def.name.value} is not defined`
-        );
+        )
       }
       // Extract description as string
-      const description = def.description.value;
-      const lines = description.split(/\r?\n/);
+      const description = def.description.value
+      const lines = description.split(/\r?\n/)
 
       enum State {
         Default,
         Endpoint,
         Sparql,
       }
-      let state: State = State.Default;
+      let state: State = State.Default
 
       // Split lines in type definition
       lines.forEach((line: string) => {
         switch (line) {
           case "--- endpoint ---":
-            state = State.Endpoint;
-            return;
+            state = State.Endpoint
+            return
           case "--- sparql ---":
-            state = State.Sparql;
-            sparql = "";
-            return;
+            state = State.Sparql
+            sparql = ""
+            return
         }
 
         switch (state) {
           case State.Endpoint:
-            endpoint = line;
-            state = State.Default;
-            break;
+            endpoint = line
+            state = State.Default
+            break
           case State.Sparql:
-            sparql += line + "\n";
-            break;
+            sparql += line + "\n"
+            break
         }
-      });
+      })
 
       if (!endpoint) {
-        throw new Error(`endpoint is not defined for type ${def.name.value}`);
+        throw new Error(`endpoint is not defined for type ${def.name.value}`)
       }
 
       if (!sparql) {
         throw new Error(
           `sparql query is not defined for type ${def.name.value}`
-        );
+        )
       }
     }
 
     // If the sparql key is in the template index, use that template
     if (templateIndex && sparql) {
-      const template = templateIndex.get(sparql);
+      const template = templateIndex.get(sparql)
       if (template) {
-        sparql = template;
+        sparql = template
       } else {
         logger.info(
           `query for type ${def.name.value} is not in template definitions; interpreting as SPARQL query.`
-        );
+        )
       }
     }
 
     if (!serviceIndex || !serviceIndex.has(endpoint)) {
       logger.info(
         `Endpoint '${endpoint}' for type ${def.name.value} is not in service definitions; trying as url.`
-      );
-      const sparqlClient = new SparqlClient({ endpointUrl: endpoint });
-      return new Resource(resources, def, sparqlClient, sparql);
+      )
+      const sparqlClient = new SparqlClient({ endpointUrl: endpoint })
+      return new Resource(resources, def, sparqlClient, sparql)
     }
     // sparql client cannot be undefined now
-    const sparqlClient = serviceIndex.get(endpoint);
-    return new Resource(resources, def, sparqlClient, sparql);
+    const sparqlClient = serviceIndex.get(endpoint)
+    return new Resource(resources, def, sparqlClient, sparql)
   }
 
   /**
@@ -227,76 +227,105 @@ export default class Resource extends BaseResource {
    * @param args
    * @returns
    */
-  async fetch(args: object, opts?:{proxyHeaders?:HeadersInit}): Promise<Map<string, ResourceEntry>> {
-    if (!this.queryTemplate || !this.sparqlClient) {
-      throw new Error(
-        "query template and endpoint should be specified in order to query"
-      );
-    }
-    const sparqlQuery = this.queryTemplate(args);
+  fetch(args: object, opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string, ResourceEntry>> {
+    return new Promise((resolve, reject) => {
+      if (!this.queryTemplate || !this.sparqlClient) {
+        return reject(new Error(
+          "query template and endpoint should be specified in order to query"
+        ))
+      }
+      const sparqlQuery = this.queryTemplate(args)
+      const endpointUrl = this.sparqlClient.store.endpoint.endpointUrl
 
-    let entries: Map<string, ResourceEntry> | undefined = cache.get(sparqlQuery);
-    logger.info(
-      {
-        cache: entries !== undefined,
-        query: sparqlQuery,
-        endpointUrl: this.sparqlClient.store.endpoint.endpointUrl,
-      },
-      "SPARQL query sent to endpoint."
-    );
-    if (entries !== undefined) {
-      return entries;
-    }
+      let entries: Map<string, ResourceEntry> | undefined = cache.get(sparqlQuery)
+      logger.info(
+        {
+          cache: entries !== undefined,
+          query: sparqlQuery,
+          endpointUrl,
+        },
+        "SPARQL query sent to endpoint."
+      )
+      if (entries !== undefined) {
+        return resolve(entries)
+      }
 
-    try {
-      const bindingsStream = await fetchBindingsUntilThreshold(
+      fetchBindingsUntilThreshold(
         this.sparqlClient,
-        sparqlQuery, 
+        sparqlQuery,
         RESULT_LIMIT,
         {
           operation: "postUrlencoded",
           headers: opts?.proxyHeaders
         }
-      )
+      ).then(bindingsStream => {
+        bindingsStream.on('error', (err) => {
+          logger.error({
+            cache: entries !== undefined,
+            query: sparqlQuery,
+            endpointUrl,
+            error: err
+          }, 'Unable to query SPARQL service')
+          return reject(new GraphQLError('Unable to query SPARQL service', {
+            ...(err instanceof Error && { originalError: err }),
+            extensions: {
+              code: 'SPARQL_SERVICE_FAILURE',
+              http: { status: 500 }
+            },
+          }))
+        })
 
-      const { bindingsGroupedBySubject, primaryBindingsGroupedBySubject } =
-        await groupBindingsStream(bindingsStream);
-
-      // Collect the final list of entries from primaryBindings
-      entries = new Map(Object.entries(primaryBindingsGroupedBySubject).map(
-        ([subject, _sBindings]) => {
-          return [subject, buildEntry(
-            bindingsGroupedBySubject,
-            subject,
-            this,
-            this.resources
-          )];
-        }
-      ));
-      cache.set(sparqlQuery, entries);
+        groupBindingsStream(bindingsStream).then(({ bindingsGroupedBySubject, primaryBindingsGroupedBySubject }) => {
+          // Collect the final list of entries from primaryBindings
+          entries = new Map(Object.entries(primaryBindingsGroupedBySubject).map(
+            ([subject, _sBindings]) => {
+              return [subject, buildEntry(
+                bindingsGroupedBySubject,
+                subject,
+                this,
+                this.resources
+              )]
+            }
+          ))
+          cache.set(sparqlQuery, entries)
           logger.info(
-            { cached: true, triples: Object.entries(primaryBindingsGroupedBySubject).length },
+            {
+              cached: true,
+              triples: Object.entries(primaryBindingsGroupedBySubject).length,
+              endpointUrl
+            },
             "SPARQL query successfully answered."
-          );
-      
-      return entries;
-
-    } catch (err) {
-      const endpointUrl = this.sparqlClient.store.endpoint.endpointUrl
-      logger.error({
-        cache: entries !== undefined,
-        query: sparqlQuery,
-        endpointUrl,
-        error: err
-      }, sparqlQuery);
-      throw new GraphQLError(`Cannot query SPARQL service`, {
-        ...(err instanceof Error && { originalError: err }),
-        extensions: {
-          code: 'SPARQL_SERVICE_FAILURE',
-          http: { status: 500 }
-        },
-      });
-    }
+          )
+          return resolve(entries)
+        }).catch(err => {
+          logger.error({
+            cache: entries !== undefined,
+            error: err
+          }, 'Unable to group SPARQL result bindings')
+          return reject(new GraphQLError('Unable to group SPARQL result bindings', {
+            ...(err instanceof Error && { originalError: err }),
+            extensions: {
+              code: 'SPARQL_SERVICE_FAILURE',
+              http: { status: 500 }
+            },
+          }))
+        })
+      }).catch(err => {
+        logger.error({
+          cache: entries !== undefined,
+          query: sparqlQuery,
+          endpointUrl,
+          error: err
+        }, 'Unable to query SPARQL service')
+        return reject(new GraphQLError('Unable to query SPARQL service', {
+          ...(err instanceof Error && { originalError: err }),
+          extensions: {
+            code: 'SPARQL_SERVICE_FAILURE',
+            http: { status: 500 }
+          },
+        }))
+      })
+    })
   }
 }
 
@@ -319,9 +348,9 @@ export class UnionResource extends BaseResource {
     return new UnionResource(unionResources, def)
   }
 
-  async fetch(args: object, opts?: { proxyHeaders?: HeadersInit } ): Promise<Map<string,ResourceEntry>> {
+  async fetch(args: object, opts?: { proxyHeaders?: HeadersInit }): Promise<Map<string, ResourceEntry>> {
     logger.debug(`Fetching entries for union type ${this.name}`)
-    const promises = this.resources.map(resource => resource.fetch(args, opts));
+    const promises = this.resources.map(resource => resource.fetch(args, opts))
     const entryMaps = await Promise.all(promises)
     return new Map(entryMaps.flatMap(entryMap => [...entryMap]))
   }
