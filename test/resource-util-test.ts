@@ -93,32 +93,35 @@ describe("fetchResultsUntilThreshold", () => {
     describe("when endpoint returns error", () => {
         const sparqlClient = getTestErrorSparqlClient();
         
+        it("sparqlclient should produce error", async () => {
+            expect.assertions(1);
+            try {
+                await sparqlClient.query.construct('CONSTRUCT { ?s ?p ?o }')
+            } catch (error) {
+                expect((error as Error).message).toMatch(" (401): ");
+            }
+        })
+        
         it("should produce error event with no threshold", done => {
-            fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", 0)
-            .catch(e => {
-                console.log('found this thrown error: %s:',e)
-                done()
+            expect.assertions(1);
+            fetchBindingsUntilThreshold(sparqlClient, "CONSTRUCT { ?s ?p ?o }", 0)
+            .then(bindingsStream => {
+                bindingsStream.on('error', (e) => {
+                    expect((e as Error).message).toMatch(" (401): ");
+                    done()
+                })
             })
-            // .then(bindingsStream => {
-            //     bindingsStream.on('error', (e) => {
-            //         console.log('found this error: %s:',e)
-            //         done()
-            //     })
-            // })
         })
 
         it("should produce error event with threshold", done => {
-            fetchBindingsUntilThreshold(sparqlClient, "SELECT * WHERE { ?s ?p ?o }", 1)
-            .catch(e => {
-                console.log('found this thrown error: %s:',e)
-                done()
+            expect.assertions(1);
+            fetchBindingsUntilThreshold(sparqlClient, "CONSTRUCT { ?s ?p ?o }", 1)
+            .then(bindingsStream => {
+                bindingsStream.on('error', (e) => {
+                    expect((e as Error).message).toMatch(" (401): ");
+                    done()
+                })
             })
-            // .then(bindingsStream => {
-            //     bindingsStream.on('error', (e) => {
-            //         console.log('found this error: %s:',e)
-            //         done()
-            //     })
-            // })
         })
     })
 })

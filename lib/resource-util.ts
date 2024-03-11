@@ -118,17 +118,25 @@ export async function fetchBindingsUntilThreshold(
   sparqlQuery: string,
   threshold: number, options?: QueryOptions
 ): Promise<Stream<Quad> & internal.Readable> {
-  // If the threshold is 0 or lower, just execute the query without paging
-  if (threshold <= 0) {
-    return sparqlClient.query.construct(
-      sparqlQuery,
-      options
-    )
-  }
-
   const reader = new PassThrough({
     objectMode: true,
   })
+
+  // If the threshold is 0 or lower, just execute the query without paging
+  if (threshold <= 0) {
+    sparqlClient.query.construct(
+        sparqlQuery,
+        options
+    ).then(bindingsStream => {
+      bindingsStream
+      .pipe(reader)
+      .on('error', e => reader.emit('error', e))
+    })
+    .catch(e => {
+      reader.emit('error', e)
+    })
+    return reader
+  }
 
   // store first triple to prevent indefinite loop
   let first: Quad
@@ -136,19 +144,19 @@ export async function fetchBindingsUntilThreshold(
     pagedQuery: string,
     offset: number = 0): Promise<void> {
 
-    return new Promise(async (resolve) => {
+    return new Promise(async (resolve, reject) => {
       // Fetch all bindings
-      sparqlClient.query.construct(
-        pagedQuery,
-        options
-      ).then(bindingsStream => {
-
+      try {
+        const bindingsStream = await sparqlClient.query.construct(
+          pagedQuery,
+          options
+        )
         let count = 0
         bindingsStream.on('data', (q: Quad) => {
           if (count == 0) {
             // if we have seen the first quad before, something is off
             if (first && first.equals(q)) {
-              throw new Error("Found duplicate triple; possible infinite loop detected.")
+              reader.emit('error', new Error("Found duplicate triple; possible infinite loop detected."))
             } else {
               first = q
             }
@@ -159,30 +167,34 @@ export async function fetchBindingsUntilThreshold(
           }
           count++
         })
-
+  
         bindingsStream.on('error', (error) => {
           reader.emit('error', error)
         })
-
+  
         bindingsStream.on('end', async () => {
           if (count === threshold) {
             const newOffset = offset + threshold
             // Alter query
             const alteredQuery = `${sparqlQuery} 
-                        OFFSET ${newOffset}
-                        LIMIT ${threshold}`
+                          OFFSET ${newOffset}
+                          LIMIT ${threshold}`
             // Repeat the process
-            await fetchBindings(alteredQuery, newOffset)
+            try {
+              await fetchBindings(alteredQuery, newOffset)
+            }  catch (e) {
+              reader.emit('error', e)
+            }
+
           } else {
             // If fewer or more than threshold results are returned, end the stream
             reader.push(null)
           }
           resolve()
         })
-      }).catch(error => {
-        logger.error(error, 'Error while fetching bindings')
-        reader.emit('error', error)
-      })
+      } catch(e) {
+        reader.emit('error', e)
+      }
     })
   }
   // Implement the logic to fetch and emit results here

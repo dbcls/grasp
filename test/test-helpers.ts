@@ -95,18 +95,18 @@ export function getTestPagedSparqlClient(basePath:string, threshold = 5): Sparql
   })
 }
 
-export function getTestErrorSparqlClient(): SparqlClient {
+// NEEDS FIX: following function influences other SPARQL clients
+export function getTestErrorSparqlClient(status: number = 401): SparqlClient {
 
-  const mockFetch = async function (fetchUrl: url.URL | string) {
+  const mockFetch = async () => {
     return new Response(undefined, {
-      //headers: new Headers({'Content-Type': 'text/turtle'}),
-      status: 401
+      status
     })
   }
   mockFetch.Headers = Headers
 
   return new SparqlClient({
-    endpointUrl: "http://example.org", fetch: mockFetch
+    endpointUrl: "http://example.org/error", fetch: mockFetch
   })
 }
 
