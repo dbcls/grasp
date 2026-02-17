@@ -1,4 +1,4 @@
-FROM node:18
+FROM node:24
 
 RUN useradd --create-home --home-dir /app app
 

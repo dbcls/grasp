@@ -23,7 +23,7 @@ Let's look at a simple example.
 
 ### Requirements
 
-* [Node.js](https://nodejs.org/) 14 or later
+* [Node.js](https://nodejs.org/) 24 or later
 
 ### Install
 
