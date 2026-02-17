@@ -1,10 +1,8 @@
 import Handlebars from "handlebars";
-import fetch from "node-fetch";
 import groupBy from "lodash.groupby";
 import mapValues from "lodash.mapvalues";
 import transform from "lodash.transform";
 import { ObjectTypeDefinitionNode } from "graphql";
-import { URLSearchParams } from "url";
 
 import Resources from "./resources.js";
 import {
