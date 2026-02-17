@@ -1,21 +1,25 @@
 {
   "scripts": {
+    "build:graphiql-ui": "esbuild graphiql-ui/main.jsx --bundle --format=esm --target=es2022 --loader:.ttf=file --outfile=public/graphiql/main.js",
+    "prestart": "npm run build:graphiql-ui",
+    "prewatch": "npm run build:graphiql-ui",
     "start": "node --import tsx main.ts",
     "watch": "nodemon --watch . --ext ts,graphql --exec \"node --import tsx main.ts\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@apollo/server": "^5.4.0",
+    "@as-integrations/express4": "^1.1.2",
     "@types/handlebars": "^4.1.0",
     "@types/lodash.groupby": "^4.6.7",
     "@types/lodash.isequal": "^4.5.6",
     "@types/lodash.mapvalues": "^4.6.7",
     "@types/lodash.transform": "^4.6.7",
     "@types/node": "^24.0.0",
-    "apollo-server": "^3.3.0",
-    "apollo-server-express": "^3.3.0",
     "dataloader": "^2.1.0",
-    "graphql": "^15.4.0",
-    "graphql-tag": "^2.11.0",
+    "express": "^4.22.1",
+    "graphiql": "^5.2.2",
+    "graphql": "^16.12.0",
     "handlebars": "^4.7.6",
     "lodash.groupby": "^4.6.0",
     "lodash.isequal": "^4.5.0",
@@ -23,11 +27,16 @@
     "lodash.transform": "^4.6.0",
     "nodemon": "^2.0.20",
     "outdent": "^0.8.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=24"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "^0.27.3"
+  }
 }

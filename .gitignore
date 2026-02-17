@@ -3,3 +3,4 @@
 
 /resources/*
 !/resources/.keep
+/public/graphiql/
