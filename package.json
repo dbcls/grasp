@@ -1,6 +1,7 @@
 {
   "scripts": {
     "build:graphiql-ui": "esbuild graphiql-ui/main.jsx --bundle --format=esm --target=es2022 --loader:.ttf=file --outfile=public/graphiql/main.js",
+    "postinstall": "npm run build:graphiql-ui",
     "prestart": "npm run build:graphiql-ui",
     "prewatch": "npm run build:graphiql-ui",
     "start": "node --import tsx main.ts",
@@ -18,6 +19,7 @@
     "@types/node": "^24.0.0",
     "dataloader": "^2.1.0",
     "express": "^4.22.1",
+    "esbuild": "^0.27.3",
     "graphiql": "^5.2.2",
     "graphql": "^16.12.0",
     "handlebars": "^4.7.6",
@@ -36,7 +38,5 @@
     "node": ">=24"
   },
   "type": "module",
-  "devDependencies": {
-    "esbuild": "^0.27.3"
-  }
+  "devDependencies": {}
 }

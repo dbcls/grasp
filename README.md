@@ -31,6 +31,11 @@ Let's look at a simple example.
     $ cd grasp
     $ npm install
 
+`npm install` automatically builds GraphiQL assets and writes them to `public/graphiql`.
+If you need to rebuild them manually, run:
+
+    $ npm run build:graphiql-ui
+
 ### Run
 
     $ RESOURCES_DIR=./examples npm run watch
