@@ -23,6 +23,68 @@ export type ResourceEntry = Record<string, any>;
 
 const handlebars = Handlebars.create();
 
+function decodeQleverValue(rawValue: string): string {
+  const iriMatch = rawValue.match(/^<(.+)>$/);
+  if (iriMatch) {
+    return iriMatch[1];
+  }
+
+  const literalMatch = rawValue.match(
+    /^"((?:[^"\\]|\\.)*)"(?:@[A-Za-z0-9-]+|\^\^<[^>]+>)?$/
+  );
+  if (literalMatch) {
+    return literalMatch[1]
+      .replace(/\\t/g, "\t")
+      .replace(/\\n/g, "\n")
+      .replace(/\\r/g, "\r")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
+  }
+
+  return rawValue;
+}
+
+function normalizeBindings(data: any, contentType: string | null): Array<Triple> {
+  const normalizedContentType = (contentType || "").toLowerCase();
+
+  if (normalizedContentType.includes("application/sparql-results+json")) {
+    return data.results.bindings.map((b: Record<string, any>) => {
+      const normalizedBinding = {
+        s: b.s || b.subject,
+        p: b.p || b.predicate,
+        o: b.o || b.object,
+      };
+
+      return mapValues(normalizedBinding, ({ value }) => value);
+    });
+  }
+
+  if (normalizedContentType.includes("application/qlever-results+json")) {
+    const selected: string[] = data.selected;
+    const getIndex = (...names: string[]) =>
+      selected.findIndex((name) => names.includes(name));
+    const sIdx = getIndex("?s", "?subject");
+    const pIdx = getIndex("?p", "?predicate");
+    const oIdx = getIndex("?o", "?object");
+
+    if (sIdx < 0 || pIdx < 0 || oIdx < 0) {
+      throw new Error(
+        `QLever JSON result does not include ?s/?p/?o (selected=${selected.join(
+          ", "
+        )})`
+      );
+    }
+
+    return data.res.map((row: string[]) => ({
+      s: decodeQleverValue(row[sIdx]),
+      p: decodeQleverValue(row[pIdx]),
+      o: decodeQleverValue(row[oIdx]),
+    }));
+  }
+
+  throw new Error(`Unsupported SPARQL content type: ${contentType}`);
+}
+
 handlebars.registerHelper(
   "join",
   function (separator: string, strs: string | string[]): string {
@@ -199,7 +261,11 @@ export default class Resource {
       method: "POST",
       body: sparqlParams,
       headers: {
-        Accept: "application/sparql-results+json",
+        // Keep this order for compatibility with both QLever and Virtuoso:
+        // Virtuoso may fail when `application/qlever-results+json` is listed first,
+        // but QLever needs `application/qlever-results+json` to return `CONSTRUCT` results as JSON.
+        Accept:
+          "application/sparql-results+json, application/qlever-results+json",
       },
     };
 
@@ -207,16 +273,7 @@ export default class Resource {
 
     if (res.ok) {
       const data = (await res.json()) as any;
-
-      return data.results.bindings.map((b: Record<string, any>) => {
-        const normalizedBinding = {
-          s: b.s || b.subject,
-          p: b.p || b.predicate,
-          o: b.o || b.object,
-        };
-
-        return mapValues(normalizedBinding, ({ value }) => value);
-      });
+      return normalizeBindings(data, res.headers.get("content-type"));
     } else {
       const body = await res.text();
 
