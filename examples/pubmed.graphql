@@ -1,6 +1,6 @@
 """
 --- endpoint ---
-https://integbio.jp/rdf/sparql
+https://rdfportal.org/primary/sparql
 
 --- sparql ---
 PREFIX : <https://github.com/dbcls/grasp/ns/>

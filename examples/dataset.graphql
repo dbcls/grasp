@@ -1,6 +1,6 @@
 """
 --- endpoint ---
-https://integbio.jp/rdf/sparql
+https://rdfportal.org/primary/sparql
 
 --- sparql ---
 PREFIX : <https://github.com/dbcls/grasp/ns/>
@@ -21,7 +21,7 @@ CONSTRUCT {
   ?publisher :name_en ?publisher_name_en .
   ?publisher :page ?publisher_page .
 }
-FROM <http://rdf.integbio.jp/dataset/dbcatalog/main>
+FROM <http://rdfportal.org/dataset/dbcatalog/main>
 WHERE
 {
   { ?iri dcterms:identifier ?id }
