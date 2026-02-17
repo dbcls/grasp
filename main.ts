@@ -162,6 +162,10 @@ SchemaLoader.loadFrom(resourcesDir).then((loader) => {
       express.static(join(currentDir, "public/graphiql"))
     );
 
+    app.get("/favicon.ico", (_req, res) => {
+      res.status(204).end();
+    });
+
     app.get(path, (_req, res) => {
       res.type("html").send(renderGraphiQLPage(path));
     });

@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "build:graphiql-ui": "esbuild graphiql-ui/main.jsx --bundle --format=esm --target=es2022 --loader:.ttf=file --outfile=public/graphiql/main.js",
+    "build:graphiql-ui": "npm run build:graphiql-workers && esbuild graphiql-ui/main.jsx --bundle --format=esm --target=es2022 --loader:.ttf=file --outfile=public/graphiql/main.js",
+    "build:graphiql-workers": "esbuild node_modules/monaco-editor/esm/vs/editor/editor.worker.js --bundle --format=esm --target=es2022 --outfile=public/graphiql/editor.worker.js && esbuild node_modules/monaco-editor/esm/vs/language/json/json.worker.js --bundle --format=esm --target=es2022 --outfile=public/graphiql/json.worker.js && esbuild node_modules/monaco-editor/esm/vs/language/css/css.worker.js --bundle --format=esm --target=es2022 --outfile=public/graphiql/css.worker.js && esbuild node_modules/monaco-editor/esm/vs/language/html/html.worker.js --bundle --format=esm --target=es2022 --outfile=public/graphiql/html.worker.js && esbuild node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js --bundle --format=esm --target=es2022 --outfile=public/graphiql/ts.worker.js && esbuild graphiql-ui/graphql.worker.js --bundle --format=esm --target=es2022 --outfile=public/graphiql/graphql.worker.js",
     "postinstall": "npm run build:graphiql-ui",
     "prestart": "npm run build:graphiql-ui",
     "prewatch": "npm run build:graphiql-ui",
