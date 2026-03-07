@@ -9,15 +9,16 @@ import DataLoader from "dataloader";
 import transform from "lodash.transform";
 import isEqual from "lodash.isequal";
 
-import Resource, { ResourceEntry } from "./resource.js";
-import Resources from "./resources.js";
-import SchemaLoader from "./schema-loader.js";
+import type { ResourceEntry } from "./resource.ts";
+import Resource from "./resource.ts";
+import Resources from "./resources.ts";
+import SchemaLoader from "./schema-loader.ts";
 import {
 	isListType,
 	oneOrMany,
 	unwrapCompositeType,
 	ensureArray,
-} from "./utils.js";
+} from "./utils.ts";
 
 type ResourceResolver = (
 	parent: ResourceEntry,

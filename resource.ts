@@ -2,15 +2,15 @@ import Handlebars from "handlebars";
 import groupBy from "lodash.groupby";
 import mapValues from "lodash.mapvalues";
 import transform from "lodash.transform";
-import { ObjectTypeDefinitionNode } from "graphql";
+import type { ObjectTypeDefinitionNode } from "graphql";
 
-import Resources from "./resources.js";
+import Resources from "./resources.ts";
 import {
   oneOrMany,
   isListType,
   unwrapCompositeType,
   ensureArray,
-} from "./utils.js";
+} from "./utils.ts";
 
 interface Triple {
   s: string;
@@ -184,29 +184,24 @@ export default class Resource {
     let endpoint: string | null = null,
       sparql = "";
 
-    enum State {
-      Default,
-      Endpoint,
-      Sparql,
-    }
-    let state: State = State.Default;
+    let state: "default" | "endpoint" | "sparql" = "default";
 
     lines.forEach((line: string) => {
       switch (line) {
         case "--- endpoint ---":
-          state = State.Endpoint;
+          state = "endpoint";
           return;
         case "--- sparql ---":
-          state = State.Sparql;
+          state = "sparql";
           return;
       }
 
       switch (state) {
-        case State.Endpoint:
+        case "endpoint":
           endpoint = line;
-          state = State.Default;
+          state = "default";
           break;
-        case State.Sparql:
+        case "sparql":
           sparql += line + "\n";
           break;
       }

@@ -1,5 +1,5 @@
 import fs from "fs";
-import { ObjectTypeDefinitionNode, TypeNode, DocumentNode } from "graphql";
+import type { DocumentNode, ObjectTypeDefinitionNode } from "graphql";
 import { join } from "path";
 import { parse } from "graphql/language/parser.js";
 
@@ -40,7 +40,7 @@ export default class SchemaLoader {
         continue;
       }
 
-      schema += await readFile(join(baseDir, path));
+      schema += await readFile(join(baseDir, path), "utf8");
     }
 
     return new SchemaLoader(schema);

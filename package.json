@@ -5,8 +5,8 @@
     "postinstall": "npm run build:graphiql-ui",
     "prestart": "npm run build:graphiql-ui",
     "prewatch": "npm run build:graphiql-ui",
-    "start": "node --import tsx main.ts",
-    "watch": "nodemon --watch . --ext ts,graphql --exec \"node --import tsx main.ts\"",
+    "start": "node main.ts",
+    "watch": "RESOURCES_DIR=./examples node --watch main.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -28,11 +28,9 @@
     "lodash.isequal": "^4.5.0",
     "lodash.mapvalues": "^4.6.0",
     "lodash.transform": "^4.6.0",
-    "nodemon": "^2.0.20",
     "outdent": "^0.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   },
   "engines": {

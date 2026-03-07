@@ -1,7 +1,7 @@
-import { ObjectTypeDefinitionNode, TypeNode } from "graphql";
+import type { ObjectTypeDefinitionNode, TypeNode } from "graphql";
 
-import Resource from "./resource.js";
-import { unwrapCompositeType } from "./utils.js";
+import Resource from "./resource.ts";
+import { unwrapCompositeType } from "./utils.ts";
 
 export default class Resources {
   all: Array<Resource>;

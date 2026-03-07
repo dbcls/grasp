@@ -1,12 +1,12 @@
-import { TypeNode, NamedTypeNode } from 'graphql';
+import type { NamedTypeNode, TypeNode } from "graphql";
 
 export function isListType(type: TypeNode): boolean {
   switch (type.kind) {
-    case 'NamedType':
+    case "NamedType":
       return false;
-    case 'ListType':
+    case "ListType":
       return true;
-    case 'NonNullType':
+    case "NonNullType":
       return isListType(type.type);
     default:
       throw new Error(`unsupported type: ${(type as TypeNode).kind}`);
@@ -19,10 +19,10 @@ export function oneOrMany<T>(xs: T[], one: boolean): T | T[] {
 
 export function unwrapCompositeType(type: TypeNode): NamedTypeNode {
   switch (type.kind) {
-    case 'NamedType':
+    case "NamedType":
       return type;
-    case 'ListType':
-    case 'NonNullType':
+    case "ListType":
+    case "NonNullType":
       return unwrapCompositeType(type.type);
     default:
       throw new Error(`unsupported type: ${(type as TypeNode).kind}`);
