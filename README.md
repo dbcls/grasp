@@ -47,7 +47,7 @@ which contains no resource definitions in a fresh clone. Add your `.graphql`
 resource definitions there or set `RESOURCES_DIR` to the directory containing them
 before starting the server.
 
-Visit http://localhost:4000. You will see GraphQL Playground.
+Visit http://localhost:4000. You will see GraphiQL.
 
 Note: You can change the port to listen on with `PORT` environment variable. Other configurations are described at  [Configuration](#configuration) section.
 
@@ -68,8 +68,6 @@ query {
 
 Then, press Ctrl+Enter. The query will be issued and results will be shown (on right pane).
 
-![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/graphql-playground.png)
-
 Now we've queried [Integbio Database Catalog/RDF](https://integbio.jp/rdf/?view=detail&id=dbcatalog) with GraphQL. Let's see how it works.
 
 ### Run in Docker container
@@ -89,7 +87,10 @@ Grasp does those translation according to a GraphQL schema (type definition), SP
 
 You will see the resource definition at  [examples/dataset.graphql](https://github.com/dbcls/grasp/blob/master/examples/dataset.graphql).
 
-SPARQL Endpoint URL and SPARQL query are written in the GraphQL comment of the type in a special form. SPARQL Endpoint is specified after the `--- endpoint ---` line. SPARQL query is placed after the `--- sparql ---` line.
+The SPARQL endpoint URL and query template are written in the GraphQL type
+description, a triple-quoted string before the type definition. The endpoint URL
+follows the `--- endpoint ---` line, and the query template follows the
+`--- sparql ---` line.
 
 The query returns a RDF graph by the `CONSTRUCT` query form.  The graph has triples which consist of the IRI identifying the object, the predicate corresponding to the field name of the object, and its value.
 
@@ -136,13 +137,15 @@ The SPARQL query is actually written in [Handlebars](https://handlebarsjs.com/gu
 Taken together, this part consequently selects triples by `iri`, if `iri` given. For more about the use of Grasp-defined helpers, see the later section.
 
 
-After the comment block, we have `Dataset` GraphQL object type as follows. This corresponds to the above-mentioned SPARQL query.
+After the type description, we have `Dataset` GraphQL object type as follows. This corresponds to the above-mentioned SPARQL query.
 
 ```graphql
 type Dataset {
   iri: String!
   title_ja: String!
   title_en: String
+  # ...
+}
 ```
 
 Note: `!` means that the field is non-nullable. See https://graphql.org/learn/schema/#lists-and-non-null
@@ -153,7 +156,7 @@ Now we've defined the `Dataset` object type. In addition, we need to define a fi
 ```graphql
 type Query {
   # ...
-  dataset(iri: String!): Dataset
+  dataset(iri: String, id: String): Dataset
   # ...
 }
 ```
@@ -222,7 +225,8 @@ Consider the following case:
 
 ![](https://raw.githubusercontent.com/dbcls/grasp/master/docs/embedded.svg?sanitize=true)
 
-In [examples/pubmed.graphql](https://github.com/dbcls/grasp/blob/master/examples/publisher.graphql), we have the following definition of `Publisher`:
+In [examples/dataset.graphql](examples/dataset.graphql), the `publisher` field
+refers to `Publisher`:
 
 ```graphql
 type Dataset {
@@ -232,7 +236,8 @@ type Dataset {
 }
 ```
 
-The `Publisher` resource is defined as follows:
+The `Publisher` resource is defined in
+[examples/publisher.graphql](examples/publisher.graphql) as follows:
 
 ```graphql
 type Publisher @embedded {
@@ -242,7 +247,7 @@ type Publisher @embedded {
 }
 ```
 
-Note that `Publisher` doesn't have a special comment containing an endpoint definition and SPARQL query, and that we marked `Publisher` as `@embedded`. When resolving resources with `@embedded`, Grasp doesn't fetch the resource with a separate query. Instead, fills the fields from the query of its parent resource.
+Note that `Publisher` doesn't have a type description containing an endpoint definition and SPARQL query, and that we marked `Publisher` as `@embedded`. When resolving resources with `@embedded`, Grasp doesn't fetch the resource with a separate query. Instead, fills the fields from the query of its parent resource.
 
 The following query fetches `Dataset`. In this query, values of `publisher` are fetched all together:
 
@@ -280,7 +285,9 @@ You can add your own definitions in the directory specified with `RESOURCES_DIR`
 (default is `./resources`).
 The resource definition files must start with `[0-9a-zA-Z]` and end with `.graphql`. The other files in the directory are ignored.
 
-You need to restart Grasp to reload the definitions. You can use `npm run watch` to restart the server automatically.
+Restart Grasp after changing `.graphql` resource definitions. With `npm run watch`,
+press Ctrl+C and run the command again to reload them. Watch mode automatically
+restarts Grasp when its entry point or imported source modules change.
 
 ## Advanced Topics
 
@@ -338,7 +345,7 @@ VALUES ?id { "NBDC00012" "NBDC00013" }
 ```
 
 In this case, instead of doing simple interpolation (as previously mentioned),
-you can also use `join` and `as-strings` helpers:
+you can also use `join` and `as-string` helpers:
 
 ```hbs
 WHERE
