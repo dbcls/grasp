@@ -1,13 +1,12 @@
 import express from "express";
 import { ApolloServer } from "@apollo/server";
-import { expressMiddleware } from "@as-integrations/express4";
+import { expressMiddleware } from "@as-integrations/express5";
 import { ApolloServerPluginLandingPageDisabled } from "@apollo/server/plugin/disabled";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
 import DataLoader from "dataloader";
 import transform from "lodash.transform";
-import isEqual from "lodash.isequal";
 
 import type { ResourceEntry } from "./resource.ts";
 import Resource from "./resource.ts";
@@ -77,7 +76,7 @@ SchemaLoader.loadFrom(resourcesDir).then((loader) => {
 				throw new Error(`resource ${resourceName} is not found`);
 			}
 
-			if (isEqual(Object.keys(args), ["iri"])) {
+			if (Object.keys(args).length === 1 && Object.hasOwn(args, "iri")) {
 				const loader = context.loaders.get(resource);
 
 				if (!loader) {
