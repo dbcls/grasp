@@ -19,11 +19,11 @@
     "@types/lodash.transform": "^4.6.7",
     "@types/node": "^24.0.0",
     "dataloader": "^2.1.0",
-    "express": "^4.22.1",
     "esbuild": "^0.27.3",
+    "express": "^4.22.3",
     "graphiql": "^5.2.2",
     "graphql": "^16.12.0",
-    "handlebars": "^4.7.6",
+    "handlebars": "^4.7.10",
     "lodash.groupby": "^4.6.0",
     "lodash.isequal": "^4.5.0",
     "lodash.mapvalues": "^4.6.0",
@@ -36,6 +36,5 @@
   "engines": {
     "node": "^24.22.1 || >=26.12.1"
   },
-  "type": "module",
-  "devDependencies": {}
+  "type": "module"
 }
