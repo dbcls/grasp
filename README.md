@@ -23,7 +23,7 @@ Let's look at a simple example.
 
 ### Requirements
 
-* [Node.js](https://nodejs.org/) 24 or later
+* [Node.js](https://nodejs.org/) 24.22.1 or later in the 24.x release line, or 26.12.1 or later
 
 ### Install
 
@@ -72,6 +72,9 @@ Now we've queried [Integbio Database Catalog/RDF](https://integbio.jp/rdf/?view=
     $ docker run --rm -it -p 4000:4000 -v /full/path/to/resources:/app/resources ghcr.io/dbcls/grasp:<tag>
 
 And access `localhost:4000`. See available image tags at [dbcls/grasp](https://github.com/dbcls/grasp/pkgs/container/grasp).
+
+After updating Node.js in the Dockerfile, rebuild the image and recreate running
+containers. Existing images and containers retain their bundled Node.js version.
 
 ## How does this works?
 
