@@ -6,7 +6,7 @@
     "prestart": "npm run build:graphiql-ui",
     "prewatch": "npm run build:graphiql-ui",
     "start": "node main.ts",
-    "watch": "RESOURCES_DIR=./examples node --watch main.ts",
+    "watch": "node --watch main.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

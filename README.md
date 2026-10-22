@@ -40,7 +40,12 @@ If you need to rebuild them manually, run:
 
     $ RESOURCES_DIR=./examples npm run watch
 
-This loads the example resource definitions from `./example`.
+This loads the example resource definitions from `./examples`.
+
+Without `RESOURCES_DIR`, both `npm start` and `npm run watch` load `./resources`,
+which contains no resource definitions in a fresh clone. Add your `.graphql`
+resource definitions there or set `RESOURCES_DIR` to the directory containing them
+before starting the server.
 
 Visit http://localhost:4000. You will see GraphQL Playground.
 
@@ -271,7 +276,8 @@ Note that we need to return graph containing triples whose 1) subject points the
 
 ## Write your own definition
 
-You can add your own definitions in the directory specified with `RESOURCES_DIR` (default is `./resources`).
+You can add your own definitions in the directory specified with `RESOURCES_DIR`
+(default is `./resources`).
 The resource definition files must start with `[0-9a-zA-Z]` and end with `.graphql`. The other files in the directory are ignored.
 
 You need to restart Grasp to reload the definitions. You can use `npm run watch` to restart the server automatically.
@@ -392,6 +398,6 @@ Grasp issues queries in batches to reduce number of queries. This may result in 
 
 ### `RESOURCES_DIR`
 
-(default: `resources`)
+(default: `./resources`)
 
-Load resources from the specified directory.
+Load resources from the specified directory. Both `npm start` and `npm run watch` use this setting.

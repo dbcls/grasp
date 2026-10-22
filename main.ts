@@ -196,7 +196,11 @@ SchemaLoader.loadFrom(resourcesDir).then((loader) => {
 			}),
 		);
 
-		app.listen(port, () => {
+		app.listen(port, (error) => {
+			if (error) {
+				throw error;
+			}
+
 			console.log(`🚀 Server ready at http://localhost:${port}${path}`);
 		});
 	});

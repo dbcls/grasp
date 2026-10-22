@@ -40,7 +40,15 @@ export default class SchemaLoader {
         continue;
       }
 
-      schema += await readFile(join(baseDir, path), "utf8");
+      schema += `${await readFile(join(baseDir, path), "utf8")}\n`;
+    }
+
+    if (!schema.trim()) {
+      throw new Error(
+        `No GraphQL schema definitions found in "${baseDir}". ` +
+          "Add .graphql resource definitions or set RESOURCES_DIR to a directory containing them " +
+          "(e.g. RESOURCES_DIR=./examples npm run watch)."
+      );
     }
 
     return new SchemaLoader(schema);
