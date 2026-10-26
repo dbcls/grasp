@@ -17,6 +17,7 @@
     "@types/lodash.mapvalues": "^4.6.9",
     "@types/lodash.transform": "^4.6.9",
     "@types/node": "^24.19.2",
+    "cors": "^2.8.6",
     "dataloader": "^2.2.3",
     "esbuild": "^0.28.2",
     "express": "^5.3.0",
@@ -36,5 +37,8 @@
   "engines": {
     "node": "^24.22.1 || >=26.12.1"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@types/cors": "^2.8.19"
+  }
 }

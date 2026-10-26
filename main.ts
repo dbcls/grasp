@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
 import { ApolloServerPluginLandingPageDisabled } from "@apollo/server/plugin/disabled";
@@ -172,6 +173,10 @@ SchemaLoader.loadFrom(resourcesDir).then((loader) => {
 
     app.use(
       path,
+      cors({
+        origin: "*",
+        credentials: true
+      }),
       express.json(),
 			expressMiddleware(server, {
 				context: async () => {
